@@ -1,6 +1,7 @@
+import {positionPopover} from './popover.js';
 import {FORMATS, EXAMPLES, demoPreview, trajectory, validPreview, clarificationFor, quickAnswer} from './model.js';
 const $ = id => document.getElementById(id);
-const state = {key:'', live:false, requests:0, connectionRevision:0, composing:false, revision:0, format:'Interactive page', audience:'', controller:null, timer:null, proposal:null, component:null, history:[], blocks:[], selection:null, expanded:false, quick:null, uncertainty:null, popoverTimer:null};
+const state = {key:'', live:false, requests:0, connectionRevision:0, composing:false, revision:0, format:'Interactive page', audience:'', controller:null, timer:null, proposal:null, component:null, history:[], blocks:[], selection:null, expanded:false, quick:null, uncertainty:null, popoverTimer:null, clarification:null, openClarification:null, popoverOrigin:null, suppressed:null, customDrafts:new Map()};
 const node=(tag, cls, text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
 function status(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);}
 function stop(){clearTimeout(state.timer);state.controller?.abort();state.controller=null;$('cancel-button').hidden=true;}
@@ -16,52 +17,82 @@ function renderQuick(data,source){
   state.quick=data;
   const answer=source==='Demo'?quickAnswer($('intent-input').value):(data.body[0]||data.interpretation);
   $('quick-preview').hidden=!answer;
-  $('quick-answer').textContent=answer.slice(0,320);
+  const compact=answer.length>240?answer.slice(0,237).replace(/\s+\S*$/,'')+'…':answer;$('quick-answer').textContent=compact;
   $('quick-provenance').textContent=source==='Demo'?'Short example · demo mode':'Quick answer · GPT-6 Luna';
-  const u=state.uncertainty;
-  const question=u?.question||data.question;
-  $('typing-question').hidden=!question;
-  $('typing-question-label').textContent=question;
-  choices($('typing-question-options'),u?.options||data.options,'',applyClarification);
+  updateClarification(state.uncertainty|| (data.question?{question:data.question,options:data.options,phrase:null,replace:false}:null));
+}
+function updateClarification(clarification){
+  state.clarification=clarification;
+  const trigger=$('clarify-phrase');trigger.hidden=!clarification;
+  $('refine-label').textContent=clarification?.phrase?`Refine “${clarification.phrase}”`:'One detail';
+  trigger.setAttribute('aria-label',clarification?clarification.question:'Refine your intent');
 }
 function renderUncertainty(){
   const input=$('intent-input'),mirror=$('input-mirror');const text=input.value;
   const u=state.uncertainty=clarificationFor(text);
   mirror.replaceChildren();
   if(u){mirror.append(document.createTextNode(text.slice(0,u.start)));const mark=node('mark');mark.textContent=text.slice(u.start,u.end);mark.id='uncertain-range';mirror.append(mark,document.createTextNode(text.slice(u.end)+'\u200b'));}else mirror.textContent=text+'\u200b';
-  $('clarify-phrase').hidden=!u;
-  $('clarify-phrase').textContent=u?`Clarify “${u.phrase}”`:'';
-  mirror.style.transform=`translateY(${-input.scrollTop}px)`;
+  updateClarification(u);mirror.style.transform=`translateY(${-input.scrollTop}px)`;
 }
 function applyClarification(value){
   value=value.trim();if(!value)return;
-  const input=$('intent-input'),u=state.uncertainty;
+  const input=$('intent-input'),u=state.openClarification||state.clarification;
   if(u?.replace)input.value=input.value.slice(0,u.start)+value+input.value.slice(u.end);
-  else input.value=input.value.replace(/\s+$/,'')+`\n${u?.question||state.quick?.question||'Preference'} ${value}`;
+  else input.value=input.value.replace(/\s+$/,'')+`\n${u?.question||'Preference'} ${value}`;
+  if(u)state.customDrafts.delete(u.question);
   closeIntentPopover();changed();input.focus();
 }
-function closeIntentPopover(){clearTimeout(state.popoverTimer);$('intent-popover').hidden=true;$('clarify-phrase').setAttribute('aria-expanded','false');}
-function openIntentPopover(keyboard=false){
-  const u=state.uncertainty;if(!u)return;clearTimeout(state.popoverTimer);
-  const pop=$('intent-popover');$('popover-question').textContent=u.question;
-  choices($('popover-options'),u.options,'',applyClarification);pop.hidden=false;
-  const rect=($('uncertain-range')||$('clarify-phrase')).getBoundingClientRect();
-  const width=Math.min(320,innerWidth-32);pop.style.width=width+'px';pop.style.left=Math.max(16,Math.min(rect.left,innerWidth-width-16))+'px';
-  pop.style.top=Math.max(12,Math.min(rect.bottom+10,innerHeight-pop.offsetHeight-12))+'px';
-  $('clarify-phrase').setAttribute('aria-expanded','true');if(keyboard)pop.querySelector('button').focus();
+function closeIntentPopover({restore=false,suppress=false}={}){
+  clearTimeout(state.popoverTimer);
+  const origin=state.popoverOrigin;
+  if(suppress)state.suppressed=state.openClarification?.question;
+  $('intent-popover').hidden=true;$('clarify-phrase').setAttribute('aria-expanded','false');
+  state.openClarification=null;state.popoverOrigin=null;
+  if(restore&&origin!=='hover')$('clarify-phrase').hidden?$('intent-input').focus():$('clarify-phrase').focus();
 }
-$('clarify-phrase').onclick=()=>openIntentPopover(true);
-$('intent-input').addEventListener('pointermove',event=>{const mark=$('uncertain-range');if(!mark)return;const hit=[...mark.getClientRects()].some(r=>event.clientX>=r.left&&event.clientX<=r.right&&event.clientY>=r.top&&event.clientY<=r.bottom);if(hit)openIntentPopover();else if(!$('intent-popover').hidden){clearTimeout(state.popoverTimer);state.popoverTimer=setTimeout(closeIntentPopover,220);}});
-$('intent-input').addEventListener('pointerleave',()=>{if(!$('intent-popover').hidden)state.popoverTimer=setTimeout(closeIntentPopover,220);});
+function positionIntentPopover(anchor){
+  const pop=$('intent-popover');
+  const rect=anchor.getBoundingClientRect();
+  const result=positionPopover(rect,304,pop.offsetHeight,innerWidth,innerHeight);
+  pop.style.width=result.width+'px';pop.style.left=result.left+'px';pop.style.top=result.top+'px';pop.style.setProperty('--arrow-x',result.arrow+'px');pop.dataset.side=result.side;
+}
+function openIntentPopover(origin='click'){
+  const u=state.clarification;if(!u)return;clearTimeout(state.popoverTimer);
+  if(origin==='hover'&&state.suppressed===u.question)return;
+  const pop=$('intent-popover');if(!pop.hidden&&state.openClarification?.question===u.question)return;
+  if(origin!=='hover')state.suppressed=null;
+  state.openClarification={...u};state.popoverOrigin=origin;
+  $('popover-question').textContent=u.question;
+  choices($('popover-options'),u.options,'',applyClarification);
+  $('popover-custom').value=state.customDrafts.get(u.question)||'';
+  const hasDraft=!!$('popover-custom').value;
+  $('popover-custom-form').hidden=!hasDraft;$('custom-answer-button').hidden=hasDraft;$('custom-answer-button').setAttribute('aria-expanded',String(hasDraft));
+  pop.hidden=false;
+  positionIntentPopover(origin==='hover'&&$('uncertain-range')?$('uncertain-range'):$('clarify-phrase'));
+  $('clarify-phrase').setAttribute('aria-expanded','true');
+  if(origin!=='hover')(pop.querySelector('#popover-options button')||(hasDraft?$('popover-custom'):$('custom-answer-button'))).focus();
+}
+function schedulePopoverClose(){clearTimeout(state.popoverTimer);state.popoverTimer=setTimeout(()=>{if(!$('intent-popover').contains(document.activeElement))closeIntentPopover();},260);}
+$('clarify-phrase').onclick=()=>openIntentPopover('click');
+$('intent-input').addEventListener('pointermove',event=>{if(event.pointerType==='touch'||event.buttons)return;const mark=$('uncertain-range');if(!mark)return;const hit=[...mark.getClientRects()].some(r=>event.clientX>=r.left&&event.clientX<=r.right&&event.clientY>=r.top&&event.clientY<=r.bottom);if(hit)openIntentPopover('hover');else if(!$('intent-popover').hidden)schedulePopoverClose();else state.suppressed=null;});
+$('intent-input').addEventListener('pointerleave',()=>{state.suppressed=null;schedulePopoverClose();});
+$('clarify-phrase').onpointerenter=()=>clearTimeout(state.popoverTimer);
+$('clarify-phrase').onpointerleave=schedulePopoverClose;
 $('intent-input').addEventListener('scroll',()=>{renderUncertainty();closeIntentPopover();});
 $('intent-popover').onpointerenter=()=>clearTimeout(state.popoverTimer);
-$('intent-popover').onpointerleave=()=>state.popoverTimer=setTimeout(closeIntentPopover,220);
-$('close-popover').onclick=closeIntentPopover;
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeIntentPopover();});
-window.addEventListener('resize',closeIntentPopover);window.addEventListener('scroll',closeIntentPopover,{passive:true});
-for(const [form,input] of [['popover-custom-form','popover-custom'],['typing-custom-form','typing-custom']])$(form).onsubmit=e=>{e.preventDefault();applyClarification($(input).value);$(input).value='';};
-$('typing-connection').onclick=()=>$('connection-dialog').showModal();
-$('build-page').onclick=()=>{if(!$('intent-input').value.trim())return;stop();state.expanded=true;document.body.classList.add('page-open');preview('page');};
+$('intent-popover').onpointerleave=schedulePopoverClose;
+$('close-popover').onclick=()=>closeIntentPopover({restore:true,suppress:true});
+$('custom-answer-button').onclick=()=>{ $('custom-answer-button').hidden=true;$('custom-answer-button').setAttribute('aria-expanded','true');$('popover-custom-form').hidden=false;positionIntentPopover($('clarify-phrase'));$('popover-custom').focus();};
+$('popover-custom').oninput=()=>{const key=state.openClarification?.question;if(key){state.customDrafts.set(key,$('popover-custom').value);if(state.customDrafts.size>10)state.customDrafts.delete(state.customDrafts.keys().next().value);}};
+$('popover-custom-form').onsubmit=e=>{e.preventDefault();applyClarification($('popover-custom').value);};
+$('intent-popover').addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;const buttons=[...$('intent-popover').querySelectorAll('button')].filter(b=>!b.hidden&&!b.closest('[hidden]'));const index=buttons.indexOf(document.activeElement);if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();buttons[(index+(e.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length]?.focus();}});
+$('intent-input').addEventListener('keydown',e=>{if(e.altKey&&e.key==='ArrowDown'&&state.clarification){e.preventDefault();openIntentPopover('keyboard');}if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();$('build-page').click();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('intent-popover').hidden){e.preventDefault();closeIntentPopover({restore:true,suppress:true});}});
+document.addEventListener('pointerdown',e=>{if(!$('intent-popover').hidden&&!$('intent-popover').contains(e.target)&&!$('clarify-phrase').contains(e.target))closeIntentPopover({suppress:true});});
+window.addEventListener('resize',()=>{if(!$('intent-popover').hidden)positionIntentPopover($('clarify-phrase'));});window.addEventListener('scroll',()=>{if($('intent-popover').contains(document.activeElement))positionIntentPopover($('clarify-phrase'));else closeIntentPopover();},{passive:true});
+$('typing-connection').onclick=()=>{closeIntentPopover();$('connection-dialog').showModal();};
+$('build-page').onclick=()=>{if(!$('intent-input').value.trim())return;closeIntentPopover();stop();state.expanded=true;document.body.classList.add('page-open');preview('page');};
+
 function setProposal(data, revision, source, selection=null, phase='page'){
   if(phase==='preview'){if(revision===state.revision)renderQuick(data,source);return;}
   if(revision!==state.revision||!validPreview(data))return;
@@ -123,12 +154,12 @@ async function preview(phase='preview'){
   try{const data=await callPreview({text,audience:state.audience,format:state.format,phase},controller.signal);if(revision!==state.revision)return;setProposal(data.preview,revision,data.model||'gpt-6-luna',null,phase);status(`${phase==='page'?'Terra page':'Luna preview'} · ${(data.elapsedMs/1000).toFixed(1)} s · ${data.usage?.total_tokens??'—'} tokens. No document changes until you accept.`);}catch(error){if(error.name!=='AbortError'&&revision===state.revision)status(error.message,true);}finally{if(state.controller===controller){state.controller=null;$('cancel-button').hidden=true;$('input-state').textContent='You can keep typing';}}
 }
 function changed(){
-  state.revision++;stop();closeIntentPopover();if(state.proposal){$('accept-button').disabled=true;$('proposal-label').textContent='Earlier page · explore again to use the latest intent';}
+  state.revision++;state.suppressed=null;stop();closeIntentPopover();if(state.proposal){$('accept-button').disabled=true;$('proposal-label').textContent='Earlier page · explore again to use the latest intent';}
   const hasText=!!$('intent-input').value.trim();document.body.classList.toggle('has-intent',hasText);$('typing-assistance').hidden=!hasText;
   $('build-page').disabled=!hasText;
   const input=$('intent-input');input.style.height='auto';input.style.height=Math.min(220,Math.max(60,input.scrollHeight))+'px';
   refreshIntent();renderUncertainty();
-  if(!hasText){$('quick-preview').hidden=true;$('typing-question').hidden=true;return;}
+  if(!hasText){$('quick-preview').hidden=true;updateClarification(null);return;}
   if(!state.live)preview('preview');else{status('Draft changed. Luna preview follows after a pause.');state.timer=setTimeout(()=>preview('preview'),1100);}
 }
 
@@ -146,8 +177,8 @@ async function fromSelection(kind){if(!state.selection)return;stop();const selec
 $('diagram-selection').onclick=()=>fromSelection('diagram');$('explain-selection').onclick=()=>fromSelection('outline');
 $('history-button').onclick=()=>{$('history-panel').hidden=!$('history-panel').hidden;renderHistory();};$('close-history').onclick=()=>$('history-panel').hidden=true;
 $('download-button').onclick=()=>{const data={version:1,title:$('document-title').value,notes:$('document-input').value,component:state.component,blocks:state.blocks};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=node('a');a.href=url;a.download='ai-interaction-page.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status('Exported page data as JSON. API keys are never included.');};
-for(const [button,dialog] of [['connection-button','connection-dialog'],['about-button','about-dialog']])$(button).onclick=()=>$(dialog).showModal();
+for(const [button,dialog] of [['connection-button','connection-dialog'],['about-button','about-dialog']])$(button).onclick=()=>{closeIntentPopover();$(dialog).showModal();};
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>{if(b.dataset.close==='connection-dialog')$('api-key').value='';$(b.dataset.close).close();});$('connection-dialog').addEventListener('close',()=>{$('api-key').value='';state.connectionRevision++;});
-$('connection-form').onsubmit=async event=>{event.preventDefault();const key=$('api-key').value.trim();if(!key){$('connection-error').textContent='Enter an OpenAI API key, or stay in demo mode.';return;}const connectionRevision=++state.connectionRevision;$('connect-button').disabled=true;$('connection-error').textContent='Checking Luna access…';try{const response=await fetch('/api/check',{method:'POST',headers:{Authorization:`Bearer ${key}`}});const result=await response.json();if(connectionRevision!==state.connectionRevision)return;if(!response.ok)throw new Error(result.error||'Connection failed.');stop();state.key=key;state.requests=0;state.live=true;document.body.classList.add('live');$('mode-label').textContent='OpenAI connected';$('typing-connection').textContent='Luna preview · Terra page';$('api-key').value='';$('connection-error').textContent='';$('connection-dialog').close();changed();}catch(error){$('connection-error').textContent=error.message;}finally{$('connect-button').disabled=false;}};
-$('disconnect-button').onclick=()=>{state.connectionRevision++;stop();state.key='';state.live=false;document.body.classList.remove('live');$('mode-label').textContent='Demo mode';$('typing-connection').textContent='Demo · connect OpenAI';$('api-key').value='';$('connection-dialog').close();changed();};
+$('connection-form').onsubmit=async event=>{event.preventDefault();const key=$('api-key').value.trim();if(!key){$('connection-error').textContent='Enter an OpenAI API key, or stay in demo mode.';return;}const connectionRevision=++state.connectionRevision;$('connect-button').disabled=true;$('connection-error').textContent='Checking Luna access…';try{const response=await fetch('/api/check',{method:'POST',headers:{Authorization:`Bearer ${key}`}});const result=await response.json();if(connectionRevision!==state.connectionRevision)return;if(!response.ok)throw new Error(result.error||'Connection failed.');stop();state.key=key;state.requests=0;state.live=true;document.body.classList.add('live');$('mode-label').textContent='OpenAI connected';$('typing-connection').firstChild.textContent='Connected';$('api-key').value='';$('connection-error').textContent='';$('connection-dialog').close();changed();}catch(error){$('connection-error').textContent=error.message;}finally{$('connect-button').disabled=false;}};
+$('disconnect-button').onclick=()=>{state.connectionRevision++;stop();state.key='';state.live=false;document.body.classList.remove('live');$('mode-label').textContent='Demo mode';$('typing-connection').firstChild.textContent='Demo';$('api-key').value='';$('connection-dialog').close();changed();};
 window.addEventListener('pagehide',()=>{stop();state.key='';});refreshIntent();changed();

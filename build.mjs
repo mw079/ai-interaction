@@ -1,5 +1,5 @@
 import {readFile,mkdir,writeFile} from 'node:fs/promises';
-const files=['index.html','style.css','app.js','model.js','mark.svg'];
+const files=['index.html','style.css','app.js','model.js','popover.js','mark.svg'];
 const types={'html':'text/html; charset=utf-8','css':'text/css; charset=utf-8','js':'application/javascript; charset=utf-8','svg':'image/svg+xml'};
 const assets={};for(const name of files)assets['/'+name]={body:await readFile(new URL('./public/'+name,import.meta.url),'utf8'),type:types[name.split('.').at(-1)]};
 const model=await readFile(new URL('./public/model.js',import.meta.url),'utf8');

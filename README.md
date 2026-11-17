@@ -15,7 +15,7 @@ Open `http://127.0.0.1:4317`. Set `PORT` to use another port. Restart the server
 
 ## Current flow
 
-Start with only an empty text field. Typing reveals a brief provisional answer and at most one useful clarification. A highlighted phrase can be clarified through hover, click or the keyboard-accessible Clarify button, with options or custom input. Nothing opens the longer page until **Explore interactively** is clicked. Existing page edits remain when the input changes.
+Start with only an empty text field. Typing reveals a brief provisional answer and at most one useful clarification. A highlighted phrase can be clarified through hover, click or the keyboard-accessible Clarify button, with options or custom input. Choices now appear only in one anchored popover, not as a second question form below the field. Custom entry is revealed through Something else; unsubmitted custom text survives dismissal in this tab. Nothing opens the longer page until **Explore interactively** is clicked. Existing page edits remain when the input changes.
 
 ## What works
 
@@ -56,4 +56,4 @@ Design references: the user's `ed-sim/design-skills` collection, especially Emil
 
 ## Verification and limits
 
-Eleven Node checks pass for the ideal trajectory, demo/schema limits, input bounds, same-origin/key gates, strict Luna request configuration and safe refusal/error handling. Browser checks verified gravity-dependent results, keep-page state, direct explanation editing, selection-scoped questions, and demo inline replies. Desktop/mobile geometry is checked separately. The native LocalMind app's real Luna generation was verified previously; this website's BYOK live path has not yet been exercised with a valid key. HTTP fixtures do not establish live acceptance or preview latency. The initial empty screen, typing-stage answer/question, custom phrase clarification and explicit full-page transition were checked in the browser. The existing private deployment address is retained even though the product and Site display title are now AI Interaction.
+Fourteen Node checks pass for the ideal trajectory, demo/schema limits, input bounds, same-origin/key gates, strict Luna request configuration and safe refusal/error handling. Browser checks verified gravity-dependent results, keep-page state, direct explanation editing, selection-scoped questions, and demo inline replies. Desktop/mobile geometry is checked separately. The native LocalMind app's real Luna generation was verified previously; this website's BYOK live path has not yet been exercised with a valid key. HTTP fixtures do not establish live acceptance or preview latency. The initial empty screen, typing-stage answer/question, custom phrase clarification and explicit full-page transition were checked in the browser. The existing private deployment address is retained even though the product and Site display title are now AI Interaction.
