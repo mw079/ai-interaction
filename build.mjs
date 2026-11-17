@@ -1,0 +1,10 @@
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
+const files=['index.html','style.css','app.js','model.js','mark.svg'];
+const types={'html':'text/html; charset=utf-8','css':'text/css; charset=utf-8','js':'application/javascript; charset=utf-8','svg':'image/svg+xml'};
+const assets={};for(const name of files)assets['/'+name]={body:await readFile(new URL('./public/'+name,import.meta.url),'utf8'),type:types[name.split('.').at(-1)]};
+const model=await readFile(new URL('./public/model.js',import.meta.url),'utf8');
+const api=(await readFile(new URL('./api.mjs',import.meta.url),'utf8')).replace("import {validPreview} from './public/model.js';",'');
+const source=`${model}\n${api}\nconst ASSETS=${JSON.stringify(assets)};\nexport default {async fetch(request){const url=new URL(request.url);if(url.pathname.startsWith('/api/'))return handleAPI(request);if(!['GET','HEAD'].includes(request.method))return new Response('Method not allowed',{status:405});const asset=ASSETS[url.pathname==='/'?'/index.html':url.pathname];if(!asset)return new Response('Not found',{status:404});return new Response(request.method==='HEAD'?null:asset.body,{headers:{'Content-Type':asset.type,'Cache-Control':'no-cache','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Permissions-Policy':'camera=(), microphone=(), geolocation=()','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' https://chatgpt.com https://*.chatgpt.com"}})}};\n`;
+await mkdir(new URL('./dist/server/',import.meta.url),{recursive:true});await writeFile(new URL('./dist/server/index.js',import.meta.url),source);
+await mkdir(new URL('./dist/.openai/',import.meta.url),{recursive:true});await writeFile(new URL('./dist/.openai/hosting.json',import.meta.url),await readFile(new URL('./.openai/hosting.json',import.meta.url)));
+console.log('Built dependency-free Worker and browser assets.');

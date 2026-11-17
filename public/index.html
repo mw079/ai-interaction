@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="An idea is enough. Shape your intent, explore possibilities, and work on a document with LocalMind.">
+  <meta name="theme-color" content="#f8f9f6">
+  <title>LocalMind — A little room to think</title>
+  <link rel="icon" href="/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="/" aria-label="LocalMind home"><img src="/mark.svg" width="26" height="26" alt="">LocalMind<span class="prototype-label">Preview</span></a>
+    <nav aria-label="Main"><button id="about-button" class="quiet-button">The idea</button><button id="connection-button" class="mode-button"><span class="mode-dot" aria-hidden="true"></span><span id="mode-label">Demo mode</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button></nav>
+  </header>
+  <main>
+    <section class="intro" aria-labelledby="page-title"><h1 id="page-title">An idea is enough.</h1><p>Start thinking out loud. Find the shape of it together.</p></section>
+    <div class="workspace">
+      <section class="intent-panel" aria-label="Your developing intent">
+        <label for="intent-input" class="section-label">What’s on your mind?</label>
+        <div class="composer"><textarea id="intent-input" rows="4" maxlength="4000" placeholder="Something you want to understand, make, or figure out…">Help me understand projectile motion.</textarea><div class="composer-bottom"><span id="input-state">You can keep typing</span><button id="refresh-button" class="icon-button" aria-label="Refresh preview" title="Refresh preview"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 7a7 7 0 0 1 11.5-1L20 9M4 15l2.4 3A7 7 0 0 0 18 17"/></svg></button></div></div>
+        <div class="examples" aria-label="Try an example"><span>Try</span><button data-example="physics">Physics</button><button data-example="presentation">A presentation</button><button data-example="comparison">A comparison</button></div>
+        <div class="understanding">
+          <div class="section-heading"><h2>Here’s what I’m hearing</h2><span id="preview-kind" class="small-status">Sample preview</span></div>
+          <p id="interpretation"></p>
+          <div id="format-options" class="choice-group" aria-label="Desired output"></div>
+          <div class="clarification"><label for="audience-input">Who is it for? <span>Optional</span></label><div id="audience-options" class="choice-group"><button data-audience="My team">My team</button><button data-audience="New team members">New team members</button><button data-audience="Just me">Just me</button></div><input id="audience-input" autocomplete="off" maxlength="120" placeholder="Or describe the audience…"></div>
+          <div id="model-question" hidden><p id="question-label"></p><div id="question-options" class="choice-group"></div></div>
+          <div class="intent-summary" id="intent-summary"></div>
+        </div>
+        <p id="status" class="status-line" role="status">Demo responses use built-in examples. No draft text is sent.</p>
+        <button id="cancel-button" class="quiet-button" hidden>Pause preview</button>
+      </section>
+      <section class="document-panel" aria-label="Shared working document">
+        <div class="document-toolbar"><span class="document-location"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>Your interactive page</span><div class="document-actions"><button id="history-button" class="quiet-button">History <span id="history-count">0</span></button><button id="download-button" class="quiet-button">Export</button></div></div>
+        <div class="paper">
+          <label class="sr-only" for="document-title">Document title</label><input id="document-title" class="document-title" value="A little room to explore" maxlength="160">
+          <div id="active-component"></div>
+          <details class="page-notes"><summary>Your notes</summary><label class="sr-only" for="document-input">Write in your document</label><textarea id="document-input" rows="3" maxlength="20000" placeholder="Add your own thinking. Select a passage to explain it or turn it into a diagram."></textarea></details>
+          <div id="selection-tools" class="selection-tools" hidden><span id="selection-label">Selected text</span><button id="explain-selection">Explain this</button><button id="diagram-selection">Make a diagram</button></div>
+          <div id="accepted-blocks" aria-label="Accepted visualizations"></div>
+          <section id="proposal" class="proposal" aria-label="Suggested addition"><div class="proposal-heading"><span class="suggestion-marker" aria-hidden="true"></span><span id="proposal-label">Explore this suggested page</span><button id="dismiss-button" class="quiet-button">Dismiss</button></div><h3 id="proposal-title"></h3><div id="proposal-content"></div><div class="proposal-actions"><span id="proposal-provenance">Built-in example</span><button id="accept-button" class="primary-button">Keep this page<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg></button></div></section>
+          <div id="proposal-empty" class="proposal-empty" hidden><p>Your document stays yours.</p><button id="new-suggestion" class="quiet-button">Show another suggestion</button></div>
+        </div>
+        <div class="document-foot"><span>Changes are yours to accept.</span><span id="document-state">This tab only · not saved to a server</span></div>
+        <div id="history-panel" class="history-panel" hidden><div class="section-heading"><h3>Document versions</h3><button id="close-history" class="quiet-button">Close</button></div><div id="history-list"></div></div>
+      </section>
+    </div>
+    <footer class="site-footer"><span>A small experiment in thinking together.</span><a href="https://demos.liubruce.me/intra-turn/" target="_blank" rel="noopener noreferrer">Inspired by Bruce Liu’s intra-turn experiments<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg></a></footer>
+  </main>
+  <dialog id="connection-dialog" aria-labelledby="connection-title"><form id="connection-form"><div class="dialog-heading"><h2 id="connection-title">Think with Luna</h2><button type="button" class="quiet-button" data-close="connection-dialog">Close</button></div><p>Demo mode works without an account. Connect your own OpenAI key for live interpretations and suggested drafts.</p><label for="api-key">OpenAI API key</label><input type="password" id="api-key" autocomplete="off" spellcheck="false" maxlength="300" placeholder="Your key stays out of the document"><p class="privacy-copy">Connecting enables live preview: your draft, choices and explicitly selected text are sent through this website’s server to OpenAI after typing pauses. Your key stays in this tab’s memory and is forwarded for these requests; the app does not save it. API charges apply. Each connection is limited to 30 preview requests. No desktop key is accessed.</p><p id="connection-error" role="alert"></p><div class="dialog-actions"><button type="button" id="disconnect-button">Use demo instead</button><button type="submit" id="connect-button" class="primary-button">Connect & enable live preview</button></div></form></dialog>
+  <dialog id="about-dialog" aria-labelledby="about-title"><div class="dialog-heading"><h2 id="about-title">A workspace, not a waiting room.</h2><button class="quiet-button" data-close="about-dialog">Close</button></div><p>Describe an unfinished thought. Correct the interpretation, fill in a missing detail, or work directly on the document. You don’t have to finish one message before contributing again.</p><p>Feedforward and inline clarification are inspired by Bruce Liu’s work. This prototype connects them to an editable artifact, explicit selection, reusable visual components and reviewable changes.</p><p>Those are established interaction ideas in a new combination—not a claim to have invented a new research paradigm. The question is whether the combination helps people reach what they actually intended.</p><p>Demo mode uses a small catalog of examples. Live mode uses GPT-6 Luna. There is no web search, agent file access, computer control, account storage or collaborative sync here yet.</p></dialog>
+</body>
+</html>
