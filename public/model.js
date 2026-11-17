@@ -4,6 +4,23 @@ export const EXAMPLES = {
   presentation: 'Help me prepare a presentation about our release process.',
   comparison: 'Help me compare two approaches for our project.'
 };
+export function clarificationFor(text) {
+  if(text.trim().length<8)return null;
+  const rules=[
+    {regex:/\bphysics\b/i,question:'Which part of physics?',options:['Projectile motion','Energy','Waves'],replace:true},
+    {regex:/\bexpensive\b/i,question:'What do you mean by expensive?',options:['Purchase price','Running costs','Valuation'],replace:false},
+    {regex:/\b(?:explain|understand)\b/i,question:'What kind of explanation would help?',options:['Simple intuition','With examples','With the mathematics'],replace:false}
+  ];
+  for(const r of rules){const m=r.regex.exec(text);if(!m)continue;if(!r.replace&&/\b(?:simple intuition|with examples|mathematics|purchase price|running costs|valuation)\b/i.test(text))continue;return {start:m.index,end:m.index+m[0].length,phrase:m[0],question:r.question,options:r.options,replace:r.replace};}
+  return null;
+}
+export function quickAnswer(text) {
+  if(/projectile|trajectory|gravity/i.test(text))return 'In an ideal projectile, horizontal speed stays constant while gravity changes vertical speed. Together, they produce a curved path.';
+  if(/\bphysics\b/i.test(text))return 'Physics studies how matter, motion and energy behave. A specific example can make the idea easier to explore.';
+  if(/presentation|slides/i.test(text))return 'A useful starting point is one main idea, who it is for, and what you want them to take away.';
+  if(/compar|versus|\bvs\b/i.test(text))return 'A clear comparison starts with the same criteria for both options. Decide what matters before choosing a winner.';
+  return '';
+}
 export function trajectory(speed, angle, gravity) {
   const v = Math.max(1, Math.min(30, Number(speed) || 20));
   const a = Math.max(5, Math.min(85, Number(angle) || 45)) * Math.PI / 180;

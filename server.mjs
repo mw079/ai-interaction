@@ -11,4 +11,4 @@ const server=http.createServer(async(req,res)=>{
   const response=await worker.default.fetch(request);res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
  }catch{res.writeHead(500,{'Content-Type':'text/plain'});res.end('The local server could not complete this request.');}
 });
-server.listen(port,'127.0.0.1',()=>console.log(`LocalMind preview: http://127.0.0.1:${port}`));
+server.listen(port,'127.0.0.1',()=>console.log(`AI Interaction preview: http://127.0.0.1:${port}`));
