@@ -53,7 +53,7 @@ export function demoPreview(text, audience = '', format = 'Interactive page') {
 }
 export function validPreview(v) {
   const short = (s, max) => typeof s === 'string' && s.length <= max;
-  return !!v && ['projectile','outline','diagram','comparison'].includes(v.kind)
+  return !!v && ['projectile','outline','diagram','comparison','planner'].includes(v.kind)
     && short(v.title,160) && short(v.interpretation,500) && short(v.audience,120) && short(v.question,200)
     && Array.isArray(v.options) && v.options.length <= 3 && v.options.every(s=>short(s,80))
     && Array.isArray(v.body) && v.body.length <= 6 && v.body.every(s=>short(s,700))

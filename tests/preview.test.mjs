@@ -16,3 +16,18 @@ test('short requests stay on Luna and explicitly committed pages use Terra',asyn
 test('unknown phase is rejected instead of routing arbitrary models',async()=>{assert.equal((await handleAPI(req({...payload,phase:'gpt-anything'}),()=>{throw new Error('No upstream call allowed');})).status,400);});
 test('model access checks both requested models without generation',async()=>{const urls=[];const r=await handleAPI(new Request('https://example.test/api/check',{method:'POST',headers}),async(url,opts)=>{urls.push(url);assert.equal(opts.method,'GET');return Response.json({});});assert.equal(r.status,200);assert.deepEqual(urls,['https://api.openai.com/v1/models/gpt-6-luna','https://api.openai.com/v1/models/gpt-6.1-terra']);});
 test('uncertainty highlights concrete phrases and resolved preferences stop repeating',()=>{assert.equal(clarificationFor('hi'),null);const c=clarificationFor('Please explain physics');assert.equal(c.phrase,'physics');assert.equal(c.start,15);assert.equal(clarificationFor('Help me understand motion. With the mathematics'),null);assert.ok(quickAnswer('projectile motion').length<320);assert.equal(quickAnswer('an unsupported topic'), '');});
+test('page context is forwarded and oversized context is rejected',async()=>{
+ const context='Existing plan: Italy, quiet hotel; dates not chosen';
+ const upstream=async(url,opts)=>{assert.equal(JSON.parse(JSON.parse(opts.body).input).context,context);return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({...demoPreview('gravity'),kind:'planner'})}]}]});};
+ assert.equal((await handleAPI(req({...payload,context,phase:'page'}),upstream)).status,200);
+ assert.equal((await handleAPI(req({...payload,context:'x'.repeat(6001)}),()=>{throw Error('No inference');})).status,400);
+});
+test('environment key stays server-side and requires local or authenticated hosted access',async()=>{
+ const env={OPENAI_API_KEY:'test-server-key-not-a-real-secret'};
+ const config=url=>new Request(url+'/api/config');
+ assert.deepEqual(await (await handleAPI(config('http://127.0.0.1:4317'),fetch,env)).json(),{serverKey:true});
+ assert.deepEqual(await (await handleAPI(config('https://example.test'),fetch,env)).json(),{serverKey:false});
+ const local=new Request('http://127.0.0.1:4317/api/check',{method:'POST'});
+ let calls=0;assert.equal((await handleAPI(local,async(url,opts)=>{calls++;assert.equal(opts.headers.Authorization,'Bearer '+env.OPENAI_API_KEY);return Response.json({});},env)).status,200);assert.equal(calls,2);
+ assert.equal((await handleAPI(new Request('https://example.test/api/check',{method:'POST'}),()=>{throw Error('No inference');},env)).status,401);
+});
