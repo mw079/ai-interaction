@@ -11,9 +11,9 @@ import {setupComposerExperience} from './composer.js';
 import {INFORMATION_TYPES, informationFor, rebaseInformation, chooseInformation, mergeInformation} from './intent.js';
 import {renderInformationControl} from './controls.js';
 import {positionPopover} from './popover.js';
-import {FORMATS, EXAMPLES, demoPreview, trajectory, validPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isCurrentPreview} from './model.js';
+import {demoPreview, trajectory, validPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isCurrentPreview} from './model.js';
 const $ = id => document.getElementById(id);
-const state = {key:'', live:false, requests:0, connectionRevision:0, composing:false, revision:0, format:'Auto', audience:'', controller:null, timer:null, proposal:null, component:null, history:[], blocks:[], selection:null, expanded:false, quick:null, uncertainty:null, popoverTimer:null, clarification:null, openClarification:null, popoverOrigin:null, suppressed:null, customDrafts:new Map(), serverKey:false, pendingSend:false, pageController:null, pageRequest:0, taskGoal:'', pageVersion:0, information:[], previousDraft:'', activeInformation:null,confirmedChoices:[],answers:[],intentOverride:'',slideChoice:undefined};
+const state = {key:'', live:false, requests:0, connectionRevision:0, composing:false, revision:0, format:'Auto', audience:'', controller:null, timer:null, proposal:null, component:null, history:[], blocks:[], selection:null, uncertainty:null, popoverTimer:null, clarification:null, openClarification:null, popoverOrigin:null, suppressed:null, customDrafts:new Map(), serverKey:false, pendingSend:false, pageController:null, pageRequest:0, taskGoal:'', pageVersion:0, information:[], previousDraft:'', activeInformation:null,confirmedChoices:[],answers:[],intentOverride:'',slideChoice:undefined};
 const node=(tag, cls, text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
 let composerExperience,workspace;
 let followUpScope=null;
@@ -60,15 +60,7 @@ const timeline=new PageTimeline();
 function status(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);$('status').hidden=!error;}
 function stop(){clearTimeout(state.timer);state.controller?.abort();state.controller=null;$('cancel-button').hidden=true;}
 function choices(target,values,selected,action){target.replaceChildren();values.forEach(value=>{const b=node('button','',value);b.type='button';b.setAttribute('aria-pressed',String(value===selected));b.onclick=()=>action(value);target.append(b);});}
-function refreshIntent(){
-  const labels=/projectile|trajectory|gravity|physics|motion/i.test($('intent-input').value)?['New learners','Students','Just me']:['My team','New team members','Just me'];
-  document.querySelectorAll('[data-audience]').forEach((b,i)=>{b.dataset.audience=labels[i];b.textContent=labels[i];});
-  choices($('format-options'),FORMATS,state.format,value=>{state.format=value;changed();});
-  document.querySelectorAll('[data-audience]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.audience===state.audience)));
-  $('intent-summary').textContent=[state.format,state.audience?`Audience: ${state.audience} (your choice)`:'Audience not set — you can decide later'].join(' · ');
-}
 function renderQuick(data,source){
-  state.quick=data;
   const answer=source==='Demo'?quickAnswer($('intent-input').value):compactLiveAnswer(data);
   $('quick-preview').hidden=!answer;
   const compact=answer.length>240?answer.slice(0,237).replace(/\s+\S*$/,'')+'…':answer;$('quick-answer').textContent=compact;
@@ -207,7 +199,7 @@ function pageContext(){
   return JSON.stringify({originalRequest:state.taskGoal,title:$('document-title').value,componentIds:(state.component.components||[]).map(c=>c.id),edits:state.component.edits,page:state.component,notes:$('document-input').value}).slice(0,6000);
 }
 function openPage(){
-  state.expanded=true;document.body.classList.add('page-open');
+  document.body.classList.add('page-open');
   $('intent-input').placeholder='Ask a question or change this page…';
 }
 async function submitPage(text=$('intent-input').value.trim(),slideChoice=text===$('intent-input').value.trim()?state.slideChoice:undefined,retryContext){
@@ -241,19 +233,13 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
   finally{if(id===state.pageRequest){state.pageController=null;if($('page-progress').textContent==='Creating your page…')$('page-progress').hidden=true;}}
 }
 
-function setProposal(data, revision, source, selection=null, phase='page'){
-  if(phase==='preview'){if(revision===state.revision)renderQuick(data,source);return;}
+function setProposal(data, revision, source, selection){
   if(revision!==state.revision||!validPreview(data))return;
   state.proposal={...structuredClone(data),revision,source,selection,physics:{speed:20,angle:45,gravity:9.81},edits:{},selected:0};
-  $('interpretation').textContent=data.interpretation;
-  $('preview-kind').textContent=source==='Demo'?'Sample page':'Terra page';
-  $('model-question').hidden=!data.question;
-  $('question-label').textContent=data.question;
-  choices($('question-options'),data.options,'',value=>{const input=$('intent-input');input.value+=`\n${data.question} ${value}`;changed();});
   renderProposal();
 }
 function renderProposal(){
-  const p=state.proposal;$('proposal').hidden=!p;$('proposal-empty').hidden=true;
+  const p=state.proposal;$('proposal').hidden=!p;
   if(!p)return;
   $('proposal-label').textContent='Explore this suggested page';$('proposal-title').textContent=p.title;
   $('proposal-provenance').textContent=p.source==='Demo'?'Built-in example · not model-generated':`${p.source==='Luna'||p.source==='gpt-6-luna'?'Luna':'Terra'} content · trusted interactive components`;
@@ -316,7 +302,7 @@ async function callPreview(payload,signal,onProgress){
 async function callPreviewAttempt(payload,signal,onProgress){
   if(state.requests>=30)throw new Error('This connection has reached its 30-preview limit. Reconnect to enable another session, or use demo mode.');
   state.requests++;
-  let response;try{response=await fetch('/api/preview',{method:'POST',headers:{'Content-Type':'application/json',...(state.key?{'Authorization':`Bearer ${state.key}`}:{})},body:JSON.stringify({...payload,stream:typeof onProgress==='function'&&payload.phase==='preview',interaction:composerExperience?.interaction()||'unified',context:requestContext({explicitIntent:state.intentOverride,draft:payload.text,page:payload.context??pageContext(),confirmed:[...state.confirmedChoices,...confirmedChoices([...state.information,...state.answers])],date:new Date().toLocaleDateString('en-CA'),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone})}),signal});}catch(error){if(signal?.aborted)throw error;throw requestError('Connection interrupted. Try again.',true);}
+  let response;try{response=await fetch('/api/preview',{method:'POST',headers:{'Content-Type':'application/json',...(state.key?{'Authorization':`Bearer ${state.key}`}:{})},body:JSON.stringify({...payload,stream:typeof onProgress==='function'&&payload.phase==='preview',context:requestContext({explicitIntent:state.intentOverride,draft:payload.text,page:payload.context??pageContext(),confirmed:[...state.confirmedChoices,...confirmedChoices([...state.information,...state.answers])],date:new Date().toLocaleDateString('en-CA'),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone})}),signal});}catch(error){if(signal?.aborted)throw error;throw requestError('Connection interrupted. Try again.',true);}
   if(!response.ok){let failure={};try{failure=await response.json();}catch{}throw requestError(failure.error||'Preview unavailable. Try again.',typeof failure.retryable==='boolean'?failure.retryable:response.status>=500);}
   let data;try{if(response.headers.get('Content-Type')?.includes('text/event-stream')){
     for await(const event of readSSE(response.body,{signal})){if(event.type==='partial')onProgress?.(event.preview);else if(event.type==='error')throw requestError(event.error||'The preview was interrupted.',event.retryable===true);else if(event.type==='done'){data=event;break;}}
@@ -324,16 +310,16 @@ async function callPreviewAttempt(payload,signal,onProgress){
   }else data=await response.json();}catch(error){if(error instanceof TypeError&&!signal?.aborted)throw requestError('Connection interrupted. Try again.',true);throw error;}
   if(!validPreview(data.preview))throw new Error('The preview was invalid. Your page is unchanged.');return data;
 }
-async function preview(phase='preview'){
-  const revision=state.revision;const text=$('intent-input').value.trim();if(!text){$('interpretation').textContent='Start anywhere. An unfinished thought is welcome.';state.proposal=null;renderProposal();return;}
-  if(!state.live){setProposal(demoPreview(text,state.audience,state.format),revision,'Demo',null,phase);status('Demo uses built-in examples, not semantic AI. No draft text is sent.');return;}
-  const controller=new AbortController();state.controller=controller;$('cancel-button').hidden=false;$('input-state').textContent='Preview updating · keep typing';status(phase==='page'?'Terra is building your interactive page…':'Sending the current draft and choices to Luna…');
-  try{const data=await callPreview({text,audience:state.audience,format:state.format,phase},controller.signal,partial=>{
+async function preview(){
+  const revision=state.revision;const text=$('intent-input').value.trim();if(!text)return;
+  if(!state.live){renderQuick(demoPreview(text,state.audience,state.format),'Demo');status('Demo uses built-in examples, not semantic AI. No draft text is sent.');return;}
+  const controller=new AbortController();state.controller=controller;$('cancel-button').hidden=false;$('input-state').textContent='Preview updating · keep typing';status('Sending the current draft and choices to Luna…');
+  try{const data=await callPreview({text,audience:state.audience,format:state.format,phase:'preview'},controller.signal,partial=>{
     if(!isCurrentPreview(revision,state.revision,controller.signal))return;
     if(partial.reset){$('quick-preview').hidden=true;$('quick-answer').textContent='';}
     if(typeof partial.answer==='string'){$('quick-answer').textContent=partial.answer;$('quick-preview').hidden=!partial.answer;}
     composerExperience?.onStream(partial);
-  });if(!isCurrentPreview(revision,state.revision,controller.signal))return;setProposal(data.preview,revision,data.model||'gpt-6-luna',null,phase);status('');}catch(error){if(error.name!=='AbortError'&&revision===state.revision){$('quick-preview').hidden=true;composerExperience?.onStream({reset:true});status(error.message,true);}}finally{if(state.controller===controller){state.controller=null;$('cancel-button').hidden=true;$('input-state').textContent='You can keep typing';}}
+  });if(!isCurrentPreview(revision,state.revision,controller.signal))return;renderQuick(data.preview,data.model||'gpt-6-luna');status('');}catch(error){if(error.name!=='AbortError'&&revision===state.revision){$('quick-preview').hidden=true;composerExperience?.onStream({reset:true});status(error.message,true);}}finally{if(state.controller===controller){state.controller=null;$('cancel-button').hidden=true;$('input-state').textContent='You can keep typing';}}
 }
 function sizeComposer(){const input=$('intent-input');input.style.height='0px';input.style.height=Math.min(220,Math.max(56,input.scrollHeight))+'px';}
 window.addEventListener('resize',sizeComposer);
@@ -342,24 +328,22 @@ function changed(){
   document.dispatchEvent(new Event('intent:changed'));
   composerExperience?.onDraftChanged();
   state.information=rebaseInformation(state.previousDraft,$('intent-input').value,state.information).filter(e=>e.confirmed);state.previousDraft=$('intent-input').value;
-  state.revision++;state.quick=null;state.uncertainty=null;$('quick-preview').hidden=true;state.suppressed=null;stop();closeIntentPopover();if(state.proposal&&state.proposal.baseVersion===undefined){$('accept-button').disabled=true;$('proposal-label').textContent='Earlier page · explore again to use the latest intent';}
+  state.revision++;state.uncertainty=null;$('quick-preview').hidden=true;state.suppressed=null;stop();closeIntentPopover();if(state.proposal&&state.proposal.baseVersion===undefined){$('accept-button').disabled=true;$('proposal-label').textContent='Earlier page · explore again to use the latest intent';}
   const hasText=!!$('intent-input').value.trim();if(!hasText)state.answers=[];document.body.classList.toggle('has-intent',hasText);$('typing-assistance').hidden=!hasText;
   $('build-page').disabled=!hasText;
   sizeComposer();
-  refreshIntent();renderUncertainty();
+  renderUncertainty();
   if(!hasText){$('quick-preview').hidden=true;updateClarification(null);return;}
-  if(!state.live)preview('preview');else{status('Draft changed. Luna preview follows after a pause.');state.timer=setTimeout(()=>preview('preview'),1100);}
+  if(!state.live)preview();else{status('Draft changed. Luna preview follows after a pause.');state.timer=setTimeout(()=>preview(),1100);}
 }
 
 function snapshot(label){state.history.unshift({label,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),title:$('document-title').value,text:$('document-input').value,component:structuredClone(state.component),blocks:structuredClone(state.blocks)});state.history=state.history.slice(0,8);$('history-count').textContent=state.history.length;}
 function renderHistory(){const target=$('history-list');target.replaceChildren();if(!state.history.length)target.append(node('p','status-line','Accepted changes will appear here.'));state.history.forEach((v,i)=>{const row=node('div','history-row');row.append(node('span','',`${v.label} · ${v.time}`));const b=node('button','','Restore');b.onclick=()=>{const chosen=structuredClone(v);timeline.save(capturePage());snapshot('Before restore');$('document-title').value=chosen.title;$('document-input').value=chosen.text;state.component=chosen.component;state.blocks=chosen.blocks;state.pageVersion++;state.proposal=null;renderProposal();renderActive();renderBlocks();renderHistory();timeline.append(capturePage());renderPageNavigation();status('Previous page restored. The page you left is in History.');};row.append(b);target.append(row);});}
 function renderBlocks(){const target=$('accepted-blocks');target.replaceChildren();state.blocks.forEach((block,i)=>{const section=node('section','visual-block');const heading=node('div','block-title');heading.append(node('h3','',block.title));const b=node('button','quiet-button','Remove');b.onclick=()=>{snapshot('Before removing a block');state.blocks.splice(i,1);renderBlocks();};heading.append(b);section.append(heading);renderComponent(section,block);target.append(section);});}
 $('intent-input').oninput=()=>{if(!state.composing)changed();};$('intent-input').addEventListener('compositionstart',()=>{state.composing=true;stop();});$('intent-input').addEventListener('compositionend',()=>{state.composing=false;changed();});
-$('audience-input').oninput=e=>{state.audience=e.target.value;changed();};document.querySelectorAll('[data-audience]').forEach(b=>b.onclick=()=>{state.audience=b.dataset.audience;$('audience-input').value=state.audience;changed();});
-document.querySelectorAll('[data-example]').forEach(b=>b.onclick=()=>{$('intent-input').value=EXAMPLES[b.dataset.example];state.audience='';$('audience-input').value='';state.format='Auto';changed();});
-$('refresh-button').onclick=()=>{stop();preview();};$('cancel-button').onclick=()=>{stop();status('Preview paused. Keep editing, or refresh when you are ready.');$('input-state').textContent='Preview paused';};
+$('cancel-button').onclick=()=>{stop();status('Preview paused. Keep editing to resume.');$('input-state').textContent='Preview paused';};
 $('accept-button').onclick=()=>{const p=state.proposal;if(!p||(p.baseVersion!==undefined?p.baseVersion!==state.pageVersion:p.revision!==state.revision))return;if(p.selection&&$('document-input').value.slice(p.selection.start,p.selection.end)!==p.selection.text){status('The selected text changed. Select it again for a fresh suggestion.',true);return;}timeline.save(capturePage());snapshot(state.component?'Before replacing the page':'Before keeping the page');if(p.selection)state.blocks.push(structuredClone(p));else{state.component=structuredClone(p);$('document-title').value=p.title;}state.proposal=null;state.pageVersion++;renderActive();renderBlocks();renderProposal();timeline.append(capturePage());renderPageNavigation();$('document-state').textContent='Kept in this tab · export to save';status('Page kept. Edit it directly, or restore the previous version in History.');};
-$('dismiss-button').onclick=()=>{state.proposal=null;renderProposal();};$('new-suggestion').onclick=()=>$('intent-input').focus();
+$('dismiss-button').onclick=()=>{state.proposal=null;renderProposal();};
 $('document-input').addEventListener('select',()=>{const f=$('document-input');const text=f.value.slice(f.selectionStart,f.selectionEnd).trim();state.selection=text?{start:f.selectionStart,end:f.selectionEnd,text:f.value.slice(f.selectionStart,f.selectionEnd)}:null;$('selection-tools').hidden=!text;$('selection-label').textContent=text?`Selected: ${text.slice(0,35)}${text.length>35?'…':''}`:'Selected text';});
 async function fromSelection(kind){if(!state.selection)return;stop();const selection={...state.selection};if(!state.live){const v=demoPreview(selection.text,state.audience,kind==='diagram'?'Diagram':'Outline');v.title=kind==='diagram'?'Explore the selected idea':'A closer look';setProposal(v,state.revision,'Demo',selection);status('Sample selection response. Connect Luna for an explanation of arbitrary text.');}else{const revision=state.revision;try{const data=await callPreview({text:`${kind==='diagram'?'Make a diagram about':'Explain'} this selected text: ${selection.text}`,audience:state.audience,format:kind==='diagram'?'Diagram':'Outline'},new AbortController().signal);setProposal(data.preview,revision,'Luna',selection);}catch(e){status(e.message,true);}}}
 $('diagram-selection').onclick=()=>fromSelection('diagram');$('explain-selection').onclick=()=>fromSelection('outline');
@@ -372,9 +356,8 @@ $('disconnect-button').onclick=()=>{state.connectionRevision++;stop();composerEx
 $('active-component').addEventListener('input',event=>{if(event.target.closest('.page-assistant'))return;state.pageVersion++;if(state.proposal?.baseVersion!==undefined)renderProposal();});
 $('document-title').addEventListener('input',event=>{state.pageVersion++;event.target.style.height='0';event.target.style.height=event.target.scrollHeight+'px';});
 $('document-input').addEventListener('input',()=>state.pageVersion++);
-document.addEventListener('prototype:render-blocks',()=>{renderBlocks();renderProposal();});
-composerExperience=setupComposerExperience({state,changed,request:callPreview,snapshot,renderActive,setIntent(value){state.intentOverride=value.slice(0,500);changed();if(state.live&&$('intent-input').value.trim()){stop();preview('preview');}},closeDetail:closeIntentPopover,openDetail(entry,origin='click',anchor=null){if(!entry)return;closeIntentPopover();updateClarification(entry);openIntentPopover(origin,anchor);}});
+composerExperience=setupComposerExperience({state,changed,request:callPreview,setIntent(value){state.intentOverride=value.slice(0,500);changed();if(state.live&&$('intent-input').value.trim()){stop();preview();}},closeDetail:closeIntentPopover,openDetail(entry,origin='click',anchor=null){if(!entry)return;closeIntentPopover();updateClarification(entry);openIntentPopover(origin,anchor);}});
 setupPageAssistant({state,request:callPreview,commit(apply){timeline.save(capturePage());snapshot('Before inline change');apply();state.pageVersion++;renderActive();timeline.append(capturePage());renderPageNavigation();}});
 workspace=setupWorkspace();$('page-back').onclick=()=>navigatePage(-1);$('page-forward').onclick=()=>navigatePage(1);
-window.addEventListener('pagehide',()=>{stop();state.pageController?.abort();state.key='';});refreshIntent();changed();
+window.addEventListener('pagehide',()=>{stop();state.pageController?.abort();state.key='';});changed();
 fetch('/api/config').then(r=>r.json()).then(config=>{if(!config.serverKey)return;state.serverKey=true;state.live=true;document.body.classList.add('live');$('mode-label').textContent='OpenAI configured';$('typing-connection').firstChild.textContent='OpenAI';$('disconnect-button').textContent='Pause live previews';changed();}).catch(()=>{});

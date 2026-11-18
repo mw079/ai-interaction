@@ -82,7 +82,7 @@ Local template QA: http://127.0.0.1:4317/__dev/pickers (development fixtures, av
 
 ## Unified composer — current local experience
 
-There is one interface and no Design selector. The five experimental modes have been combined; `prototypes.js` and its catalog are retained as historical experiments, not loaded by the app.
+There is one interface and no Design selector. The unified composer combines the five design experiments. The original implementations are available in Git history.
 
 - A genuinely useful optional question sits above the field; open it for choices or custom entry.
 - A short live answer sits below the field.
@@ -92,7 +92,7 @@ There is one interface and no Design selector. The five experimental modes have 
 
 Optional controls are disclosed on demand, with click/keyboard alternatives to hover. Routine model attribution and token/timing diagnostics stay off the writing surface. The initial state is an empty field.
 
-Luna supplies automatic draft help and scoped selection help. Send requests Terra. Existing page editing, Read/Explore, bounded inline suggestions, review and History remain available once a page exists. The live outline is deferred rather than adding another permanent preview.
+Luna supplies automatic draft help and scoped selection help. Send requests Terra. Page editing, inline suggestions, Apply and Reject, and History are available once a page exists.
 
 Explicit choices are captured before clearing the composer and forwarded as background context. Unanchored clarifications can be answered without inserting a question/answer transcript; their choices remain editable in the intent card. Context stays valid JSON within the size limit. Preferences and pages remain tab-local; export before reloading.
 

@@ -1,10 +1,10 @@
 import {slideRecipe} from './component-catalog.js';
 import {positionPopover} from './popover.js';
-import {canAcceptCompletion,currentTarget} from './prototype-model.js';
+import {canAcceptCompletion} from './model.js';
 const $=id=>document.getElementById(id);
 const make=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
-export function setupComposerExperience({state,changed,request,snapshot,renderActive,openDetail,closeDetail,setIntent}){
- let current='unified',completion='',helpController=null,editTimer=null,selectionTimer=null,editVersion=0,selectionVersion=0,pending=null,lastSelection='',lastField=null,summary='',question=null,summaryTimer=null,summaryPinned=false;
+export function setupComposerExperience({state,changed,request,openDetail,closeDetail,setIntent}){
+ let completion='',helpController=null,selectionTimer=null,selectionVersion=0,lastSelection='',summary='',question=null,summaryTimer=null,summaryPinned=false;
  const input=$('intent-input'),composer=document.querySelector('.composer'),trigger=$('clarify-phrase');
  const questionRow=make('div','live-question');questionRow.id='live-question';questionRow.hidden=true;
  const questionButton=make('button','live-question-button');questionButton.type='button';questionButton.setAttribute('aria-haspopup','dialog');questionRow.append(questionButton);composer.before(questionRow);
@@ -40,16 +40,8 @@ export function setupComposerExperience({state,changed,request,snapshot,renderAc
  const ghostText=make('span','completion-text');const accept=make('button','completion-accept','Tab ↹');accept.type='button';accept.setAttribute('aria-label','Accept suggested sentence');ghost.append(accept);document.querySelector('.composer-actions').prepend(ghost);
  const help=make('section','local-assistance');help.id='local-assistance';help.hidden=true;help.setAttribute('aria-label','Help with selected text');
  const helpHead=make('div','local-help-heading');const helpLabel=make('span','','Selected text');const dismiss=make('button','','Close');dismiss.type='button';dismiss.setAttribute('aria-label','Close local help');helpHead.append(helpLabel,dismiss);
- const helpText=make('p');helpText.setAttribute('role','status');const proposed=make('p','local-replacement');proposed.hidden=true;
- const apply=make('button','primary-button','Apply this change');apply.type='button';apply.hidden=true;help.append(helpHead,helpText,proposed,apply);document.body.append(help);
- const viewBar=make('div','page-view-tools');viewBar.hidden=true;
- const read=make('button','','Read');const explore=make('button','','Explore');read.type=explore.type='button';read.setAttribute('aria-pressed','false');explore.setAttribute('aria-pressed','true');
- const readOnlyState=new Map();
- function setReading(on){document.body.classList.toggle('page-reading',on);for(const field of document.querySelectorAll('#active-component textarea,#active-component input')){if(on){if(!readOnlyState.has(field))readOnlyState.set(field,field.readOnly);field.readOnly=true;}else if(readOnlyState.has(field)){field.readOnly=readOnlyState.get(field);readOnlyState.delete(field);}}}
- read.onclick=()=>{setReading(true);read.setAttribute('aria-pressed','true');explore.setAttribute('aria-pressed','false');};explore.onclick=()=>{setReading(false);read.setAttribute('aria-pressed','false');explore.setAttribute('aria-pressed','true');};
- const undo=make('button','','Undo latest page change');undo.type='button';undo.onclick=()=>{const previous=state.history[0];if(!previous)return;const copy=structuredClone(previous);snapshot('Before undo');$('document-title').value=copy.title;$('document-input').value=copy.text;state.component=copy.component;state.blocks=copy.blocks;state.proposal=null;state.pageVersion++;renderActive();$('proposal').hidden=true;document.dispatchEvent(new CustomEvent('prototype:render-blocks'));};
- viewBar.append(read,explore,undo);document.querySelector('.document-toolbar').after(viewBar);
- function stopHelp(){clearTimeout(editTimer);clearTimeout(selectionTimer);helpController?.abort();helpController=null;editVersion++;selectionVersion++;pending=null;lastField=null;lastSelection='';help.hidden=true;document.body.classList.remove('has-local-help');apply.hidden=true;proposed.hidden=true;}
+ const helpText=make('p');helpText.setAttribute('role','status');help.append(helpHead,helpText);document.body.append(help);
+ function stopHelp(){clearTimeout(selectionTimer);helpController?.abort();helpController=null;selectionVersion++;lastSelection='';help.hidden=true;document.body.classList.remove('has-local-help');}
  dismiss.onclick=stopHelp;document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!help.hidden)stopHelp();});
  function render(){
   document.body.dataset.experience='unified';
@@ -63,7 +55,6 @@ export function setupComposerExperience({state,changed,request,snapshot,renderAc
   $('refine-label').textContent=summary;trigger.setAttribute('aria-label','Review intent: '+summary);
   questionRow.hidden=!question;questionButton.disabled=!!question?.streaming;const slideLabel=question?.slideOptions ? slideRecipe(state.slideChoice)?.label : '';
   questionButton.textContent=slideLabel||question?.question||'';questionButton.setAttribute('aria-label',(question?.slideOptions?'Slide format: ':question?.questionKind==='explore'?'Explore further: ':'Clarifying question: ')+(slideLabel||question?.question||''));questionButton.setAttribute('aria-expanded',String(!questionRow.hidden&&!$('intent-popover').hidden&&state.openClarification?.question===question?.question));questionButton.setAttribute('aria-controls','intent-popover');
-  viewBar.hidden=!state.component;undo.disabled=!state.history.length;
  }
  document.addEventListener('focusin',render);document.addEventListener('focusout',()=>setTimeout(()=>{if(!composer.contains(document.activeElement)&&!summaryCard.contains(document.activeElement)&&!$('intent-popover').contains(document.activeElement))closeSummary();render();},0));input.addEventListener('keyup',render);input.addEventListener('click',render);input.addEventListener('select',render);input.addEventListener('scroll',render);input.addEventListener('compositionstart',render);input.addEventListener('compositionend',render);
  new MutationObserver(()=>{if(!$('intent-popover').hidden)closeSummary();render();}).observe($('intent-popover'),{attributes:true,attributeFilter:['hidden']});
@@ -71,16 +62,14 @@ export function setupComposerExperience({state,changed,request,snapshot,renderAc
  accept.onclick=()=>{const input=$('intent-input');input.setSelectionRange(input.value.length,input.value.length);acceptSentence();};
  $('intent-input').addEventListener('keydown',event=>{const input=event.currentTarget;if(event.key==='Escape'){completion='';render();}if(event.key==='Tab'&&!ghost.hidden&&canAcceptCompletion({text:input.value,start:input.selectionStart,end:input.selectionEnd,completion,composing:state.composing||event.isComposing,modified:event.shiftKey||event.metaKey||event.ctrlKey||event.altKey})){event.preventDefault();acceptSentence();}});
  async function explainSelected(text){
-  if(!state.live||!text||text===lastSelection)return;helpController?.abort();const controller=helpController=new AbortController(),version=++selectionVersion;lastSelection=text;pending=null;help.hidden=false;document.body.classList.add('has-local-help');helpLabel.textContent='About “'+text.slice(0,65)+'”';helpText.textContent='…';apply.hidden=true;proposed.hidden=true;
-  try{const result=await request({text,audience:state.audience,format:'Auto',phase:'selection'},controller.signal);if(version!==selectionVersion||controller.signal.aborted||current!=='unified')return;helpText.textContent=result.preview.body.join('\n\n');}catch(error){if(error.name!=='AbortError'&&version===selectionVersion)helpText.textContent=error.message;}
+  if(!state.live||!text||text===lastSelection)return;helpController?.abort();const controller=helpController=new AbortController(),version=++selectionVersion;lastSelection=text;help.hidden=false;document.body.classList.add('has-local-help');helpLabel.textContent='About “'+text.slice(0,65)+'”';helpText.textContent='…';
+  try{const result=await request({text,audience:state.audience,format:'Auto',phase:'selection'},controller.signal);if(version!==selectionVersion||controller.signal.aborted)return;helpText.textContent=result.preview.body.join('\n\n');}catch(error){if(error.name!=='AbortError'&&version===selectionVersion)helpText.textContent=error.message;}
  }
- function inspectSelection(){if(current!=='unified')return;const active=document.activeElement;let text='';if(active instanceof HTMLTextAreaElement||active instanceof HTMLInputElement){if(!active.closest('.intent-panel')||active.type==='password')return;text=active.value.slice(active.selectionStart,active.selectionEnd).trim();}else{const selection=window.getSelection();const parent=selection?.anchorNode?.parentElement;if(parent?.closest('.intent-panel'))text=selection.toString().trim();}
-  clearTimeout(selectionTimer);if(text.length<2||text.length>1000){if(!pending&&!help.contains(document.activeElement)&&!help.hidden){stopHelp();render();}return;}selectionTimer=setTimeout(()=>explainSelected(text),450);
+ function inspectSelection(){const active=document.activeElement;let text='';if(active instanceof HTMLTextAreaElement||active instanceof HTMLInputElement){if(!active.closest('.intent-panel')||active.type==='password')return;text=active.value.slice(active.selectionStart,active.selectionEnd).trim();}else{const selection=window.getSelection();const parent=selection?.anchorNode?.parentElement;if(parent?.closest('.intent-panel'))text=selection.toString().trim();}
+  clearTimeout(selectionTimer);if(text.length<2||text.length>1000){if(!help.contains(document.activeElement)&&!help.hidden){stopHelp();render();}return;}selectionTimer=setTimeout(()=>explainSelected(text),450);
  }
- document.addEventListener('selectionchange',inspectSelection);$('intent-input').addEventListener('select',inspectSelection);document.querySelector('.paper').addEventListener('select',inspectSelection,true);
+ document.addEventListener('selectionchange',inspectSelection);$('intent-input').addEventListener('select',inspectSelection);
 
- apply.onclick=()=>{const patch=pending;if(!patch||!currentTarget({requestVersion:patch.version,currentVersion:state.pageVersion,before:patch.before,current:patch.target.value,connected:patch.target.isConnected}))return;
-  snapshot('Before inline suggestion');patch.target.value=patch.replacement;pending=null;const mode=current;current='applying';patch.target.dispatchEvent(new Event('input',{bubbles:true}));current=mode;stopHelp();render();};
  window.addEventListener('pagehide',stopHelp);
- return {interaction:()=> 'unified',onMirrorRendered:render,onStream(partial){if(partial.reset)question=null;else if(typeof partial.question==='string')question=partial.question?{question:partial.question,options:[],phrase:null,streaming:true}:null;render();},onPreview(data){completion=data.completion||'';summary=state.intentOverride||data.interpretation||'';question=state.answers.some(e=>e.question===state.uncertainty?.question)?null:state.uncertainty;render();},onDraftChanged(){completion='';summary=state.intentOverride||'';question=null;stopHelp();closeSummary();render();},onPageRendered(){stopHelp();render();queueMicrotask(()=>{if(document.body.classList.contains('page-reading'))setReading(true);});},stop(){stopHelp();completion='';summary='';question=null;closeSummary();render();}};
+ return {onMirrorRendered:render,onStream(partial){if(partial.reset)question=null;else if(typeof partial.question==='string')question=partial.question?{question:partial.question,options:[],phrase:null,streaming:true}:null;render();},onPreview(data){completion=data.completion||'';summary=state.intentOverride||data.interpretation||'';question=state.answers.some(e=>e.question===state.uncertainty?.question)?null:state.uncertainty;render();},onDraftChanged(){completion='';summary=state.intentOverride||'';question=null;stopHelp();closeSummary();render();},onPageRendered(){stopHelp();render();},stop(){stopHelp();completion='';summary='';question=null;closeSummary();render();}};
 }

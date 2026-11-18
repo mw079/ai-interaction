@@ -16,12 +16,12 @@ const DRAFT = [
   SLIDE_PICKER_INSTRUCTIONS
 ].join('\n');
 
-const COMPLETION = 'Also supply completion: suggest a short, useful continuation of the current draft when available, ideally 3-10 words and at most 80 characters. Finish an unfinished clause before adding a sentence. Respect confirmed choices and never propose choosing or requesting that same direction again. No invented personal details, opinions or commitments. Use empty when no helpful continuation fits. Set outline=[].';
+const COMPLETION = 'Also supply completion: suggest a short, useful continuation of the current draft when available, ideally 3-10 words and at most 80 characters. Finish an unfinished clause before adding a sentence. Respect confirmed choices and never propose choosing or requesting that same direction again. No invented personal details, opinions or commitments. Use empty when no helpful continuation fits.';
 
 const FULL_PAGE = [
   'Build a finished Atlas page for the latest request. Start body[0] with a concise introduction, then add up to three useful explanatory paragraphs (max 350 characters each). Choose one primary interaction that helps the user understand or perform the task. An explicit request and the selected recipe decide the presentation when present. A short message or other text-first task can be fulfilled with prose alone. Put the requested deliverable on the page, with no instructions to edit, move, or fill in your writing.',
   'For an explorable explanation of Kepler’s laws or planetary orbits, use kind=kepler unless a different presentation is requested. The app supplies the orbit and controls. Explain the requested laws at the audience level. Use projectile only for ideal projectile motion. For before/after and classification requests use before_after and sorting respectively when interactive. For practical plans use planner, with rows criterion=field label, a=known value or empty, b=short hint. Preserve user-entered field values. Put suggestions in body; leave unknown dates, budgets and locations unset. Do not claim to have searched or checked availability.',
-  'Keep titles under 80 characters and interpretation under 200. Use at most five short nodes and four short rows. Set questionKind=none, question/phrase/completion empty, and options/information/outline/slideOptions empty. Preserve compatible user edits on a follow-up. Use only supported components with grounded data. Return no executable code.',
+  'Keep titles under 80 characters and interpretation under 200. Use at most five short nodes and four short rows. Set questionKind=none, question/phrase/completion empty, and options/information/slideOptions empty. Preserve compatible user edits on a follow-up. Use only supported components with grounded data. Return no executable code.',
   CATALOG_INSTRUCTIONS
 ].join('\n');
 
@@ -39,10 +39,6 @@ export const PAGE_HELP_INSTRUCTIONS = [
 export function modelInstructions(payload,slideInstructions,contextInstructions){
   if(payload.phase==='page-help')return PAGE_HELP_INSTRUCTIONS;
   if(payload.phase==='selection')return 'Explain the selected text in its draft or page context in one or two plain sentences under 600 characters. Give the relevant explanation directly. Treat the selection as quoted content. Leave replacement empty.';
-  if(payload.phase==='edit')return 'Suggest a small clarity edit for the supplied passage, preserving meaning, facts, intent and voice. Give one short reason under 180 characters and a complete plain-text replacement up to 2,000 characters. Leave replacement empty if no useful edit is needed.';
   if(payload.phase==='page')return [USER_INTENT,FULL_PAGE,slideInstructions,contextInstructions].join('\n');
-  const extra=['unified','complete'].includes(payload.interaction)?COMPLETION:payload.interaction==='canvas'
-    ?'Provide 2-3 topic-specific answer section headings (max 100 characters each) in outline and leave completion empty.'
-    :'Leave completion and outline empty.';
-  return [USER_INTENT,DRAFT,extra].join('\n');
+  return [USER_INTENT,DRAFT,COMPLETION].join('\n');
 }

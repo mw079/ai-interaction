@@ -1,11 +1,9 @@
 import {validComponents,validSlideOptions} from './component-catalog.js';
 import {validInformation} from './intent.js';
 export const FORMATS = ['Auto','Interactive page', 'Diagram', 'Outline'];
-export const EXAMPLES = {
-  physics: 'Help me understand projectile motion.',
-  presentation: 'Help me prepare a presentation about our release process.',
-  comparison: 'Help me compare two approaches for our project.'
-};
+export function canAcceptCompletion({text,start,end,completion,composing=false,modified=false}){
+ return !composing&&!modified&&typeof completion==='string'&&!!completion.trim()&&completion.length<=180&&start===end&&end===text.length&&text.length+completion.length+1<=4000;
+}
 export function clarificationFor(text) {
   if(text.trim().length<8)return null;
   const rules=[
@@ -77,7 +75,7 @@ export function demoPreview(text, audience = '', format = 'Interactive page') {
 }
 export function validPreview(v) {
   const short = (s, max) => typeof s === 'string' && s.length <= max;
-  return !!v && (v.slideOptions===undefined||validSlideOptions(v.slideOptions)) && (v.components===undefined||validComponents(v.components)) && (v.questionKind===undefined||['clarify','explore','none'].includes(v.questionKind)) && (v.completion===undefined||short(v.completion,180)) && (v.replacement===undefined||short(v.replacement,2000)) && (v.outline===undefined||(Array.isArray(v.outline)&&v.outline.length<=3&&v.outline.every(x=>short(x,100)))) && (v.information===undefined||validInformation(v.information)) && ['projectile','outline','diagram','comparison','planner','kepler'].includes(v.kind)
+  return !!v && (v.slideOptions===undefined||validSlideOptions(v.slideOptions)) && (v.components===undefined||validComponents(v.components)) && (v.questionKind===undefined||['clarify','explore','none'].includes(v.questionKind)) && (v.completion===undefined||short(v.completion,180)) && (v.replacement===undefined||short(v.replacement,2000)) && (v.information===undefined||validInformation(v.information)) && ['projectile','outline','diagram','comparison','planner','kepler'].includes(v.kind)
     && (v.phrase===undefined||short(v.phrase,120)) && short(v.title,160) && short(v.interpretation,500) && short(v.audience,120) && short(v.question,200)
     && Array.isArray(v.options) && v.options.length <= 3 && v.options.every(s=>short(s,80))
     && Array.isArray(v.body) && v.body.length <= 6 && v.body.every(s=>short(s,700))
