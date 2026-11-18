@@ -1,4 +1,6 @@
-export const FORMATS = ['Interactive page', 'Diagram', 'Outline'];
+import {validComponents,validSlideOptions} from './component-catalog.js';
+import {validInformation} from './intent.js';
+export const FORMATS = ['Auto','Interactive page', 'Diagram', 'Outline'];
 export const EXAMPLES = {
   physics: 'Help me understand projectile motion.',
   presentation: 'Help me prepare a presentation about our release process.',
@@ -13,6 +15,28 @@ export function clarificationFor(text) {
   ];
   for(const r of rules){const m=r.regex.exec(text);if(!m)continue;if(!r.replace&&/\b(?:simple intuition|with examples|mathematics|purchase price|running costs|valuation)\b/i.test(text))continue;return {start:m.index,end:m.index+m[0].length,phrase:m[0],question:r.question,options:r.options,replace:r.replace};}
   return null;
+}
+// Live ambiguity comes from the response for the complete current draft, not keyword rules.
+export function liveClarificationFor(text, data, entries=[]) {
+  const priority=entries.find(e=>e.type==='audience'&&!e.confirmed&&e.question)||entries.find(e=>e.type==='prior_knowledge'&&!e.confirmed&&e.question);
+  if(!data?.question?.trim())return priority||null;
+  // Missing learning context takes priority over an optional exploration.
+  if(data.questionKind==='explore')return priority||{question:data.question,questionKind:'explore',options:data.options||[],phrase:null,global:true,replace:false};
+  const matching=entries.find(e=>e.question===data.question);
+  if(matching)return matching.confirmed?null:{...matching,questionKind:'clarify'};
+  const phrase=typeof data.phrase==='string'?data.phrase.trim():'';
+  const start=phrase?text.indexOf(phrase):-1;
+  return {question:data.question,questionKind:'clarify',options:data.options||[],phrase:start>=0?phrase:null,
+    ...(start>=0?{start,end:start+phrase.length}:{}),replace:false};
+}
+export function compactLiveAnswer(data){
+  const text=(data.body?.join(' ')||'').replace(/\s+/g,' ').trim();
+  const first=text.match(/^.*?[.!?](?:\s|$)/)?.[0]?.trim();
+  if(first&&first.length<=160)return first;
+  return text.length<=160?text:text.slice(0,157).replace(/\s+\S*$/,'')+'…';
+}
+export function isCurrentPreview(requestRevision, currentRevision, signal) {
+  return requestRevision===currentRevision&&!signal?.aborted;
 }
 export function quickAnswer(text) {
   if(/projectile|trajectory|gravity/i.test(text))return 'In an ideal projectile, horizontal speed stays constant while gravity changes vertical speed. Together, they produce a curved path.';
@@ -45,7 +69,7 @@ export function demoPreview(text, audience = '', format = 'Interactive page') {
   return {
     kind, title: topic,
     interpretation: physics ? 'Explore how launch speed, angle and gravity shape a trajectory.' : compare ? 'Compare two approaches using criteria you can edit.' : presentation ? 'Build a presentation you can arrange and refine.' : 'Explore an idea through a small, editable concept map.',
-    audience, question: '', options: [],
+    audience, question: '', phrase:'', options: [],
     body: physics ? ['Horizontal motion stays uniform while gravity changes vertical velocity. Try changing one variable at a time.', 'This ideal model ignores air resistance and assumes launch and landing at the same height.'] : presentation ? ['Why this matters — define the purpose of the release process.', 'How work moves — describe the stages using your own team’s practices.', 'Who owns what — add the people responsible at each stage.', 'What happens next — agree on the next useful action.'] : ['Replace these starter labels with your own ideas.', 'Choose a part to explore it in more detail.'],
     nodes: physics ? ['Launch', 'Highest point', 'Landing'] : presentation ? ['Plan', 'Review', 'Release'] : ['The idea', 'What changes', 'What it means'],
     rows: [{criterion:'What matters most',a:'Add your criteria',b:'Add your criteria'},{criterion:'Trade-offs',a:'What do you gain?',b:'What do you give up?'},{criterion:'Next step',a:'What would you test?',b:'What would you test?'}]
@@ -53,8 +77,8 @@ export function demoPreview(text, audience = '', format = 'Interactive page') {
 }
 export function validPreview(v) {
   const short = (s, max) => typeof s === 'string' && s.length <= max;
-  return !!v && ['projectile','outline','diagram','comparison','planner'].includes(v.kind)
-    && short(v.title,160) && short(v.interpretation,500) && short(v.audience,120) && short(v.question,200)
+  return !!v && (v.slideOptions===undefined||validSlideOptions(v.slideOptions)) && (v.components===undefined||validComponents(v.components)) && (v.questionKind===undefined||['clarify','explore','none'].includes(v.questionKind)) && (v.completion===undefined||short(v.completion,180)) && (v.replacement===undefined||short(v.replacement,2000)) && (v.outline===undefined||(Array.isArray(v.outline)&&v.outline.length<=3&&v.outline.every(x=>short(x,100)))) && (v.information===undefined||validInformation(v.information)) && ['projectile','outline','diagram','comparison','planner','kepler'].includes(v.kind)
+    && (v.phrase===undefined||short(v.phrase,120)) && short(v.title,160) && short(v.interpretation,500) && short(v.audience,120) && short(v.question,200)
     && Array.isArray(v.options) && v.options.length <= 3 && v.options.every(s=>short(s,80))
     && Array.isArray(v.body) && v.body.length <= 6 && v.body.every(s=>short(s,700))
     && Array.isArray(v.nodes) && v.nodes.length <= 6 && v.nodes.every(s=>short(s,80))
