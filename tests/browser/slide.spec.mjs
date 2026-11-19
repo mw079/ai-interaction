@@ -111,6 +111,10 @@ test('a newer slide remains in History when applying a change from Back',async({
   await expect(button(page,'Next page')).toBeDisabled();
   await expect(title(page)).toHaveValue(evaporationTitle);
   await page.getByRole('button',{name:/^History /}).click();
+  // History opens under its button, inside the window, and says it is open.
+  await expect(page.locator('#history-panel')).toBeInViewport();
+  await expect(page.locator('#history-button')).toHaveAttribute('aria-expanded','true');
+  await expect(page.locator('#close-history')).toBeFocused();
   const entry=page.locator('.history-row').filter({hasText:triangleTitle});
   await expect(entry).toContainText('Later version');
   await entry.getByRole('button',{name:'Restore'}).click();
