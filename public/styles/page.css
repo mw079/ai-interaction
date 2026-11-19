@@ -265,3 +265,31 @@ body.intent-first[data-experience=unified].page-open .intent-panel::before{backg
    for a draft like "rere"), it is not drawn at all instead of appearing as an empty bar. */
 #typing-assistance:not(:has(> :not([hidden]))){display:none!important}
 body.intent-first[data-experience=unified].page-open.composer-active main{padding-bottom:calc(var(--composer-height,64px) + 124px)}
+
+/* ── Split layout with a page open ─────────────────────────────────────────────────────────────
+   Page above, dock below, nothing overlapping. The window does not scroll: the page area fills the
+   space between the header and the dock and scrolls on its own, always ending with its full card
+   edge. The dock holds everything that belongs to typing (live question, field, live answer) in
+   normal flow under a hairline. Typing grows the dock and the page area shrinks by the same amount;
+   the page is never scaled, faded or covered. These rules replace the older floating dock. */
+body.intent-first[data-experience=unified].page-open{height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+body.intent-first[data-experience=unified].page-open>.site-header{flex:none;height:64px;width:100%;box-sizing:border-box}
+body.intent-first[data-experience=unified].page-open main,
+body.intent-first[data-experience=unified].page-open.composer-active main{flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:none;margin:0;padding:0;box-sizing:border-box}
+body.intent-first[data-experience=unified].page-open .workspace{flex:1;min-height:0;display:flex;flex-direction:column;align-items:stretch;width:100%;gap:0}
+body.intent-first[data-experience=unified].page-open .document-panel{order:1;flex:1;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:0 14px 20px;box-sizing:border-box}
+body.intent-first[data-experience=unified].page-open .document-panel>*{width:100%;max-width:1152px;margin-left:auto;margin-right:auto;box-sizing:border-box}
+body.intent-first[data-experience=unified].page-open .document-toolbar{position:sticky;top:0;z-index:2;background:#f6f6f6}
+body.intent-first[data-experience=unified].page-open .atlas-stage{height:auto!important}
+body.intent-first[data-experience=unified].page-open .paper,
+body.intent-first[data-experience=unified].page-open.composer-active .paper{transform:none;max-height:none;overflow:visible}
+body.intent-first[data-experience=unified].page-open .intent-panel,
+body.intent-first[data-experience=unified].page-open.composer-active .intent-panel{order:2;flex:none;position:static;transform:none;inset:auto;width:100%;max-width:none;margin:0;padding:10px 12px max(12px,env(safe-area-inset-bottom));box-sizing:border-box;border-top:1px solid var(--line);background:#f6f6f6;display:flex;flex-direction:column}
+body.intent-first[data-experience=unified].page-open .intent-panel::before{display:none}
+body.intent-first[data-experience=unified].page-open .intent-panel>.live-question{position:static;inset:auto;order:0;max-height:none;margin:0 auto;padding:0 20px 8px}
+body.intent-first[data-experience=unified].page-open .intent-panel>*{width:100%;max-width:760px;margin-left:auto;margin-right:auto;box-sizing:border-box}
+/* The answer strip sits under the field and keeps its height while the dock is active, so an answer
+   arriving never moves the field or Send. */
+body.intent-first[data-experience=unified].page-open #typing-assistance{position:static;order:10;margin:6px auto 0;padding:0 20px;max-height:none;height:auto;overflow:visible}
+body.intent-first[data-experience=unified].page-open.composer-active #typing-assistance{display:block!important;min-height:44px;max-height:44px;overflow:auto}
+body.intent-first[data-experience=unified].page-open.composer-active #typing-assistance #quick-answer{margin:0}

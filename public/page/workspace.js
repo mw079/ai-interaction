@@ -3,7 +3,8 @@ export function setupWorkspace(){
  const stage=document.createElement('div');stage.className='atlas-stage';paper.before(stage);stage.append(paper);
  let hoverTimer;
  const composer=document.querySelector('.composer');new ResizeObserver(()=>document.body.style.setProperty('--composer-height',composer.offsetHeight+'px')).observe(composer);
- const size=()=>{if(!document.body.classList.contains('page-open'))return;stage.style.height=paper.offsetHeight*(document.body.classList.contains('composer-active')?.9:1)+'px';};
+ // The page area and the dock share the window (see the split layout in page.css); nothing is scaled.
+ const size=()=>{};
  function focus(on){clearTimeout(hoverTimer);document.body.classList.toggle('composer-active',on);size();}
  const isComposerControl=element=>panel.contains(element)||element?.closest('.intent-details,#intent-popover');
  panel.addEventListener('focusin',()=>focus(true));panel.addEventListener('pointerdown',()=>focus(true));panel.addEventListener('input',()=>focus(true));panel.addEventListener('keydown',()=>focus(true));

@@ -319,7 +319,10 @@ test('the live-help panel is not drawn while it has nothing to show',async({page
   await advancePreview(page);
   await answered;
   await page.clock.runFor(300);
-  await expect(page.locator('#typing-assistance')).toBeHidden();   // no answer: no empty bar above the composer
+  // No answer: nothing visible is drawn. The strip under the field stays reserved (so Send never
+  // moves) but is empty and has no card.
+  await expect(quickAnswer(page)).toBeHidden();
+  expect(await page.locator('#typing-assistance').evaluate(e=>{const s=getComputedStyle(e);return s.backgroundColor+' '+s.borderTopWidth+' '+e.innerText.trim();})).toBe('rgba(0, 0, 0, 0) 0px ');
   await draft(page).pressSequentially(' and how does evaporation work?');
   await advancePreview(page);
   await expect(quickAnswer(page)).toBeVisible();
@@ -337,7 +340,8 @@ test('with a page open, the live question sits above the composer and the answer
   await advancePreview(page);
   await expect(page.locator('#quick-answer')).toHaveText(japanAnswer);
   const question=page.getByRole('button',{name:'Clarifying question: '+japanQuestion});
-  await expect(question).toBeVisible();
+  await expect(question).toBeInViewport();
+  await expect(page.locator('#quick-answer')).toBeInViewport();
   const composer=await page.locator('.composer').boundingBox();
   expect((await page.locator('#quick-answer').boundingBox()).y).toBeGreaterThanOrEqual(composer.y+composer.height);
   expect((await question.boundingBox()).y+(await question.boundingBox()).height).toBeLessThanOrEqual(composer.y);
