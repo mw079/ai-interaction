@@ -104,8 +104,11 @@ test('an answer opening under the intro does not move the intro',async({page})=>
   await expect(page.locator('.atlas-layout:not(.atlas-prose)')).toHaveCount(1);   // a page with a visual column
   // Position within the page, so scrolling the window does not count as movement.
   const top=()=>field(page).evaluate(f=>f.getBoundingClientRect().top-f.closest('.atlas-layout').getBoundingClientRect().top);
-  await page.evaluate(()=>Promise.all(document.getAnimations().map(a=>a.finished)));   // the page reveal has settled
-  const before=await top();
+  // Wait until the page has settled (reveal animation, fonts, title fitting): two frames in a row agree.
+  await page.evaluate(()=>Promise.all(document.getAnimations().map(a=>a.finished)));
+  await page.evaluate(()=>document.fonts.ready);
+  let before=await top();
+  await expect.poll(async()=>{const now=await top();const same=Math.abs(now-before)<0.5;before=now;return same;}).toBe(true);
   await field(page).fill('Vaccines teach the immune system to recognise a germ. Why below boiling?');
   await review(page);
   await expect(page.getByRole('status',{name:'Answer'})).toHaveText(/^Surface molecules/);
