@@ -43,7 +43,14 @@ const PAGE_REWRITE_INSTRUCTIONS = [
   'Keep replacement under 2,000 characters, or 160 for target.id=title. Use answer only if the latest instruction also asks for a separate explanation, under 600 characters. Set components to []. The user will review the rewrite before it changes the page.'
 ].join('\n');
 
+const DEEPER_INSTRUCTIONS = [
+  'The reader is on an Atlas page (context.page) and may open follow-up questions about it. Answer each question in payload.followUps, in the same order, as one section.',
+  'Each answer is one or two plain sentences (max 300 characters) that go beyond what the page already shows. Do not restate the page, the question or the takeaways. Match the audience of the page.',
+  'Add at most one component to a section, only when seeing or doing something explains it better than a sentence. Keep it small: 2-4 items, one-sentence details. Use only supported, grounded data and lowercase-hyphen ids that differ from the page components. Otherwise leave components empty.'
+].join('\n');
+
 export function modelInstructions(payload,slideInstructions,contextInstructions){
+  if(payload.phase==='deeper')return [DEEPER_INSTRUCTIONS,CATALOG_INSTRUCTIONS].join('\n');
   if(payload.phase==='page-help')return payload.target?.mode==='rewrite'?PAGE_REWRITE_INSTRUCTIONS:PAGE_HELP_INSTRUCTIONS;
   if(payload.phase==='selection')return 'Explain the selected text in its draft or page context in one or two plain sentences under 600 characters. Give the relevant explanation directly. Treat the selection as quoted content. Leave replacement empty.';
   if(payload.phase==='page')return [USER_INTENT,FULL_PAGE,slideInstructions,contextInstructions].join('\n');

@@ -1,4 +1,4 @@
-import {COMPONENT_SCHEMA,validPageHelp,SLIDE_RECIPES,slideRecipe,matchesSlideRecipe} from './public/component-catalog.js';
+import {COMPONENT_SCHEMA,validPageHelp,validComponents,SLIDE_RECIPES,slideRecipe,matchesSlideRecipe} from './public/component-catalog.js';
 import {readSSE,partialLivePreview,partialPageAnswer} from './public/stream.js';
 import {FORMATS,validPreview,isIncompleteComparison,tidyPage} from './public/model.js';
 import {modelInstructions} from './prompts.mjs';
@@ -15,6 +15,7 @@ PREVIEW_SCHEMA.required.push('slideOptions');
 PREVIEW_SCHEMA.properties.followUps=array(string);PREVIEW_SCHEMA.required.push('followUps');
 // Put visible draft fields first so streaming delivers useful content before metadata.
 PREVIEW_SCHEMA.properties={body:PREVIEW_SCHEMA.properties.body,question:PREVIEW_SCHEMA.properties.question,phrase:PREVIEW_SCHEMA.properties.phrase,options:PREVIEW_SCHEMA.properties.options,...PREVIEW_SCHEMA.properties};
+export const DEEPER_SCHEMA={type:'object',additionalProperties:false,properties:{sections:{type:'array',items:{type:'object',additionalProperties:false,properties:{answer:string,components:{type:'array',items:COMPONENT_SCHEMA}},required:['answer','components']}}},required:['sections']};
 const SELECTION_SCHEMA={type:'object',additionalProperties:false,properties:{answer:string,replacement:string},required:['answer','replacement']};
 const json=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}});
 const eventStream=body=>new Response(body,{headers:{'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-store','X-Accel-Buffering':'no','X-Content-Type-Options':'nosniff'}});
@@ -33,7 +34,7 @@ export async function handleAPI(request,upstream=fetch,env={}){
     const reader=request.body?.getReader();if(!reader)return json({error:'Add a thought first.'},400);
     const chunks=[];let bytes=0;
     try{while(true){const {done,value}=await reader.read();if(done)break;bytes+=value.byteLength;if(bytes>40000){await reader.cancel();return json({error:'This preview is too long. Keep it under 4,000 characters.'},413);}chunks.push(value);}const data=new Uint8Array(bytes);let offset=0;for(const c of chunks){data.set(c,offset);offset+=c.length;}payload=JSON.parse(new TextDecoder().decode(data));}catch{return json({error:'The request was not valid JSON.'},400);}
-    if(!payload||(payload.stream!==undefined&&typeof payload.stream!=='boolean')||(payload.interaction!==undefined&&payload.interaction!=='unified')||(payload.context!==undefined&&(typeof payload.context!=='string'||payload.context.length>6000))||(payload.phase!==undefined&&!['preview','page','selection','page-help'].includes(payload.phase))||typeof payload.text!=='string'||!payload.text.trim()||payload.text.length>4000||typeof payload.audience!=='string'||payload.audience.length>120||!FORMATS.includes(payload.format))return json({error:'Use a shorter thought, audience, and supported view.'},400);
+    if(!payload||(payload.stream!==undefined&&typeof payload.stream!=='boolean')||(payload.interaction!==undefined&&payload.interaction!=='unified')||(payload.context!==undefined&&(typeof payload.context!=='string'||payload.context.length>6000))||(payload.phase!==undefined&&!['preview','page','selection','page-help','deeper'].includes(payload.phase))||typeof payload.text!=='string'||!payload.text.trim()||payload.text.length>4000||typeof payload.audience!=='string'||payload.audience.length>120||!FORMATS.includes(payload.format))return json({error:'Use a shorter thought, audience, and supported view.'},400);
   }
   if(payload?.sources!==undefined)return json({error:'File attachments are unsupported. Paste relevant text into your request.'},400);
   if(payload?.pageScope!==undefined && (payload.phase!=='page'||!payload.pageScope||
@@ -52,6 +53,8 @@ export async function handleAPI(request,upstream=fetch,env={}){
   const slideInstructions=recipe
     ? ' The user selected '+requestedSlide+'. Make it the primary presentation. '+(recipe.kind?'Use kind='+recipe.kind+'.':'Use kind=outline and include '+recipe.blocks.join(', ')+' in components.')+' This selection takes priority over default formats. Return slideOptions empty.'
     : ' Return slideOptions empty for a generated page.';
+  const deeper=payload?.phase==='deeper';
+  if(deeper&&(!Array.isArray(payload.followUps)||!payload.followUps.length||payload.followUps.length>3||!payload.followUps.every(q=>typeof q==='string'&&q.trim()&&q.length<=90)))return json({error:'Choose up to three short follow-up questions.'},400);
   const pageHelp=payload?.phase==='page-help';
   if(pageHelp&&(!payload.target||typeof payload.target.id!=='string'||payload.target.id.length>100||typeof payload.target.text!=='string'||payload.target.text.length>2500||(payload.target.quote!==undefined&&(typeof payload.target.quote!=='string'||payload.target.quote.length>600))||(payload.target.practice!==undefined&&(typeof payload.target.practice!=='string'||payload.target.practice.length>1500))||payload.text.length>1000))return json({error:'Choose a shorter passage and question.'},400);
   if(pageHelp&&!validPageActivity(payload.target))return json({error:'Choose a passage or describe a change.'},400);
@@ -64,14 +67,14 @@ export async function handleAPI(request,upstream=fetch,env={}){
     const check=path==='/api/check';
     const response=await upstream(check?'https://api.openai.com/v1/models/gpt-6-luna':'https://api.openai.com/v1/responses',{
       method:check?'GET':'POST',headers:{Authorization:authorization,'Content-Type':'application/json'},redirect:'error',signal,
-      ...(check?{}:{body:JSON.stringify({model,store:false,...(streaming?{stream:true}:{}),reasoning:{effort:page?'low':'none'},max_output_tokens:page?3400:pageHelp?2200:1300,
+      ...(check?{}:{body:JSON.stringify({model,store:false,...(streaming?{stream:true}:{}),reasoning:{effort:page?'low':'none'},max_output_tokens:page?3400:pageHelp?2200:deeper?2600:1300,
         instructions:modelInstructions(payload,slideInstructions,contextInstructions),
-        input:JSON.stringify(payload),text:{format:{type:'json_schema',name:pageHelp||selection?'local_assistance':'interactive_preview',strict:true,schema:pageHelp?PAGE_HELP_SCHEMA:selection?SELECTION_SCHEMA:PREVIEW_SCHEMA}}
+        input:JSON.stringify(payload),text:{format:{type:'json_schema',name:deeper?'go_deeper':pageHelp||selection?'local_assistance':'interactive_preview',strict:true,schema:deeper?DEEPER_SCHEMA:pageHelp?PAGE_HELP_SCHEMA:selection?SELECTION_SCHEMA:PREVIEW_SCHEMA}}
       })})
     });
     if(!response.ok){const messages={401:'OpenAI rejected this key. Check it and try again.',403:`This key cannot access ${model}.`,404:`${model} is not available for this key.`,429:'OpenAI quota or rate limit reached. Check API billing or try again later.'};return json({retryable:response.status>=500,error:messages[response.status]||'OpenAI could not complete the request. Your page is unchanged.'},[401,403,404,429].includes(response.status)?response.status:502);}
     if(check){const terra=await upstream('https://api.openai.com/v1/models/gpt-6.1-terra',{method:'GET',headers:{Authorization:authorization},redirect:'error',signal});if(!terra.ok)return json({error:'This key can access Luna, but GPT-6.1 Terra access could not be verified. Check model permissions and try again.'},terra.status===429?429:403);return json({connected:true,models:{preview:'gpt-6-luna',page:'gpt-6.1-terra'}});}
-    const resultOptions={model,start,selection,pageHelp,recipe,activity:payload?.target?.mode,tidy:payload?.phase==='page'&&!payload.pageScope};
+    const resultOptions={model,start,selection,pageHelp,recipe,activity:payload?.target?.mode,tidy:payload?.phase==='page'&&!payload.pageScope,deeper:deeper?payload.followUps.length:0};
     if(streaming)return liveStreamResponse(response,resultOptions,signal,()=>streamAbort.abort());
     return finishModelResponse(await response.json(),resultOptions);
   }catch(error){return json({retryable:!request.signal.aborted,error:error.name==='TimeoutError'||timeout.aborted?`${model} took too long. Try again.`:'Connection interrupted. Your page is unchanged; try again.'},504);}
@@ -86,10 +89,14 @@ function validPageActivity(target){
   return mode===undefined||mode==='question'||mode==='rewrite';
 }
 
-function finishModelResponse(data,{model,start,selection=false,pageHelp=false,recipe,activity,tidy=false}){
+function finishModelResponse(data,{model,start,selection=false,pageHelp=false,recipe,activity,tidy=false,deeper=0}){
 if(data.status!=='completed')return json({retryable:false,error:'The preview was incomplete. Shorten the request or try again.'},502);
     const content=(data.output||[]).filter(i=>i.type==='message').at(-1)?.content||[];if(content.some(c=>c.type==='refusal'))return json({error:'The model declined this request. Try a different topic.'},422);
     let preview;try{preview=JSON.parse(content.filter(c=>c.type==='output_text').map(c=>c.text).join(''));}catch{return json({retryable:false,error:'The model did not return a valid preview. Your page is unchanged.'},502);}
+    if(deeper){
+      if(!validDeeper(preview,deeper))return json({retryable:false,error:'The follow-up answers exceeded supported limits.'},502);
+      return json({preview:{kind:'outline',title:'Go deeper',interpretation:'',audience:'',question:'',phrase:'',options:[],body:[],nodes:[],rows:[],information:[],completion:'',components:[]},deeper:preview.sections,model,elapsedMs:Date.now()-start});
+    }
     if(pageHelp){
       if(!validPageHelp(preview))return json({retryable:false,error:'The proposed change exceeded supported limits. Your page is unchanged.'},502);
       const canPropose=activity!=='selection';
@@ -127,4 +134,11 @@ function liveStreamResponse(upstream,resultOptions,signal,abort){
   finally{if(!cancelled)controller.close();abort();}
  },cancel(){cancelled=true;abort();}});
  return eventStream(body);
+}
+
+// Go deeper: one short answer per follow-up question, each with at most one small component.
+export function validDeeper(value,count){
+  return !!value&&Array.isArray(value.sections)&&value.sections.length===count&&value.sections.every(section=>
+    section&&typeof section.answer==='string'&&section.answer.trim()&&section.answer.length<=420&&
+    Array.isArray(section.components)&&section.components.length<=1&&validComponents(section.components));
 }

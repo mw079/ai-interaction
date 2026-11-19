@@ -11,6 +11,9 @@ export const completedComparison='Explain the difference between evaporation and
 export const comparisonAnswer='Evaporation changes liquid to gas; sublimation changes solid directly to gas.';
 export const keplerAudienceDraft='Explain Kepler’s laws simply';
 export const keplerAudienceQuestion='Who is this explanation for?';
+export const vaccineTitle='How vaccines work';
+export const vaccineFollowUps=['Why do boosters fade?','Are side effects common?'];
+export const deeperAnswer=question=>'Short answer about '+question;
 export const japanCheckpoint='Plan a Japan trip';
 export const japanQuestion='Which part of Japan should the trip focus on?';
 export const japanAnswer='Start by choosing a region to anchor the trip.';
@@ -42,6 +45,11 @@ function previewFor({phase,text}){
     ]};
     if(text==='Create an evaporation slide.')return {...preview,title:evaporationTitle,body:[evaporationText]};
     if(text==='Create a triangle slide.')return {...preview,title:triangleTitle,body:['Triangles have three sides.']};
+    if(text==='Explain how vaccines work.')return {...preview,title:vaccineTitle,body:['Vaccines teach the immune system to recognise a germ.','Safety: They train immunity without causing the disease.'],
+      components:[{id:'vaccine-steps',type:'timeline',title:'From vaccine to memory',prompt:'',edges:[],items:[
+        {label:'Target shown',detail:'The vaccine shows an antigen.',value:0,latitude:null,longitude:null},
+        {label:'Memory forms',detail:'Memory cells remain afterwards.',value:0,latitude:null,longitude:null}]}],
+      followUps:vaccineFollowUps};
     return {...preview,kind:'kepler',body:['Change the orbit to explore Kepler’s laws.']};
   }
   if(text===completedComparison)return {...preview,body:[comparisonAnswer]};
@@ -96,6 +104,8 @@ async function fixtureUpstream(options,gates){
       replacement:request.text===windQuestion?windReplacement:/cool day|Why below boiling/.test(request.target.text)?slideReplacement:'',
       components:[]
     }
+    : request.phase==='deeper'
+    ? {sections:request.followUps.map(question=>({answer:deeperAnswer(question),components:[]}))}
     : previewFor(request);
   const text=JSON.stringify(preview);
   const response={status:'completed',output:[{type:'message',content:[{type:'output_text',text}]}]};

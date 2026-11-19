@@ -1,7 +1,7 @@
 import {renderFollowUpScope,followUpScopes,applyFollowUpScope} from './composer-extensions.js';
 import {slideRecipe} from './component-catalog.js';
 import {setupPageAssistant} from './page-assistant.js';
-import {renderAtlas} from './atlas.js';
+import {renderAtlas,refreshDeeper} from './atlas.js';
 import {PageTimeline,DirectEditUndo,historyLimit} from './page-timeline.js';
 import {setupWorkspace} from './workspace.js';
 import {withSingleRetry,requestError} from './retry.js';
@@ -230,6 +230,18 @@ document.addEventListener('pointerdown',e=>{if(!$('intent-popover').hidden&&!$('
 window.addEventListener('resize',()=>{if(!$('intent-popover').hidden)positionIntentPopover();});window.addEventListener('scroll',()=>{if($('intent-popover').contains(document.activeElement))positionIntentPopover();else closeIntentPopover();},{passive:true});
 $('typing-connection').onclick=()=>{closeIntentPopover();$('connection-dialog').showModal();};
 $('build-page').onclick=()=>submitPage();
+// Go deeper: prefetch short answers for a page's follow-up questions in one Luna request.
+const deeperRequests=new WeakSet();
+document.addEventListener('page:deeper',async event=>{
+  const page=event.detail;
+  if(!state.live||page!==state.component||deeperRequests.has(page)||!page.followUps?.length)return;
+  deeperRequests.add(page);
+  try{
+    const data=await callPreview({text:page.title||$('document-title').value||'This page',audience:state.audience,format:state.format,phase:'deeper',followUps:page.followUps});
+    page.deeper=Array.isArray(data.deeper)?data.deeper:'error';
+  }catch{page.deeper='error';}
+  refreshDeeper(page);
+});
 document.addEventListener('page:follow-up',event=>{if(typeof event.detail==='string'&&event.detail.trim())submitPage(event.detail.trim(),undefined);});
 
 function pageContext(){

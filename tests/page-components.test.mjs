@@ -150,3 +150,22 @@ test('pages with a visual keep an introduction and at most three takeaways, cut 
  const prose={kind:'outline',components:[],body:[long,'a','b','c','d']};
  assert.equal(tidyPage(prose),prose,'text-first pages keep their full deliverable');
 });
+
+test('go deeper answers every follow-up once with at most one valid component',async()=>{
+ const {handleAPI,validDeeper}=await import('../api.mjs');
+ const followUps=['Why do boosters fade?','Are side effects common?'];
+ const sections=[{answer:'Antibody levels fall over months.',components:[]},{answer:'Most are mild and short.',components:[]}];
+ let sent;
+ const response=await handleAPI(new Request('http://127.0.0.1/api/preview',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer test-key-abcdefghijklmnop'},
+  body:JSON.stringify({text:'How vaccines work',audience:'',format:'Auto',phase:'deeper',followUps})}),
+  async(_,opts)=>{sent=JSON.parse(opts.body);return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({sections})}]}]});});
+ assert.equal(response.status,200);
+ assert.equal(sent.model,'gpt-6-luna');
+ assert.equal(sent.text.format.name,'go_deeper');
+ assert.deepEqual((await response.json()).deeper,sections);
+ assert.equal(validDeeper({sections:sections.slice(0,1)},2),false,'every question needs an answer');
+ assert.equal(validDeeper({sections:[{answer:'x'.repeat(500),components:[]},sections[1]]},2),false,'answers stay short');
+ const bad=await handleAPI(new Request('http://127.0.0.1/api/preview',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer test-key-abcdefghijklmnop'},
+  body:JSON.stringify({text:'x',audience:'',format:'Auto',phase:'deeper',followUps:['a','b','c','d']})}),async()=>{throw new Error('must not call the model');});
+ assert.equal(bad.status,400);
+});

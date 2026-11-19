@@ -63,9 +63,9 @@ export function renderAtlas(target,p,{titleField,onEdit}){
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 500 350');svg.setAttribute('role','img');svg.setAttribute('aria-label','Kepler orbit: Sun at a focus, planet position and two equal-time swept areas');svg.classList.add('atlas-orbit');visual.append(svg);
   const caption=make('div','atlas-orbit-caption');caption.append(make('span','','Sun at one focus'));const speed=make('output');caption.append(speed);visual.append(caption);
   const controls=make('div','atlas-controls');const outputs={};
-  for(const [key,label,min,max]of [['eccentricity','Eccentricity',0,65],['phase','Time through orbit',0,100]]){const l=make('label');const row=make('span','atlas-control-label',label);const out=outputs[key]=make('output');row.append(out);const input=make('input');input.type='range';input.min=min;input.max=max;input.value=Math.round(orbit[key]*100);input.setAttribute('aria-label',label);input.oninput=()=>{orbit[key]=+input.value/100;onEdit();draw();};l.append(row,input);controls.append(l);}visual.append(controls);
+  for(const [key,label,min,max]of [['eccentricity','Eccentricity',0,65],['phase','Time through orbit',0,100]]){const l=make('label');const row=make('span','atlas-control-label',label);const out=outputs[key]=make('output');row.append(out);const input=make('input');input.type='range';input.min=min;input.max=max;input.value=Math.round(orbit[key]*100);input.setAttribute('aria-label',label);input.oninput=()=>{orbit[key]=+input.value/100;draw();};l.append(row,input);controls.append(l);}visual.append(controls);
   const tabs=make('div','atlas-laws');tabs.setAttribute('aria-label','Kepler law');const equations=keplerEquations();copy.append(...equations);
-  ['Elliptical paths','Equal areas','Orbital periods'].forEach((label,i)=>{const b=make('button','',label);b.setAttribute('aria-pressed',String(orbit.law===i));b.onclick=()=>{orbit.law=i;onEdit();showLaw();draw();};tabs.append(b);});target.append(tabs);
+  ['Elliptical paths','Equal areas','Orbital periods'].forEach((label,i)=>{const b=make('button','',label);b.setAttribute('aria-pressed',String(orbit.law===i));b.onclick=()=>{orbit.law=i;showLaw();draw();};tabs.append(b);});target.append(tabs);
   const detail=make('p','atlas-law-detail');target.append(detail);
   function showLaw(){
    const [before,emphasis,after]=[
@@ -102,7 +102,7 @@ export function renderAtlas(target,p,{titleField,onEdit}){
  const overview=p.kind==='kepler'&&paragraphs.length===3&&paragraphs.every((paragraph,i)=>lawPrefixes[i].test(paragraph.trim()));
  // Any page can use the same takeaway columns: two or three "Label: one sentence" passages.
  const takeawayPattern=/^([^:\n]{1,32}):\s+(\S[\s\S]*)$/;
- const takeaways=!overview&&paragraphs.length>=2&&paragraphs.length<=3&&
+ const takeaways=!overview&&paragraphs.length>=1&&paragraphs.length<=3&&
   paragraphs.every(paragraph=>{const m=paragraph.trim().match(takeawayPattern);return m&&m[1].trim().split(/\s+/).length<=4;});
  body.classList.toggle('atlas-law-overview',overview||takeaways);
  body.style.setProperty('--cols',String(paragraphs.length||3));
@@ -115,17 +115,56 @@ export function renderAtlas(target,p,{titleField,onEdit}){
   body.append(item);
  });
  target.append(body);
- // Go deeper: the next ideas become their own slide instead of more text on this one.
+ // Go deeper: follow-up questions as tabs. Answers are prefetched in one request and shown
+ // in a panel below, one at a time; the full slide stays a secondary action.
  if(p.followUps?.length){
-  const next=make('nav','atlas-next');
+  const next=make('section','atlas-next');
   next.setAttribute('aria-label','Go deeper');
-  next.append(make('span','atlas-next-label','Go deeper'));
-  p.followUps.forEach(question=>{
+  const tabs=make('div','atlas-next-tabs');
+  tabs.setAttribute('role','tablist');
+  tabs.append(make('span','atlas-next-label','Go deeper'));
+  const panel=make('div','atlas-next-panel');
+  panel.setAttribute('role','tabpanel');
+  panel.setAttribute('aria-live','polite');
+  let open=null;
+  const buttons=p.followUps.map((question,i)=>{
    const button=make('button','atlas-next-button',question);
    button.type='button';
-   button.onclick=()=>document.dispatchEvent(new CustomEvent('page:follow-up',{detail:question}));
-   next.append(button);
+   button.setAttribute('role','tab');
+   button.onclick=()=>{open=open===i?null:i;paint();};
+   tabs.append(button);
+   return button;
   });
+  function paint(){
+   buttons.forEach((button,i)=>button.setAttribute('aria-selected',String(open===i)));
+   panel.hidden=open===null;
+   if(open===null)return;
+   const question=p.followUps[open];
+   const promote=make('button','atlas-next-promote','Make this the main slide');
+   promote.type='button';
+   const arrow=make('span','',' →');arrow.setAttribute('aria-hidden','true');promote.append(arrow);
+   promote.onclick=()=>document.dispatchEvent(new CustomEvent('page:follow-up',{detail:question}));
+   const section=Array.isArray(p.deeper)?p.deeper[open]:null;
+   if(section){
+    const body=make('div','atlas-next-body');
+    body.append(make('p','atlas-next-answer',section.answer));
+    panel.replaceChildren(body);
+    section.components?.forEach(component=>renderCatalogBlock(panel,component,p,{onEdit,ask:askBlock}));
+    panel.append(promote);
+    panel.animate?.([{opacity:0,transform:'translateY(4px)'},{opacity:1,transform:'none'}],{duration:220,easing:'ease-out'});
+   }else{
+    const waiting=p.deeper==='error'?'This answer is not available right now.':'Preparing an answer…';
+    panel.replaceChildren(make('p','atlas-next-status',waiting),promote);
+   }
+  }
+  deeperPainters.set(p,paint);
+  next.append(tabs,panel);
   target.append(next);
+  paint();
+  if(p.deeper===undefined)document.dispatchEvent(new CustomEvent('page:deeper',{detail:p}));
  }
 }
+
+// Repaint the Go deeper panel when prefetched answers arrive, without re-rendering the page.
+const deeperPainters=new WeakMap();
+export function refreshDeeper(page){deeperPainters.get(page)?.();}

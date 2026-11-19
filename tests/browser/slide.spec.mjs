@@ -1,6 +1,7 @@
 import {expect,test} from '@playwright/test';
 import {
-  startFixtureServer,evaporationTitle,evaporationText,triangleTitle,slideAnswer,slideReplacement,windQuestion,windAnswer,windReplacement
+  startFixtureServer,evaporationTitle,evaporationText,triangleTitle,slideAnswer,slideReplacement,windQuestion,windAnswer,windReplacement,
+  vaccineTitle,vaccineFollowUps,deeperAnswer
 } from './fixture-server.mjs';
 
 let server;
@@ -366,4 +367,25 @@ test('Kepler takeaways have bold labels and a plain editable body, and notes ans
   await expect(answer.locator('ol li')).toHaveCount(2);
   await expect(answer.locator('strong')).toHaveText(['Shape.','Speed.']);
   await expect(answer).not.toContainText('**');
+});
+
+test('go deeper tabs show prefetched answers in place and can still open a full slide',async({page})=>{
+  const deeper=[];
+  page.on('request',request=>{if(request.url().endsWith('/api/preview')&&request.postDataJSON().phase==='deeper')deeper.push(request.postDataJSON().followUps);});
+  await send(page,'Explain how vaccines work.',vaccineTitle);
+  await expect(page.getByRole('heading',{name:'Safety'})).toBeVisible();
+  await expect.poll(()=>deeper).toEqual([vaccineFollowUps]);
+  const tab=page.getByRole('tab',{name:vaccineFollowUps[1]});
+  await tab.click();
+  await expect(tab).toHaveAttribute('aria-selected','true');
+  await expect(page.getByText(deeperAnswer(vaccineFollowUps[1]))).toBeVisible();
+  await page.getByRole('tab',{name:vaccineFollowUps[0]}).click();
+  await expect(page.getByText(deeperAnswer(vaccineFollowUps[0]))).toBeVisible();
+  await expect(page.getByText(deeperAnswer(vaccineFollowUps[1]))).toBeHidden();
+  await page.getByRole('tab',{name:vaccineFollowUps[0]}).click();
+  await expect(page.getByText(deeperAnswer(vaccineFollowUps[0]))).toBeHidden();
+  expect(deeper).toHaveLength(1);
+  await page.getByRole('tab',{name:vaccineFollowUps[1]}).click();
+  await button(page,'Make this the main slide').click();
+  await expect(page.getByText('2 / 2')).toBeVisible();
 });
