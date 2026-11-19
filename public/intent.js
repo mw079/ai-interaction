@@ -1,7 +1,7 @@
 // Fixed interaction templates; the model supplies topic-specific labels and choices only.
 export const INFORMATION_TYPES = {
   output_format:{label:'Response format',family:'cards'}, goal:{label:'Goal',family:'choices'},
-  audience:{label:'Audience',family:'search'}, prior_knowledge:{label:'Prior knowledge',family:'choices'},
+  audience:{label:'Audience',family:'choices'}, prior_knowledge:{label:'Prior knowledge',family:'choices'},
   depth:{label:'Depth',family:'depth'}, length:{label:'Length',family:'number'},
   tone:{label:'Tone',family:'tone'}, language:{label:'Language',family:'search'},
   date:{label:'Date',family:'datetime'}, date_range:{label:'Date range',family:'datetime'},

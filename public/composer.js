@@ -4,11 +4,11 @@ import {canAcceptCompletion,freshCompletion} from './model.js';
 const $=id=>document.getElementById(id);
 const make=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
 export function setupComposerExperience({state,changed,request,openDetail,closeDetail,setIntent}){
- let completion='',helpController=null,selectionTimer=null,selectionVersion=0,lastSelection='',summary='',question=null,summaryTimer=null,summaryPinned=false;
+ let completion='',helpController=null,selectionTimer=null,selectionVersion=0,lastSelection='',summary='',question=null,completedQuestion=null,questionTimer=null;
  const input=$('intent-input'),composer=document.querySelector('.composer'),trigger=$('clarify-phrase');
  const questionRow=make('div','live-question');questionRow.id='live-question';questionRow.hidden=true;
  const questionButton=make('button','live-question-button');questionButton.type='button';questionButton.setAttribute('aria-haspopup','dialog');questionRow.append(questionButton);composer.before(questionRow);
- const summaryCard=make('section','intent-details');summaryCard.id='intent-details';summaryCard.hidden=true;summaryCard.setAttribute('aria-label','Your intent and editable details');
+ const summaryCard=make('section','intent-details');summaryCard.id='intent-details';summaryCard.hidden=true;summaryCard.setAttribute('role','dialog');summaryCard.setAttribute('aria-label','Your intent and editable details');
  const summaryHeading=make('p','intent-details-heading','What I understand');const summaryText=make('p','intent-details-text');
  const headingRow=make('div','intent-details-header');const editIntent=make('button','intent-edit-button','Edit');editIntent.type='button';editIntent.setAttribute('aria-label','Edit your intent');headingRow.append(summaryHeading,editIntent);
  const intentForm=make('form','intent-edit-form');intentForm.hidden=true;
@@ -18,21 +18,21 @@ export function setupComposerExperience({state,changed,request,openDetail,closeD
  const resetIntent=make('button','intent-reset-button','Use suggested intent');resetIntent.type='button';resetIntent.hidden=true;
  summaryCard.append(headingRow,summaryText,intentForm,$('intent-refinements'),resetIntent);document.body.append(summaryCard);
  function editingIntent(on){intentForm.hidden=!on;summaryText.hidden=on;editIntent.hidden=on;resetIntent.hidden=on||!state.intentOverride;}
- editIntent.onclick=()=>{summaryPinned=true;intentInput.value=state.intentOverride||summary;editingIntent(true);openSummary('click');intentInput.focus();intentInput.setSelectionRange(intentInput.value.length,intentInput.value.length);};
- cancelIntent.onclick=()=>{editingIntent(false);openSummary('click');editIntent.focus();};
+ editIntent.onclick=()=>{intentInput.value=state.intentOverride||summary;editingIntent(true);openSummary();intentInput.focus();intentInput.setSelectionRange(intentInput.value.length,intentInput.value.length);};
+ cancelIntent.onclick=()=>{editingIntent(false);openSummary();editIntent.focus();};
  intentForm.onsubmit=event=>{event.preventDefault();const value=intentInput.value.trim();if(!value){intentInput.setCustomValidity('Describe what you want to achieve.');intentInput.reportValidity();return;}editingIntent(false);setIntent(value);input.focus();};
  intentInput.oninput=()=>intentInput.setCustomValidity('');
  resetIntent.onclick=()=>{editingIntent(false);setIntent('');input.focus();};
- trigger.setAttribute('aria-controls','intent-details');trigger.setAttribute('aria-label','Review and refine your intent');
- function closeSummary(){clearTimeout(summaryTimer);summaryPinned=false;summaryCard.hidden=true;trigger.setAttribute('aria-expanded','false');render();}
- function openSummary(origin='hover'){if(!summary)return;if(origin==='click')summaryPinned=true;closeDetail();summaryText.textContent=summary;summaryHeading.textContent=state.intentOverride?'Your intent':'What I understand';resetIntent.hidden=!intentForm.hidden||!state.intentOverride;summaryCard.hidden=false;trigger.setAttribute('aria-expanded','true');const r=trigger.getBoundingClientRect();const pos=positionPopover(r,320,summaryCard.offsetHeight,innerWidth,innerHeight);Object.assign(summaryCard.style,{left:pos.left+'px',top:pos.top+'px',width:pos.width+'px'});render();}
- trigger.onclick=()=>summaryCard.hidden||!summaryPinned?openSummary('click'):closeSummary();
- trigger.onpointerenter=()=>{clearTimeout(summaryTimer);summaryTimer=setTimeout(()=>openSummary('hover'),250);};
- trigger.onpointerleave=()=>{summaryTimer=setTimeout(()=>{if(!summaryPinned&&!summaryCard.contains(document.activeElement))closeSummary();},220);};
- summaryCard.onpointerenter=()=>clearTimeout(summaryTimer);summaryCard.onpointerleave=trigger.onpointerleave;
+ function closeSummary(){clearTimeout(questionTimer);summaryCard.hidden=true;trigger.setAttribute('aria-expanded','false');render();}
+ function openSummary(){if(!summary)return;closeDetail();summaryText.textContent=summary;summaryHeading.textContent=state.intentOverride?'Your intent':'What I understand';resetIntent.hidden=!intentForm.hidden||!state.intentOverride;summaryCard.hidden=false;trigger.setAttribute('aria-expanded','true');const r=trigger.getBoundingClientRect();const pos=positionPopover(r,320,summaryCard.offsetHeight,innerWidth,innerHeight);Object.assign(summaryCard.style,{left:pos.left+'px',top:pos.top+'px',width:pos.width+'px'});render();}
+ trigger.onclick=()=>{
+  if(!summaryCard.hidden){closeSummary();return;}
+  openSummary();
+  if(!summaryCard.hidden)(intentForm.hidden?editIntent:intentInput).focus({preventScroll:true});
+ };
  summaryCard.addEventListener('click',e=>{if(e.target.closest('.phrase-access'))closeSummary();});
  questionButton.onclick=()=>{closeSummary();openDetail(question,'click',questionButton);};
- questionButton.onpointerenter=()=>{if(question?.streaming)return;clearTimeout(summaryTimer);summaryTimer=setTimeout(()=>openDetail(question,'hover',questionButton),300);};questionButton.onpointerleave=()=>clearTimeout(summaryTimer);
+ questionButton.onpointerenter=()=>{if(questionButton.disabled)return;clearTimeout(questionTimer);questionTimer=setTimeout(()=>openDetail(question,'hover',questionButton),300);};questionButton.onpointerleave=()=>clearTimeout(questionTimer);
  document.addEventListener('pointerdown',e=>{if(!summaryCard.contains(e.target)&&!trigger.contains(e.target))closeSummary();});
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!summaryCard.hidden){closeSummary();trigger.focus();}});
  window.addEventListener('resize',closeSummary);window.addEventListener('scroll',closeSummary,{passive:true});
@@ -54,8 +54,7 @@ export function setupComposerExperience({state,changed,request,openDetail,closeD
   if(wrapsOutsideField)ghostText.hidden=true;
   wrappedCompletion.hidden=!wrapsOutsideField;
   wrappedCompletion.textContent=wrapsOutsideField?completion:'';
-  trigger.hidden=false;trigger.style.visibility=summary&&(focused||trigger===document.activeElement||!summaryCard.hidden||!$('intent-popover').hidden)?'visible':'hidden';
-  $('refine-label').textContent=summary;trigger.setAttribute('aria-label','Review intent: '+summary);
+  trigger.hidden=false;trigger.style.visibility=summary?'visible':'hidden';
   questionRow.hidden=!question;questionButton.disabled=!!question?.streaming;const slideLabel=question?.slideOptions ? slideRecipe(state.slideChoice)?.label : '';
   questionButton.textContent=slideLabel||question?.question||'';questionButton.setAttribute('aria-label',(question?.slideOptions?'Slide format: ':question?.questionKind==='explore'?'Explore further: ':'Clarifying question: ')+(slideLabel||question?.question||''));questionButton.setAttribute('aria-expanded',String(!questionRow.hidden&&!$('intent-popover').hidden&&state.openClarification?.question===question?.question));questionButton.setAttribute('aria-controls','intent-popover');
  }
@@ -75,5 +74,28 @@ export function setupComposerExperience({state,changed,request,openDetail,closeD
  document.addEventListener('selectionchange',inspectSelection);$('intent-input').addEventListener('select',inspectSelection);
 
  window.addEventListener('pagehide',stopHelp);
- return {onMirrorRendered:render,onStream(partial){if(partial.reset)question=null;else if(typeof partial.question==='string')question=partial.question?{question:partial.question,options:[],phrase:null,streaming:true}:null;render();},onPreview(data){completion=freshCompletion(input.value,data.completion);summary=state.intentOverride||data.interpretation||'';question=state.answers.some(e=>e.question===state.uncertainty?.question)?null:state.uncertainty;render();},onDraftChanged(){completion='';summary=state.intentOverride||'';question=null;stopHelp();closeSummary();render();},onPageRendered(){stopHelp();render();},stop(){stopHelp();completion='';summary='';question=null;closeSummary();render();}};
+ return {
+  onMirrorRendered:render,
+  onStream(partial){
+   if(partial.reset)question=completedQuestion&&{...completedQuestion,streaming:true};
+   else if(!completedQuestion&&partial.question)question={question:partial.question,options:[],phrase:null,streaming:true};
+   render();
+  },
+  onPreview(data,{fresh=false,keepQuestion}={}){
+   completion=freshCompletion(input.value,data.completion);
+   summary=state.intentOverride||data.interpretation||'';
+   const previous=question?.question;
+   const next=state.answers.some(e=>e.question===state.uncertainty?.question)?null:state.uncertainty;
+   if(next)question=completedQuestion=next;
+   else if(completedQuestion&&keepQuestion?.(completedQuestion))question={...completedQuestion,streaming:true};
+   else question=completedQuestion=null;
+   render();
+   if(fresh&&next&&next.question!==previous&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+    questionButton.animate([{backgroundColor:'#e8efe2'},{backgroundColor:'transparent'}],{duration:480,easing:'ease-out'});
+   }
+  },
+  onDraftChanged(keep){completion='';summary=state.intentOverride||'';if(!keep)completedQuestion=null;question=completedQuestion&&{...completedQuestion,streaming:true};stopHelp();closeSummary();render();},
+  onPageRendered(){stopHelp();render();},
+  stop(){stopHelp();completion='';summary='';question=completedQuestion=null;closeSummary();render();}
+ };
 }

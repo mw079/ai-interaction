@@ -7,6 +7,43 @@ export function isIncompleteComparison(text){
   /\b(?:compare|contrast)\s+[^.!?]+\s+(?:with|to|and)$/iu.test(draft)||
   /\S\s+(?:versus|vs)$/iu.test(draft);
 }
+export function draftWordCount(text){
+ return (text.match(/[\p{L}\p{N}][\p{L}\p{M}\p{N}'’-]*/gu)||[]).length;
+}
+
+export function completedDraft(text){
+ return text.replace(/[\p{L}\p{M}\p{N}'’-]+$/u,'').trim();
+}
+
+export function extendsPreview(snapshot,current){
+ if(current===snapshot)return true;
+ if(!current.startsWith(snapshot))return false;
+ const tail=current.slice(snapshot.length);
+ return !(/[\p{L}\p{N}]$/u.test(snapshot)&&/^[\p{L}\p{M}\p{N}]/u.test(tail))&&
+  !/\b(?:actually|instead|rather than|forget that|ignore that)\b/iu.test(tail);
+}
+
+export function draftAnswersQuestion(entry,tail){
+ const normalize=text=>' '+(text.toLowerCase().match(/[\p{L}\p{N}]+/gu)||[]).join(' ')+' ';
+ const added=normalize(tail);
+ const answered=(entry.options||[]).some(option=>option.split(/\s+(?:and|or)\s+|\//iu).some(value=>{
+  const term=normalize(value.trim());
+  return term.trim().length>=2&&added.includes(term);
+ }));
+ const durationGiven=/\b(?:a|an|one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+(?:hours?|days?|weeks?|months?|years?)\b/iu.test(tail);
+ const asksDuration=entry.type==='duration'||/\b(?:trip length|how long|how many days|duration)\b/iu.test(entry.question||'');
+ return answered||(durationGiven&&asksDuration);
+}
+
+export function workingDraftPreview(data,snapshot,current){
+ const tail=current.slice(snapshot.length);
+ const haveAnchor=entry=>entry.phrase?.trim()&&snapshot.includes(entry.phrase)&&!draftAnswersQuestion(entry,tail);
+ const question=data.questionKind!=='explore'&&haveAnchor(data)?data.question:'';
+ return {...data,body:draftWordCount(tail)<=12?data.body:[],question,phrase:question?data.phrase:'',
+  options:question?data.options:[],information:(data.information||[]).filter(item=>item.type!=='output_format'&&haveAnchor(item)),
+  completion:'',interpretation:'',slideOptions:[]};
+}
+
 export function freshCompletion(text,suggestion){
  if(typeof suggestion!=='string'||suggestion.length>180)return '';
  const normalize=value=>(value.normalize('NFKC').toLowerCase().replace(/[’‘]/g,"'")
@@ -32,6 +69,7 @@ export function clarificationFor(text) {
 export function liveClarificationFor(text, data, entries=[]) {
   const priority=entries.find(e=>e.type==='audience'&&!e.confirmed&&e.question)||entries.find(e=>e.type==='prior_knowledge'&&!e.confirmed&&e.question);
   const questionKey=value=>value.trim().toLowerCase().replace(/[?.!]+$/,'');
+  const asksAudience=question=>/\b(?:audience|who\b.*(?:\bfor\b|\blearn\b|\bread\b))\b/i.test(question);
   const clean=values=>[...new Map((values||[]).filter(value=>value.trim()).map(value=>[value.trim().toLowerCase(),value.trim()])).values()].slice(0,3);
   const withOptions=entry=>{
     if(!entry)return null;
@@ -44,18 +82,24 @@ export function liveClarificationFor(text, data, entries=[]) {
     const question=entry.question;
     let presets=[];
     if(/\bcalculus\b/i.test(question))presets=['No calculus','Basic derivatives','Full derivation'];
-    else if(/\b(?:audience|who (?:is|are|will)\b.*(?:for|learn|read))\b/i.test(question)&&/\b(?:explain|learn|teach|understand)\b/i.test(text))presets=['Beginner','High school','Undergraduate'];
+    else if(asksAudience(question)&&/\b(?:explain|learn|teach|understand)\b/i.test(text))presets=['Middle school','High school','University'];
     else if(/\b(?:what matters most|prioritiz\w*)\b/i.test(question)&&/\b(?:trip|travel|itinerary)\b/i.test(text))presets=['Lower cost','Less travel time','More to see'];
     return {...entry,options:presets};
   };
   if(!data?.question?.trim())return withOptions(priority);
   // Missing learning context takes priority over an optional exploration.
   if(data.questionKind==='explore')return withOptions(priority||{question:data.question,questionKind:'explore',phrase:null,global:true,replace:false});
-  const matching=entries.find(e=>questionKey(e.question)===questionKey(data.question));
+  const audience=asksAudience(data.question);
+  const matching=entries.find(e=>questionKey(e.question)===questionKey(data.question))||
+    (audience&&entries.find(e=>e.type==='audience'));
   if(matching)return matching.confirmed?null:withOptions({...matching,questionKind:'clarify'});
   const phrase=typeof data.phrase==='string'?data.phrase.trim():'';
   const start=phrase?text.indexOf(phrase):-1;
-  return withOptions({question:data.question,questionKind:'clarify',phrase:start>=0?phrase:null,
+  const audienceChoice=audience?{
+    type:'audience',value:'',annotation:'',unit:'',confirmed:false,
+    ...(start>=0?{key:'audience:'+start}:{global:true})
+  }:{};
+  return withOptions({...audienceChoice,question:data.question,questionKind:'clarify',phrase:start>=0?phrase:null,
     ...(start>=0?{start,end:start+phrase.length}:{}),replace:false});
 }
 export function compactLiveAnswer(data){

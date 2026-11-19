@@ -4,7 +4,7 @@ import {liveClarificationFor,compactLiveAnswer,demoPreview} from '../public/mode
 import {informationFor} from '../public/intent.js';
 import {handleAPI} from '../api.mjs';
 const encoder=new TextEncoder(),frame=value=>encoder.encode('data: '+JSON.stringify(value)+'\n\n');
-const request=(signal)=>new Request('http://127.0.0.1/api/preview',{method:'POST',signal,headers:{Authorization:'Bearer test-key-not-a-real-secret','Content-Type':'application/json'},body:JSON.stringify({text:'Explain Kepler laws',format:'Auto',audience:'',interaction:'unified',phase:'preview',stream:true,context:JSON.stringify({explicitIntent:'Teach high school students'})})});
+const request=(signal,overrides={})=>new Request('http://127.0.0.1/api/preview',{method:'POST',signal,headers:{Authorization:'Bearer test-key-not-a-real-secret','Content-Type':'application/json'},body:JSON.stringify({text:'Explain Kepler laws',format:'Auto',audience:'',interaction:'unified',phase:'preview',stream:true,context:JSON.stringify({explicitIntent:'Teach high school students'}),...overrides})});
 test('SSE handles split UTF-8, CRLF frames, comments and multiline data',async()=>{
  const bytes=encoder.encode(': comment\r\ndata: {"text":\r\ndata: "Kepler’s laws"}\r\n\r\ndata: [DONE]\r\n\r\n');let i=0;
  const body=new ReadableStream({pull(c){if(i<bytes.length)c.enqueue(bytes.slice(i,i+=1));else c.close();}});const events=[];for await(const event of readSSE(body))events.push(event);assert.deepEqual(events,[{text:'Kepler’s laws'}]);
@@ -60,4 +60,28 @@ test('clarifying questions recover missing options from matching information or 
  const withDescriptor={...data,information:[{question:'How much calculus should I use',options:['Algebra only','Multivariable calculus']}]};
  assert.deepEqual(liveClarificationFor('Explain Kepler with math',withDescriptor).options,['Algebra only','Multivariable calculus']);
  assert.deepEqual(liveClarificationFor('Plan the event',{...data,question:'What is the exact date?'}).options,[]);
+});
+
+test('page help streams answer text and releases the replacement only with a validated result',async()=>{
+ const proposal={answer:'An ellipse has two foci.',replacement:'Planets follow elliptical orbits.',components:[]};
+ const upstreamFrames=[
+  {type:'response.output_text.delta',item_id:'one',delta:'{"answer":"An ellipse has'},
+  {type:'response.output_text.delta',item_id:'one',delta:' two foci.","replacement":"Planets follow elliptical orbits."}'},
+  {type:'response.completed',response:{status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(proposal)}]}]}}
+ ];
+ const response=await handleAPI(request(undefined,{phase:'page-help',target:{mode:'question',id:'notes',text:'What is an ellipse?'}}),async(_,opts)=>{
+  assert.equal(JSON.parse(opts.body).stream,true);
+  return new Response(new ReadableStream({start(controller){
+   for(const event of upstreamFrames)controller.enqueue(frame(event));
+   controller.close();
+  }}));
+ });
+ const events=[];
+ for await(const event of readSSE(response.body))events.push(event);
+ assert.deepEqual(events.slice(0,-1),[
+  {type:'partial',preview:{answer:'An ellipse has'}},
+  {type:'partial',preview:{answer:proposal.answer}}
+ ]);
+ assert.equal(events.at(-1).type,'done');
+ assert.equal(events.at(-1).preview.replacement,proposal.replacement);
 });

@@ -1,5 +1,5 @@
 import {COMPONENT_SCHEMA,validPageHelp,SLIDE_RECIPES,slideRecipe,matchesSlideRecipe} from './public/component-catalog.js';
-import {readSSE,partialLivePreview} from './public/stream.js';
+import {readSSE,partialLivePreview,partialPageAnswer} from './public/stream.js';
 import {FORMATS,validPreview,isIncompleteComparison} from './public/model.js';
 import {modelInstructions} from './prompts.mjs';
 
@@ -57,7 +57,7 @@ export async function handleAPI(request,upstream=fetch,env={}){
   const selection=payload?.phase==='selection';
   if(selection&&payload.text.length>1000)return json({error:'Choose a shorter passage for local help.'},400);
   const page=payload?.phase==='page';const model=page?'gpt-6.1-terra':'gpt-6-luna';
-  const streamAbort=new AbortController();const streaming=payload?.stream===true&&payload.phase==='preview';
+  const streamAbort=new AbortController();const streaming=payload?.stream===true&&(payload.phase==='preview'||pageHelp);
   const start=Date.now();const timeout=AbortSignal.timeout(page?45000:25000);const signal=AbortSignal.any([request.signal,timeout,streamAbort.signal]);
   try{
     const check=path==='/api/check';
@@ -70,8 +70,9 @@ export async function handleAPI(request,upstream=fetch,env={}){
     });
     if(!response.ok){const messages={401:'OpenAI rejected this key. Check it and try again.',403:`This key cannot access ${model}.`,404:`${model} is not available for this key.`,429:'OpenAI quota or rate limit reached. Check API billing or try again later.'};return json({retryable:response.status>=500,error:messages[response.status]||'OpenAI could not complete the request. Your page is unchanged.'},[401,403,404,429].includes(response.status)?response.status:502);}
     if(check){const terra=await upstream('https://api.openai.com/v1/models/gpt-6.1-terra',{method:'GET',headers:{Authorization:authorization},redirect:'error',signal});if(!terra.ok)return json({error:'This key can access Luna, but GPT-6.1 Terra access could not be verified. Check model permissions and try again.'},terra.status===429?429:403);return json({connected:true,models:{preview:'gpt-6-luna',page:'gpt-6.1-terra'}});}
-    if(streaming)return liveStreamResponse(response,{model,start,signal,abort:()=>streamAbort.abort()});
-    return finishModelResponse(await response.json(),{model,start,selection,pageHelp,recipe,activity:payload?.target?.mode});
+    const resultOptions={model,start,selection,pageHelp,recipe,activity:payload?.target?.mode};
+    if(streaming)return liveStreamResponse(response,resultOptions,signal,()=>streamAbort.abort());
+    return finishModelResponse(await response.json(),resultOptions);
   }catch(error){return json({retryable:!request.signal.aborted,error:error.name==='TimeoutError'||timeout.aborted?`${model} took too long. Try again.`:'Connection interrupted. Your page is unchanged; try again.'},504);}
 }
 
@@ -81,7 +82,7 @@ function validPageActivity(target){
     typeof removed==='string'&&removed.length<=1000&&!!(added.trim()||removed.trim());
   if(added!==undefined||removed!==undefined)return false;
   if(mode==='selection')return !!quote?.trim();
-  return mode===undefined||mode==='question';
+  return mode===undefined||mode==='question'||mode==='rewrite';
 }
 
 function finishModelResponse(data,{model,start,selection=false,pageHelp=false,recipe,activity}){
@@ -103,7 +104,8 @@ if(data.status!=='completed')return json({retryable:false,error:'The preview was
     return json({preview,model,elapsedMs:Date.now()-start,usage:{input_tokens:data.usage?.input_tokens,output_tokens:data.usage?.output_tokens,total_tokens:data.usage?.total_tokens}});
 }
 
-function liveStreamResponse(upstream,{model,start,signal,abort}){
+function liveStreamResponse(upstream,resultOptions,signal,abort){
+ const partialResponse=resultOptions.pageHelp?partialPageAnswer:partialLivePreview;
  const encoder=new TextEncoder();let cancelled=false;
  const body=new ReadableStream({async start(controller){
   const send=value=>{if(!cancelled)controller.enqueue(encoder.encode('data: '+JSON.stringify(value)+'\n\n'));};
@@ -113,9 +115,9 @@ function liveStreamResponse(upstream,{model,start,signal,abort}){
     if(event.type==='response.output_text.delta'){
      if(item!==null&&item!==event.item_id){text='';previous='';send({type:'partial',preview:{reset:true}});}item=event.item_id;
      if(typeof event.delta!=='string')continue;text+=event.delta;if(text.length>40000)throw new Error('Oversized preview');
-     const preview=partialLivePreview(text),encoded=JSON.stringify(preview);if(encoded!==previous&&Object.keys(preview).length){previous=encoded;send({type:'partial',preview});}
+     const preview=partialResponse(text),encoded=JSON.stringify(preview);if(encoded!==previous&&Object.keys(preview).length){previous=encoded;send({type:'partial',preview});}
     }else if(event.type==='response.completed'){
-     const result=finishModelResponse(event.response,{model,start});const data=await result.json();send(result.ok?{type:'done',...data}:{type:'error',error:data.error,retryable:data.retryable===true});completed=true;break;
+     const result=finishModelResponse(event.response,resultOptions);const data=await result.json();send(result.ok?{type:'done',...data}:{type:'error',error:data.error,retryable:data.retryable===true});completed=true;break;
     }else if(['response.failed','response.incomplete','error','response.refusal.done'].includes(event.type)){const code=event.response?.error?.code||event.error?.code||event.code;const retryable=['server_error','internal_server_error','timeout'].includes(code);throw Object.assign(new Error('Incomplete preview'),{retryable});}
    }
    if(!completed)throw new Error('Interrupted preview');

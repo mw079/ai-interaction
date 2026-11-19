@@ -1,4 +1,5 @@
-import {explicitPageRewrite,patchIsCurrent,textDifference} from './page-patch.js';
+import {explicitPageQuestion,explicitPageRewrite,patchIsCurrent,textDifference} from './page-patch.js';
+import {blockContextText} from './request-context.js';
 import {validComponents} from './component-catalog.js';
 import {renderCatalogBlock} from './component-renderer.js';
 
@@ -8,6 +9,31 @@ const node=(tag,cls,text)=>{
  if(text!==undefined)element.textContent=text;
  return element;
 };
+
+function answerContent(answer){
+ const fragment=document.createDocumentFragment();
+ let list;
+ for(const line of answer.split('\n')){
+  const text=line.trim();
+  if(!text){list=null;continue;}
+  const numbered=text.match(/^(\d+)[.)]\s+(.+)$/);
+  const item=node(numbered?'li':'p');
+  const value=numbered?numbered[2]:text;
+  let cursor=0;
+  for(const match of value.matchAll(/\*\*([^*]+)\*\*/g)){
+   item.append(value.slice(cursor,match.index),node('strong','',match[1]));
+   cursor=match.index+match[0].length;
+  }
+  item.append(value.slice(cursor).replace(/\*\*/g,''));
+  if(numbered){
+   if(!list){list=node('ol');list.start=Number(numbered[1]);fragment.append(list);}
+   list.append(item);
+  }else{list=null;fragment.append(item);}
+ }
+ return fragment;
+}
+
+const liveHelpDelay=250;
 
 export function setupPageAssistant({state,request,commit}){
  const paper=document.querySelector('.paper');
@@ -30,21 +56,24 @@ export function setupPageAssistant({state,request,commit}){
  document.addEventListener('intent:changed',close);
  window.addEventListener('pagehide',close);
 
- const editable=element=>element?.matches?.('textarea[data-page-field]')&&element.closest('#active-component');
+ const editable=element=>element?.matches?.('textarea[data-page-field]')&&element.closest('#active-component,.page-notes');
  const blockFor=element=>{
   const section=element?.closest?.('[data-component-id]');
   return state.component?.components?.find(block=>block.id===section?.dataset.componentId);
  };
- const textTarget=(field,quote)=>({
-  anchor:field,field,original:field.value,
-  target:{id:field.dataset.pageField,text:field.value,...(quote?{quote}: {})}
- });
+ function textTarget(field,quote){
+  const original=field.value;
+  const start=Math.max(0,Math.min(field.selectionStart-1200,original.length-2500));
+  return {anchor:field,field,original,target:{
+   id:field.dataset.pageField,text:original.slice(start,start+2500),...(quote?{quote}:{})
+  }};
+ }
  function blockTarget(anchor,block,quote,practice){
   const original=block?JSON.stringify(block):anchor.textContent.trim();
   return {
    anchor,block,original,target:{
     id:block?'component:'+block.id:'selection',
-    text:original.slice(0,2500),
+    text:block?blockContextText(block,2500):original.slice(0,2500),
     ...(quote?{quote}:{}),
     ...(practice!==undefined?{practice:practice.slice(0,1500)}:{})
    }
@@ -74,13 +103,13 @@ export function setupPageAssistant({state,request,commit}){
    }
   }
   if(!part){
-   if(active?.mode==='selection'&&!output)close();
+   if(active?.mode==='selection'&&(!output||controller))close();
    return;
   }
   const {anchor,target}=part;
   if(selection?.anchor===anchor&&selection.quote===target.quote&&selection.version===state.pageVersion)return;
   selection={anchor,quote:target.quote,version:state.pageVersion};
-  schedule(part,'selection',target.quote,450);
+  schedule(part,'selection',target.quote,liveHelpDelay);
  }
  document.addEventListener('selectionchange',inspectSelection);
  paper.addEventListener('select',inspectSelection,true);
@@ -101,15 +130,17 @@ export function setupPageAssistant({state,request,commit}){
   const difference=textDifference(before,field.value);
   if(!difference.added.trim()&&!difference.removed.trim())return;
   const part=textTarget(field);
-  const instruction=explicitPageRewrite(difference);
+  const rewrite=explicitPageRewrite(difference);
+  const question=explicitPageQuestion(difference);
+  const instruction=rewrite||question;
   if(instruction){
-   part.target.mode='question';
-   schedule(part,'edit',instruction.slice(0,1000),700);
+   part.target.mode=rewrite?'rewrite':'question';
+   schedule(part,'edit',instruction.slice(0,1000),liveHelpDelay);
    return;
   }
   part.target.added=difference.added.slice(0,1000);
   part.target.removed=difference.removed.slice(0,1000);
-  schedule(part,'edit',(difference.added.trim()||difference.removed.trim()).slice(0,1000),700);
+  schedule(part,'edit',(difference.added.trim()||difference.removed.trim()).slice(0,1000),liveHelpDelay);
  }
 
  function schedule(part,mode,instruction,delay){
@@ -126,19 +157,38 @@ export function setupPageAssistant({state,request,commit}){
   const version=state.pageVersion;
   const target={mode,...part.target};
   timer=setTimeout(async()=>{
-   controller=new AbortController();
-   const {signal}=controller;
+   const current=controller=new AbortController();
+   const {signal}=current;
+   const isCurrent=()=>!signal.aborted&&id===sequence&&version===state.pageVersion&&part.anchor.isConnected;
+   const pendingTimer=target.mode==='rewrite'?setTimeout(()=>{
+    if(isCurrent())showRewritePending(part);
+   },300):undefined;
    try{
-    const {preview}=await request({text:instruction,target,audience:state.audience,format:'Auto',phase:'page-help'},signal);
-    if(signal.aborted||id!==sequence||version!==state.pageVersion||!part.anchor.isConnected)return;
+    const {preview}=await request({text:instruction,target,audience:state.audience,format:'Auto',phase:'page-help'},signal,partial=>{
+     if(!isCurrent())return;
+     if(partial.reset){
+      output?.remove();output=null;
+      if(target.mode==='rewrite')showRewritePending(part);
+     }else if(partial.answer?.trim()){
+      clearTimeout(pendingTimer);
+      showAnswer(part,partial.answer,true);
+     }
+    });
+    if(!isCurrent())return;
     const answer=preview.body.join(' ');
-    const replacement=part.field&&preview.replacement!==part.original&&preview.replacement?.length<=part.field.maxLength?preview.replacement:'';
+    const replacement=part.field&&part.target.text===part.original&&preview.replacement!==part.original&&preview.replacement?.length<=part.field.maxLength?preview.replacement:'';
     const components=preview.components||[];
     if(mode==='edit')baselines.set(part.field,part.original);
-    if(!answer&&!replacement&&!components.length)return;
+    if(!answer&&!replacement&&!components.length){output?.remove();output=null;return;}
     render(part,answer,{version,replacement,components});
    }catch(error){
-    if(error.name!=='AbortError'&&id===sequence&&version===state.pageVersion)render(part,error.message);
+    if(error.name!=='AbortError'&&isCurrent())render(part,error.message);
+   }finally{
+    clearTimeout(pendingTimer);
+    if(controller===current){
+     controller=null;
+     if(!isCurrent())close();
+    }
    }
   },delay);
  }
@@ -155,19 +205,42 @@ export function setupPageAssistant({state,request,commit}){
   }
  });
 
- function render(part,answer,change){
+ function ensureOutput(part){
+  if(output)return;
   const wrapper=part.anchor.closest('.page-field,.catalog-block');
   output=node('div','page-assistant');
   if(wrapper)wrapper.append(output);
   else part.anchor.after(output);
-  const replacement=change?.replacement;
-  const hasProposal=!!(replacement||change?.components.length);
-  if(answer){
-   const response=node('p','page-response',answer);
+ }
+
+ function showRewritePending(part){
+  ensureOutput(part);
+  if(output.querySelector('.page-assistant-status'))return;
+  const pending=node('p','page-assistant-status','Preparing edit…');
+  pending.setAttribute('role','status');
+  output.append(pending);
+ }
+
+ function showAnswer(part,answer,streaming=false){
+  ensureOutput(part);
+  output.querySelector('.page-assistant-status')?.remove();
+  let response=output.querySelector('.page-response');
+  if(!answer){response?.remove();return;}
+  if(!response){
+   response=node('div','page-response');
    response.setAttribute('role','status');
    response.setAttribute('aria-label','Answer');
    output.append(response);
   }
+  response.setAttribute('aria-live',streaming?'off':'polite');
+  if(response.dataset.answer!==answer){response.dataset.answer=answer;response.replaceChildren(answerContent(answer));}
+ }
+
+ function render(part,answer,change){
+  showAnswer(part,answer);
+  const wrapper=part.anchor.closest('.page-field,.catalog-block');
+  const replacement=change?.replacement;
+  const hasProposal=!!(replacement||change?.components.length);
   if(!hasProposal)return;
 
   if(answer){
@@ -209,7 +282,7 @@ export function setupPageAssistant({state,request,commit}){
    apply.type=reject.type='button';actions.append(apply,reject);output.append(actions);
    reject.onclick=()=>{
     close();
-    if(answer)render(part,answer);
+    if(answer)showAnswer(part,answer);
     if(part.field)baselines.set(part.field,part.field.value);
     part.field?.focus({preventScroll:true});
    };
@@ -223,7 +296,7 @@ export function setupPageAssistant({state,request,commit}){
     const merged=new Map((state.component.components||[]).map(block=>[block.id,block]));
     change.components.forEach(block=>merged.set(block.id,block));
     const components=[...merged.values()];
-    if(!validComponents(components)){close();render(part,'This suggestion exceeds the slide’s two-component limit.');return;}
+    if(!validComponents(components)){close();showAnswer(part,'This suggestion exceeds the slide’s two-component limit.');return;}
     committing=true;
     try{
      commit(()=>{

@@ -9,6 +9,11 @@ export const keplerFollowUp='Angular momentum stays constant, so the orbital rad
 export const unfinishedComparison='Explain the difference between evaporation and…';
 export const completedComparison='Explain the difference between evaporation and sublimation.';
 export const comparisonAnswer='Evaporation changes liquid to gas; sublimation changes solid directly to gas.';
+export const keplerAudienceDraft='Explain Kepler’s laws simply please';
+export const keplerAudienceQuestion='Who is this explanation for?';
+export const japanCheckpoint='Plan a trip to Japan';
+export const japanQuestion='Which part of Japan should the trip focus on?';
+export const japanAnswer='Start by choosing a region to anchor the trip.';
 export const travelDraft='Plan a five-day April trip for two adults. Compare Tokyo with Kyoto.';
 export const travelQuestion='Which city should the trip focus on?';
 export const kyotoChoice='Focus on Kyoto';
@@ -18,6 +23,9 @@ export const evaporationText='Evaporation happens when liquid water becomes wate
 export const triangleTitle='Explore triangles';
 export const slideAnswer='Surface molecules can escape into the air even below the boiling point.';
 export const slideReplacement=evaporationText+' A puddle can dry on a cool day.';
+export const windQuestion='Why does wind matter?';
+export const windAnswer='Moving air carries water vapor away from the surface.';
+export const windReplacement=evaporationText+' Wind can make a puddle evaporate faster.';
 
 function previewFor({phase,text}){
   const preview={
@@ -26,16 +34,39 @@ function previewFor({phase,text}){
     nodes:[],rows:[],information:[],completion:'',components:[],slideOptions:[]
   };
   if(phase==='page'){
+    if(text==='Explain all three Kepler laws.')return {...preview,kind:'kepler',body:[
+      'Three rules describe how planets orbit the Sun.',
+      'First law: An orbit is an ellipse with the Sun at a focus.',
+      'Second law: An orbit sweeps equal areas in equal times.',
+      'Third law: Larger orbits take longer to complete.'
+    ]};
     if(text==='Create an evaporation slide.')return {...preview,title:evaporationTitle,body:[evaporationText]};
     if(text==='Create a triangle slide.')return {...preview,title:triangleTitle,body:['Triangles have three sides.']};
     return {...preview,kind:'kepler',body:['Change the orbit to explore Kepler’s laws.']};
   }
   if(text===completedComparison)return {...preview,body:[comparisonAnswer]};
   if(text.includes(kyotoChoice))return {...preview,body:[kyotoAnswer],interpretation:'Plan five days in Kyoto.'};
+  if(text===keplerAudienceDraft)return {
+    ...preview,questionKind:'clarify',question:'Who should this simple explanation be for?',phrase:'simply',
+    options:['Middle school','High school','University'],body:['Planets move around the Sun in oval paths.'],
+    information:[{type:'audience',phrase:'simply',question:keplerAudienceQuestion,options:['Middle school','High school','University'],unit:'',samples:[]}]
+  };
+  if(text.startsWith(keplerAudienceDraft))return {...preview,body:['Imagine an oval orbit around the Sun.']};
+  if(text.includes('simply (High school)'))return {...preview,body:['At high-school level, imagine a stretched circle with the Sun off-center.']};
+  if(text===japanCheckpoint)return {
+    ...preview,interpretation:'Plan a trip to Japan.',questionKind:'clarify',question:japanQuestion,phrase:'Japan',
+    options:['Kyoto and Osaka','Tokyo','Hokkaido'],body:[japanAnswer],
+    information:[{type:'geographic_scope',phrase:'Japan',question:japanQuestion,options:['Kyoto and Osaka','Tokyo','Hokkaido'],unit:'',samples:[]}]
+  };
+  if(text.startsWith(japanCheckpoint))return {...preview,body:['With kids, Kyoto is a good base for a week.']};
   if(text===travelDraft)return {
     ...preview,interpretation:'Compare Tokyo and Kyoto for an April trip.',
     questionKind:'clarify',question:travelQuestion,phrase:'Tokyo with Kyoto',
     options:['Focus on Tokyo',kyotoChoice,'Split the trip'],body:['Tokyo and Kyoto suit different kinds of trips.']
+  };
+  if(text.startsWith(travelDraft))return {
+    ...preview,questionKind:'clarify',question:'Would you prefer gardens or museums?',options:['Gardens','Museums'],
+    body:['Leave one quiet afternoon for gardens or a small museum.']
   };
   return {
     ...preview,
@@ -44,29 +75,51 @@ function previewFor({phase,text}){
   };
 }
 
-function fixtureUpstream(_,options){
+async function fixtureUpstream(options,gates){
   const {input,stream}=JSON.parse(options.body);
   const request=JSON.parse(input);
+  const exactRewrite=request.target?.mode==='rewrite'
+    ? request.text.match(/^Replace this entire (?:paragraph|note) with exactly this sentence: (.+)$/)?.[1]
+    : undefined;
   const preview=request.phase==='page-help'
-    ? {
-      answer:request.target.text.includes('Why below boiling')?slideAnswer:'',
-      replacement:/cool day|Why below boiling/.test(request.target.text)?slideReplacement:'',
+    ? exactRewrite
+      ? {answer:'',replacement:exactRewrite,components:[]}
+      : {
+      answer:request.target.id==='notes'&&request.text==='Explain again in very simple terms.'
+        ? 'Kepler’s rules:\n\n1. **Shape.** Orbits can be oval.\n2. **Speed.** Planets move faster near the Sun.'
+        : request.text===windQuestion?windAnswer
+        : request.target.mode==='question'&&request.text==='What is an astronomical unit?'
+        ? 'One AU is roughly the distance from Earth to the Sun.'
+        : request.target.mode==='question'&&request.target.id==='notes'&&request.text==='What is an ellipse?'
+          ? 'An ellipse is an oval with two foci.'
+          : request.target.text.includes('Why below boiling')?slideAnswer:'',
+      replacement:request.text===windQuestion?windReplacement:/cool day|Why below boiling/.test(request.target.text)?slideReplacement:'',
       components:[]
     }
     : previewFor(request);
   const text=JSON.stringify(preview);
   const response={status:'completed',output:[{type:'message',content:[{type:'output_text',text}]}]};
-  if(!stream)return Response.json(response);
-  const events=[
-    {type:'response.output_text.delta',item_id:'fixture',delta:JSON.stringify({body:preview.body}).slice(0,-1)},
-    {type:'response.completed',response}
-  ];
-  return new Response(events.map(event=>'data: '+JSON.stringify(event)+'\n\n').join(''),{
-    headers:{'Content-Type':'text/event-stream'}
+  const gate=gates.get(request.text);
+  if(!stream){await gate;return Response.json(response);}
+  const delta=JSON.stringify(request.phase==='page-help'?{answer:preview.answer}:{body:preview.body}).slice(0,-1);
+  const push=(controller,event)=>controller.enqueue(new TextEncoder().encode('data: '+JSON.stringify(event)+'\n\n'));
+  const body=new ReadableStream({
+    async start(controller){
+      const first=gate?delta.slice(0,Math.floor(delta.length/2)):delta;
+      push(controller,{type:'response.output_text.delta',item_id:'fixture',delta:first});
+      if(gate){
+        await gate;
+        push(controller,{type:'response.output_text.delta',item_id:'fixture',delta:delta.slice(first.length)});
+      }
+      push(controller,{type:'response.completed',response});
+      controller.close();
+    }
   });
+  return new Response(body,{headers:{'Content-Type':'text/event-stream'}});
 }
 
 export async function startFixtureServer(){
+  const gates=new Map();
   const server=http.createServer(async(request,response)=>{
     try{
       const chunks=[];
@@ -76,7 +129,7 @@ export async function startFixtureServer(){
       if(!['GET','HEAD'].includes(request.method))init.body=Buffer.concat(chunks);
       const webRequest=new Request(url,init);
       const result=url.pathname.startsWith('/api/')
-        ? await handleAPI(webRequest,fixtureUpstream,{OPENAI_API_KEY:'local-fixture-not-a-real-key'})
+        ? await handleAPI(webRequest,(_,options)=>fixtureUpstream(options,gates),{OPENAI_API_KEY:'local-fixture-not-a-real-key'})
         : await worker.fetch(webRequest,{});
       response.writeHead(result.status,Object.fromEntries(result.headers));
       for await(const chunk of result.body||[])response.write(chunk);
@@ -90,6 +143,11 @@ export async function startFixtureServer(){
   await once(server,'listening');
   return {
     url:'http://127.0.0.1:'+server.address().port,
+    holdPreview(text){
+      const gate=Promise.withResolvers();
+      gates.set(text,gate.promise);
+      return ()=>{gates.delete(text);gate.resolve();};
+    },
     close(){return new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));}
   };
 }

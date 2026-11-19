@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {validComponents,validPageHelp} from '../public/component-catalog.js';import {explicitPageRewrite,textDifference,patchIsCurrent} from '../public/page-patch.js';import {handleAPI} from '../api.mjs';
+import {validComponents,validPageHelp} from '../public/component-catalog.js';import {explicitPageQuestion,explicitPageRewrite,textDifference,patchIsCurrent} from '../public/page-patch.js';import {handleAPI} from '../api.mjs';
 const cycle={id:'learning-cycle',type:'cycle',title:'Learn by explaining',prompt:'',items:[{label:'Explain',detail:'Try simple words.',value:0},{label:'Find gaps',detail:'Notice what you cannot explain.',value:0}],edges:[]};
 const req=(overrides={})=>new Request('http://127.0.0.1/api/preview',{method:'POST',headers:{Authorization:'Bearer test-key-not-a-real-secret','Content-Type':'application/json'},body:JSON.stringify({text:'What does this mean? Explain it for high school.',target:{id:'intro',text:'Explain an idea simply, then find gaps.'},audience:'',format:'Auto',phase:'page-help',...overrides})});
 test('catalog rejects executable props, duplicate ids, invalid relationships and oversized data',()=>{assert.equal(validComponents([cycle]),true);for(const invalid of [[{...cycle,onClick:'run code'}],[cycle,cycle],[{...cycle,type:'html'}],[{...cycle,id:'constructor'}],[{...cycle,items:cycle.items.map(i=>({...i,value:Infinity}))}],[{...cycle,type:'graph',edges:[{from:0,to:7,label:'bad'}]}]])assert.equal(validComponents(invalid),false);});
@@ -108,4 +108,32 @@ test('explicit rewrite instructions are distinguished from ordinary passage edit
  assert.equal(explicitPageRewrite(textDifference(passage,passage+'\n\n'+instruction)),instruction);
  assert.equal(explicitPageRewrite(textDifference(passage+'\n\n'+instruction,passage+'\n\n'+updated)),updated);
  assert.equal(explicitPageRewrite(textDifference(passage,'Explain an idea simply.')),'');
+ const noteQuestion='What is an ellipse?';
+ for(const rewrite of ['Rewrite these notes in one sentence.','Rewrite my notes for a high-school student.']){
+  assert.equal(explicitPageRewrite(textDifference(noteQuestion,noteQuestion+' '+rewrite)),rewrite);
+ }
+});
+
+test('a completed inline question uses the whole changed sentence',()=>{
+ const passage='Earth has a semimajor axis of 1 AU.';
+ const unfinished=passage+'\n\nWhat is an astronomical';
+ assert.equal(explicitPageQuestion(textDifference(unfinished,unfinished+' unit?')),'What is an astronomical unit?');
+ assert.equal(explicitPageQuestion(textDifference('', 'What is an ellipse?')),'What is an ellipse?');
+ assert.equal(explicitPageQuestion(textDifference('An orbit is round. What is an ellipse?','An orbit is oval. What is an ellipse?')),'');
+});
+
+test('explicit rewrite after an inline question has its own instruction path',async()=>{
+ const question='Orbits are ellipses. What is an astronomical unit?';
+ const instruction='Rewrite this for a high school student.';
+ const text=question+' '+instruction;
+ assert.equal(explicitPageRewrite(textDifference(question,text)),instruction);
+ const replacement='Planets orbit in oval paths. One astronomical unit is about the distance from Earth to the Sun.';
+ const response=await handleAPI(req({text:instruction,target:{id:'intro',mode:'rewrite',text}}),async(_,options)=>{
+  const sent=JSON.parse(options.body);
+  assert.match(sent.instructions,/Follow it even if target.text or context contains an earlier question/);
+  assert.match(sent.instructions,/complete revised passage in replacement/);
+  assert.equal(JSON.parse(sent.input).text,instruction);
+  return modelHelp({answer:'',replacement,components:[]});
+ });
+ assert.equal((await response.json()).preview.replacement,replacement);
 });

@@ -23,15 +23,24 @@ function streamValueEnd(text,start){
  let depth=0;for(let i=start;i<text.length;i++){const c=text[i];if(c==='"'){const s=streamString(text,i);if(!s?.complete)return -1;i=s.end-1;continue;}if(c==='['||c==='{')depth++;else if(c===']'||c==='}'){depth--;if(depth===0)return i+1;if(depth<0)return i;}else if(c===','&&depth===0)return i;}
  return -1;
 }
-// Only expose bounded display text before the complete structured result is validated.
-// Choices/highlights are committed from the fully validated final response.
-export function partialLivePreview(text){
- const fields=Object.create(null),complete=new Set();let i=0;while(/\s/.test(text[i]||'')&&i<text.length)i++;if(text[i++]!=='{')return {};
+function partialFields(text){
+ const fields=Object.create(null),complete=new Set();let i=0;while(/\s/.test(text[i]||'')&&i<text.length)i++;if(text[i++]!=='{')return {fields,complete};
  const skip=()=>{while(i<text.length&&/\s|,/.test(text[i]))i++;};
  while(i<text.length){skip();if(text[i]!== '"')break;const key=streamString(text,i);if(!key?.complete)break;i=key.end;skip();if(text[i++]!==':')break;skip();const start=i,end=streamValueEnd(text,start);
   if(end<0){if(text[start]==='"'){const value=streamString(text,start);if(value)fields[key.value]=value.value;}else if(key.value==='body'&&text[start]==='['){i=start+1;skip();if(text[i]==='"'){const value=streamString(text,i);if(value)fields.body=[value.value];}}break;}
   try{fields[key.value]=JSON.parse(text.slice(start,end));complete.add(key.value);}catch{break;}i=end;
  }
+ return {fields,complete};
+}
+
+// Only expose bounded display text before the complete structured result is validated.
+export function partialPageAnswer(text){
+ const {fields}=partialFields(text);
+ return typeof fields.answer==='string'?{answer:fields.answer.slice(0,600)}:{};
+}
+
+export function partialLivePreview(text){
+ const {fields,complete}=partialFields(text);
  const result={};if(Array.isArray(fields.body)&&typeof fields.body[0]==='string')result.answer=fields.body[0].slice(0,160);
  if(typeof fields.question==='string'){result.question=fields.question.slice(0,200);result.questionReady=complete.has('question')&&complete.has('options')&&complete.has('phrase');}
  if(complete.has('phrase')&&typeof fields.phrase==='string')result.phrase=fields.phrase.slice(0,120);

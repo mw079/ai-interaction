@@ -1,4 +1,5 @@
 import {worldMap} from './maps.js';
+import {blockContextText} from './request-context.js';
 
 const node=(tag,text,className)=>{
   const element=document.createElement(tag);
@@ -184,7 +185,7 @@ export function followUpScopes(component,activeField,selection){
     if(excerpt?.trim())scopes.splice(1,0,{id:activeField+':selection',label:'Selected passage',text:excerpt,start:selection.start,end:selection.end});
   }
   for(const block of component.components||[]){
-    scopes.push({id:'block:'+block.id,label:block.title,text:JSON.stringify(block),preview:block.prompt||''});
+    scopes.push({id:'block:'+block.id,label:block.title,text:blockContextText(block,4500),preview:block.prompt||''});
   }
   return scopes;
 }

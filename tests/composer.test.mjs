@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {confirmedChoices,requestContext} from '../public/request-context.js';
-import {demoPreview} from '../public/model.js';
+import {confirmedChoices,requestContext,blockContextText} from '../public/request-context.js';
+import {demoPreview,draftWordCount,completedDraft,extendsPreview,workingDraftPreview} from '../public/model.js';
 import {handleAPI} from '../api.mjs';
 test('explicit choices survive clearing the composer and inferred choices stay separate',()=>{
  const entries=[{type:'depth',phrase:'explain',value:'Beginner',confirmed:true},{type:'tone',phrase:'explain',value:'Friendly',confirmed:false}];
@@ -36,4 +36,68 @@ test('clarifying and exploratory choices are forwarded to both live completion a
   assert.equal(result.status,200);assert.ok(sent.input.includes('Undergraduate'));assert.ok(sent.input.includes('Angular momentum and equal areas'));assert.ok(sent.input.includes('Which connection should we explore?'));assert.ok(sent.instructions.includes('Apply them to the actual answer content and the page'));if(phase==='preview')assert.ok(sent.instructions.includes('never propose choosing or requesting that same direction again'));
   assert.equal(sent.instructions.includes('Also supply completion:'),phase==='preview');
  }
+});
+
+test('long follow-ups contain a structured slide with edited text and stable component IDs',()=>{
+ const preview=demoPreview('compare');
+ preview.edits={explanation:'The user revised this passage. '+('“λ”\n🌒 '.repeat(350))};
+ const block={
+  id:'phase-changes',type:'hierarchy',title:'Phase changes',prompt:'',
+  items:[{label:'Matter',detail:'“例”\n'.repeat(145),value:0},{label:'Gas',detail:'solid\n'.repeat(90),value:0}],
+  edges:[{from:0,to:1,label:'can become'}]
+ };
+ preview.components=[block];
+ const encoded=requestContext({
+  draft:'Explain why this changes.',
+  page:{title:'My edited slide',originalRequest:'Compare states of matter.',page:preview,notes:'“備忘”\n'.repeat(2000)},
+  confirmed:[{type:'audience',phrase:'Explain',value:'Undergraduate'}],
+  explicitIntent:'Understand the change'
+ });
+ assert.ok(Buffer.byteLength(encoded)<=6000);
+ const context=JSON.parse(encoded);
+ assert.equal(context.explicitIntent,'Understand the change');
+ assert.equal(context.confirmed[0].value,'Undergraduate');
+ assert.equal(context.page.title,'My edited slide');
+ assert.match(context.page.page.body[0],/^The user revised this passage\./);
+ assert.equal(context.page.page.components[0].id,'phase-changes');
+ assert.deepEqual(context.page.page.components[0].edges.map(({from,to})=>[from,to]),[[0,1]]);
+ assert.ok(context.page.notes.length>0);
+ assert.notEqual(preview.edits.explanation,context.page.page.body[0]);
+});
+
+test('scoped component context stays valid JSON at both API limits',()=>{
+ const block={
+  id:'test-tree',type:'hierarchy',title:'“分類”'.repeat(24),prompt:'Explain the branches.',
+  items:Array.from({length:6},(_,i)=>({label:'節点'.repeat(35),detail:('\u0001🌒"\n'.repeat(100)),value:i,latitude:null,longitude:null})),
+  edges:Array.from({length:5},(_,i)=>({from:i,to:i+1,label:'“枝”'.repeat(24)}))
+ };
+ for(const limit of [2500,4500]){
+  const text=blockContextText(block,limit);
+  assert.ok(Buffer.byteLength(text)<=limit);
+  const compact=JSON.parse(text);
+  assert.equal(compact.id,block.id);
+  assert.equal(compact.items.length,block.items.length);
+  assert.deepEqual(compact.edges.map(({from,to})=>[from,to]),block.edges.map(({from,to})=>[from,to]));
+ }
+});
+
+test('in-progress previews use finished words and drop resolved or superseded suggestions',()=>{
+ const snapshot='Plan a trip to Japan';
+ assert.equal(draftWordCount(completedDraft(snapshot+' wi')),5);
+ assert.equal(completedDraft(snapshot+' wi'),snapshot);
+ assert.equal(extendsPreview(snapshot,snapshot+' with two kids'),true);
+ assert.equal(extendsPreview(snapshot,snapshot+'ese gardens'),false);
+ assert.equal(extendsPreview(snapshot,snapshot+' Actually, plan a math lesson.'),false);
+ const control={phrase:'Japan',type:'location',options:['Kyoto and Osaka','Tokyo']};
+ const preview={...control,information:[control],question:'Which region?',body:['Choose a base.'],completion:'Use a train.'};
+ assert.equal(workingDraftPreview(preview,snapshot,snapshot+' with two kids').information.length,1);
+ const resolved=workingDraftPreview(preview,snapshot,snapshot+' focused on Kyoto');
+ assert.deepEqual(resolved.information,[]);
+ assert.equal(resolved.question,'');
+ assert.equal(resolved.completion,'');
+ const duration={phrase:'trip',type:'duration',question:'What trip length should I plan for?',options:['One week','Two weeks']};
+ const durationPreview={...duration,information:[duration],body:[]};
+ const answeredDuration=workingDraftPreview(durationPreview,snapshot,snapshot+' for a week');
+ assert.deepEqual(answeredDuration.information,[]);
+ assert.equal(answeredDuration.question,'');
 });

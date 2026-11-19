@@ -1,5 +1,44 @@
 import {renderCatalogBlock} from './component-renderer.js';
 const make=(tag,cls,text)=>{const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el;};
+const mathElement=(tag,...children)=>{
+ const element=document.createElementNS('http://www.w3.org/1998/Math/MathML',tag);
+ element.append(...children);
+ return element;
+};
+
+function keplerEquations(){
+ const variable=name=>mathElement('mi',name);
+ const number=value=>mathElement('mn',value);
+ const operator=symbol=>mathElement('mo',symbol);
+ const power=(name,exponent)=>mathElement('msup',variable(name),number(exponent));
+ const row=(...elements)=>mathElement('mrow',...elements);
+ const equation=(label,...terms)=>{
+  const math=mathElement('math',...terms);
+  math.setAttribute('display','block');
+  math.setAttribute('aria-label',label);
+  return math;
+ };
+ const shape=make('div','atlas-equation');
+ shape.append(equation('Eccentricity ranges from zero up to, but excluding, one',
+  number('0'),operator('≤'),variable('e'),operator('<'),number('1')));
+ const areas=make('div','atlas-equation');
+ areas.append(equation('Rate of change of swept area equals a constant',
+  mathElement('mfrac',row(mathElement('mi','d'),variable('A')),row(mathElement('mi','d'),variable('t'))),
+  operator('='),mathElement('mtext','constant')));
+ const period=make('div','atlas-equation');
+ period.append(equation('Orbital period squared is proportional to semimajor axis cubed',
+  power('T','2'),operator('∝'),power('a','3')));
+ const details=make('details','atlas-equation-details');
+ details.append(make('summary','','Full equation'),equation(
+  'Orbital period squared equals four pi squared times semimajor axis cubed, divided by G times the sum of the two masses',
+  power('T','2'),operator('='),
+  mathElement('mfrac',row(number('4'),power('π','2'),power('a','3')),
+   row(variable('G'),operator('('),variable('M'),operator('+'),variable('m'),operator(')')))),
+  make('p','','G is the gravitational constant. M and m are the two masses.'));
+ period.append(details);
+ return [shape,areas,period];
+}
+
 export function renderAtlas(target,p,{titleField,onEdit}){
  target.atlasDispose?.();const observers=[];target.atlasDispose=()=>observers.forEach(o=>o.disconnect());p.edits??={};const layout=make('div','atlas-layout'),copy=make('div','atlas-copy'),visual=make('div','atlas-visual');
  const diagram=!!p.components?.length||['kepler','diagram','comparison','planner','projectile'].includes(p.kind);
@@ -25,14 +64,25 @@ export function renderAtlas(target,p,{titleField,onEdit}){
   const caption=make('div','atlas-orbit-caption');caption.append(make('span','','Sun at one focus'));const speed=make('output');caption.append(speed);visual.append(caption);
   const controls=make('div','atlas-controls');const outputs={};
   for(const [key,label,min,max]of [['eccentricity','Eccentricity',0,65],['phase','Time through orbit',0,100]]){const l=make('label');const row=make('span','atlas-control-label',label);const out=outputs[key]=make('output');row.append(out);const input=make('input');input.type='range';input.min=min;input.max=max;input.value=Math.round(orbit[key]*100);input.setAttribute('aria-label',label);input.oninput=()=>{orbit[key]=+input.value/100;onEdit();draw();};l.append(row,input);controls.append(l);}visual.append(controls);
-  const tabs=make('div','atlas-laws');tabs.setAttribute('aria-label','Kepler law');const eq=make('p','atlas-equation');copy.append(eq);
-  ['Elliptical paths','Equal areas','Orbital periods'].forEach((label,i)=>{const b=make('button','',label);b.setAttribute('aria-pressed',String(orbit.law===i));b.onclick=()=>{orbit.law=i;onEdit();draw();};tabs.append(b);});target.append(tabs);
+  const tabs=make('div','atlas-laws');tabs.setAttribute('aria-label','Kepler law');const equations=keplerEquations();copy.append(...equations);
+  ['Elliptical paths','Equal areas','Orbital periods'].forEach((label,i)=>{const b=make('button','',label);b.setAttribute('aria-pressed',String(orbit.law===i));b.onclick=()=>{orbit.law=i;onEdit();showLaw();draw();};tabs.append(b);});target.append(tabs);
   const detail=make('p','atlas-law-detail');target.append(detail);
+  function showLaw(){
+   const [before,emphasis,after]=[
+    ['An ellipse has ', 'two foci', '. The Sun occupies one of them.'],
+    ['The two shaded regions correspond to ', 'equal time intervals', '.'],
+    ['', 'T is the orbital period', ' and a is the semimajor axis. For the same total mass, a larger orbit takes longer.']
+   ][orbit.law];
+   detail.replaceChildren(before,make('strong','',emphasis),after);
+   equations.forEach((equation,index)=>equation.hidden=index!==orbit.law);
+   [...tabs.children].forEach((tab,index)=>tab.setAttribute('aria-pressed',String(index===orbit.law)));
+  }
   function draw(){svg.replaceChildren();const e=orbit.eccentricity,a=190,b=a*Math.sqrt(1-e*e),cx=250,cy=175,sun=cx+a*e;const solve=M=>{let E=M;for(let j=0;j<10;j++)E-=(E-e*Math.sin(E)-M)/(1-e*Math.cos(E));return E;};const xy=E=>[cx+a*Math.cos(E),cy+b*Math.sin(E)];const add=(tag,attrs)=>{const n=document.createElementNS(svg.namespaceURI,tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);svg.append(n);};
    if(orbit.law===1)for(const m of [0,Math.PI]){const x=xy(solve(m)),y=xy(solve(m+.6));add('path',{d:`M ${sun} ${cy} L ${x[0]} ${x[1]} A ${a} ${b} 0 0 1 ${y[0]} ${y[1]} Z`,class:'atlas-sector'});}
    add('ellipse',{cx,cy,rx:a,ry:b,class:'atlas-track'});const E=solve(orbit.phase*Math.PI*2),point=xy(E);add('line',{x1:sun,y1:cy,x2:point[0],y2:point[1],class:'atlas-radius'});add('circle',{cx:sun,cy,r:8,class:'atlas-sun'});add('circle',{cx:point[0],cy:point[1],r:5,class:'atlas-planet'});
-   outputs.eccentricity.textContent=e.toFixed(2);outputs.phase.textContent=Math.round(orbit.phase*100)+'%';speed.textContent='Relative speed '+Math.sqrt(2/(1-e*Math.cos(E))-1).toFixed(2)+'×';eq.textContent=['0 ≤ e < 1','dA / dt = constant','T² ∝ a³'][orbit.law];detail.textContent=['An ellipse has two foci. The Sun occupies one of them.','The two shaded regions correspond to equal time intervals.','For the same central mass, a larger semimajor axis means a longer orbital period.'][orbit.law];[...tabs.children].forEach((b,i)=>b.setAttribute('aria-pressed',String(i===orbit.law)));
-  }draw();
+   outputs.eccentricity.textContent=e.toFixed(2);outputs.phase.textContent=Math.round(orbit.phase*100)+'%';speed.textContent='Relative speed '+Math.sqrt(2/(1-e*Math.cos(E))-1).toFixed(2)+'×';
+  }
+  showLaw();draw();
  }else if(p.components?.length){
   // Catalog blocks own this page's visual surface.
  }else if(p.kind==='diagram'){
@@ -45,5 +95,18 @@ export function renderAtlas(target,p,{titleField,onEdit}){
   // The existing tested simulator is attached by the app, retaining its controls.
   visual.classList.add('atlas-projectile');
  }
- const body=make('div','atlas-body');p.body.slice(1).forEach((paragraph,i)=>{p.edits.paragraphs??={};body.append(text(p.edits.paragraphs[i]??paragraph,'Page paragraph '+(i+2),value=>p.edits.paragraphs[i]=value,i+1));});target.append(body);
+ const body=make('div','atlas-body');
+ const paragraphs=p.body.slice(1);
+ const lawLabels=['Orbital shape','Equal areas','Orbital period'];
+ const lawPrefixes=[/^(?:first law\s*[:.)]|1[.)])\s*/i,/^(?:second law\s*[:.)]|2[.)])\s*/i,/^(?:third law\s*[:.)]|3[.)])\s*/i];
+ const overview=p.kind==='kepler'&&paragraphs.length===3&&paragraphs.every((paragraph,i)=>lawPrefixes[i].test(paragraph.trim()));
+ body.classList.toggle('atlas-law-overview',overview);
+ paragraphs.forEach((paragraph,i)=>{
+  p.edits.paragraphs??={};
+  const original=overview?paragraph.trim().replace(lawPrefixes[i],''):paragraph;
+  const item=text(p.edits.paragraphs[i]??original,'Page paragraph '+(i+2),value=>p.edits.paragraphs[i]=value,i+1);
+  if(overview)item.prepend(make('h3','atlas-law-heading',lawLabels[i]));
+  body.append(item);
+ });
+ target.append(body);
 }

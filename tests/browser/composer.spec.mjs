@@ -1,7 +1,7 @@
 import {expect,test} from '@playwright/test';
 import {
-  startFixtureServer,keplerDraft,keplerCompletion,keplerFollowUp,unfinishedComparison,
-  completedComparison,comparisonAnswer,travelDraft,travelQuestion,kyotoChoice,kyotoAnswer
+  startFixtureServer,keplerDraft,keplerCompletion,keplerFollowUp,keplerAudienceDraft,keplerAudienceQuestion,unfinishedComparison,
+  completedComparison,comparisonAnswer,japanCheckpoint,japanQuestion,japanAnswer,travelDraft,travelQuestion,kyotoChoice,kyotoAnswer
 } from './fixture-server.mjs';
 
 let server;
@@ -27,6 +27,11 @@ async function expectSameGeometry(locator,before){
 }
 
 test('wrapped autocomplete stays visible at the same geometry and Tab accepts it once',async({page})=>{
+  const initialReply=Promise.withResolvers();
+  await page.route('**/api/preview',async route=>{
+    if(route.request().postDataJSON().text===keplerDraft)await initialReply.promise;
+    await route.fallback();
+  });
   await draft(page).fill(keplerDraft);
   const composer=page.locator('.composer');
   // The typed draft can resize the field. Measure once that transition settles.
@@ -36,6 +41,7 @@ test('wrapped autocomplete stays visible at the same geometry and Tab accepts it
   await expect(wrapped).toBeHidden();
   const before=await composer.boundingBox();
   const fieldBefore=await draft(page).boundingBox();
+  initialReply.resolve();
   await advancePreview(page);
 
   await expect(wrapped).toBeVisible();
@@ -120,4 +126,166 @@ test('choosing an option with a slide open preserves draft focus and the refresh
 
   await page.getByRole('textbox',{name:'Editable explanation'}).click();
   await expect(quickAnswer(page)).toBeHidden();
+});
+
+test('refresh keeps the old preview and exact repeats make no request',async({page})=>{
+  const requests=[];
+  page.on('request',request=>{
+    if(request.url().endsWith('/api/preview')&&request.postDataJSON().phase==='preview')requests.push(request.postDataJSON().text);
+  });
+  await draft(page).fill(travelDraft);
+  await page.clock.runFor(250);
+  await expect(page.getByRole('button',{name:'Clarifying question: '+travelQuestion})).toBeEnabled();
+  await expect(quickAnswer(page)).toBeVisible();
+  const previousAnswer=await page.locator('#quick-answer').textContent();
+  await page.clock.pauseAt(await page.evaluate(()=>Date.now()+500));
+  await draft(page).fill(completedComparison.slice(0,-1));
+  await page.clock.runFor(249);
+  await expect(quickAnswer(page)).toContainText(previousAnswer);
+  await expect(quickAnswer(page)).toHaveAttribute('data-updating','');
+  await expect(page.getByRole('button',{name:'Clarifying question: '+travelQuestion})).toBeDisabled();
+  expect(requests).toEqual([travelDraft]);
+
+  await draft(page).fill(completedComparison);
+  await page.clock.runFor(250);
+  await expect(quickAnswer(page)).toHaveText(comparisonAnswer);
+  await expect(quickAnswer(page)).not.toHaveAttribute('data-updating','');
+  await draft(page).fill(travelDraft);
+  await expect(quickAnswer(page)).toHaveText(previousAnswer);
+  await expect(page.getByRole('button',{name:'Clarifying question: '+travelQuestion})).toBeEnabled();
+  await advancePreview(page);
+  expect(requests).toEqual([travelDraft,completedComparison]);
+});
+
+test('continuous typing starts Luna and keeps usable phrase options until resolved',async({page})=>{
+  const requests=[];
+  page.on('request',request=>{
+    if(request.url().endsWith('/api/preview')&&request.postDataJSON().phase==='preview')requests.push(request.postDataJSON().text);
+  });
+  await page.clock.pauseAt(await page.evaluate(()=>Date.now()+400));
+  const editor=draft(page);
+  const resume=server.holdPreview(japanCheckpoint);
+  try{
+    await editor.pressSequentially(japanCheckpoint+' ');
+    await expect.poll(()=>requests).toEqual([japanCheckpoint]);
+    await editor.pressSequentially('with my kids ');
+    resume();
+
+    // No pause timer has elapsed. The answer belongs to the prefix and its anchor still exists.
+    await expect(page.locator('#quick-answer')).toHaveText(japanAnswer);
+    const question=page.getByRole('button',{name:'Clarifying question: '+japanQuestion});
+    await expect(question).toBeEnabled();
+    await expect(page.locator('#input-mirror mark')).toHaveText('Japan');
+    await question.click();
+    await expect(page.getByText('Kyoto and Osaka',{exact:true})).toBeVisible();
+    await editor.focus();
+    await editor.pressSequentially('focused on Kyoto');
+    await expect(question).toBeHidden();
+    await expect(page.locator('#input-mirror mark')).toHaveCount(0);
+    expect(requests).toEqual([japanCheckpoint]);
+    await page.clock.runFor(300);
+    await expect(page.locator('#quick-answer')).toHaveText('With kids, Kyoto is a good base for a week.');
+    expect(requests).toEqual([japanCheckpoint,japanCheckpoint+' with my kids focused on Kyoto']);
+  }finally{resume();}
+});
+
+test('the intent icon opens the editable summary and leaves live help visible',async({page})=>{
+  await draft(page).fill(travelDraft);
+  await advancePreview(page);
+  const icon=page.getByRole('button',{name:'Review intent',exact:true});
+  const details=page.getByRole('dialog',{name:'Your intent and editable details'});
+  const edit=page.getByRole('button',{name:'Edit your intent'});
+  const question=page.getByRole('button',{name:'Clarifying question: '+travelQuestion});
+  await expect(icon).toBeVisible();
+  await expect(icon).toHaveText('');
+  await expect(question).toBeEnabled();
+  await expect(quickAnswer(page)).toBeVisible();
+  await expect(details).toBeHidden();
+  await icon.focus();
+  await icon.press('Enter');
+  await expect(details).toContainText('Compare Tokyo and Kyoto for an April trip.');
+  await expect(icon).toHaveAttribute('aria-expanded','true');
+  await expect(edit).toBeFocused();
+  await edit.press('Escape');
+  await expect(details).toBeHidden();
+  await expect(icon).toBeFocused();
+  await icon.click();
+  await edit.click();
+  await expect(page.getByRole('textbox',{name:'What do you want to achieve?'})).toHaveValue('Compare Tokyo and Kyoto for an April trip.');
+});
+
+test('a visible audience choice applies and closes even after the live preview refreshes',async({page})=>{
+  await page.clock.pauseAt(await page.evaluate(()=>Date.now()+400));
+  const editor=draft(page);
+  const followUp=keplerAudienceDraft+' with one example';
+  const resumeEarly=server.holdPreview(keplerAudienceDraft);
+  const resumeLatest=server.holdPreview(followUp);
+  const previewRequest=text=>page.waitForRequest(request=>request.url().endsWith('/api/preview')&&request.postDataJSON().text===text);
+  try{
+    const earlyRequest=previewRequest(keplerAudienceDraft);
+    await editor.pressSequentially(keplerAudienceDraft+' ');
+    await earlyRequest;
+    await page.keyboard.insertText('with one example');
+    const latestRequest=previewRequest(followUp);
+    await page.clock.runFor(300);
+    resumeEarly();
+    await latestRequest;
+    await page.getByRole('button',{name:'Clarifying question: '+keplerAudienceQuestion}).click();
+    const picker=page.locator('#intent-popover');
+    const choice=picker.getByRole('button',{name:'High school',exact:true});
+    await expect(picker.locator('.picker-option')).toHaveText(['Middle school','High school','University']);
+    await expect(picker.getByRole('searchbox')).toHaveCount(0);
+    await expect(picker.getByRole('button',{name:'Use this value'})).toHaveCount(0);
+    await expect(picker.getByRole('button',{name:'Type your own answer'})).toBeVisible();
+    await expect(choice).toBeVisible();
+    resumeLatest();
+    await expect(quickAnswer(page)).toContainText('Imagine an oval orbit around the Sun.');
+    await expect(choice).toBeVisible();
+    const chosen=followUp.replace('simply','simply (High school)');
+    const renewedRequest=previewRequest(chosen);
+    await choice.click();
+    await expect(picker).toBeHidden();
+    await expect(editor).toHaveValue(chosen);
+    await expect(editor).toBeFocused();
+    const {context}= (await renewedRequest).postDataJSON();
+    expect(JSON.parse(context).confirmed).toContainEqual({type:'audience',phrase:'simply',value:'High school'});
+    await expect(quickAnswer(page)).toContainText('At high-school level');
+
+    await page.getByRole('button',{name:'Review intent',exact:true}).click();
+    await page.getByRole('button',{name:'Audience: simply, High school',exact:true}).click();
+    await picker.getByRole('button',{name:'Type your own answer'}).click();
+    const custom=picker.locator('#popover-custom');
+    await custom.fill('Adults new to astronomy');
+    await custom.press('Enter');
+    await expect(picker).toBeHidden();
+    await expect(editor).toHaveValue(followUp.replace('simply','simply (Adults new to astronomy)'));
+    await expect(editor).toBeFocused();
+  }finally{
+    resumeEarly();
+    resumeLatest();
+  }
+});
+
+test('a long continued draft keeps live help visible until a newer response arrives',async({page})=>{
+  await draft(page).fill(travelDraft);
+  await advancePreview(page);
+  const oldQuestion=page.getByRole('button',{name:'Clarifying question: '+travelQuestion});
+  await expect(oldQuestion).toBeVisible();
+  const previous=await page.locator('#quick-answer').textContent();
+  const latest=travelDraft+' We enjoy walking slowly and having an open afternoon with enough time to read and rest.';
+  const resume=server.holdPreview(latest);
+  await page.clock.pauseAt(await page.evaluate(()=>Date.now()+500));
+  try{
+    await draft(page).fill(latest);
+    await page.clock.runFor(99);
+    await expect(oldQuestion).toBeVisible();
+    await expect(quickAnswer(page)).toBeVisible();
+    await expect(quickAnswer(page)).toHaveText(previous);
+    await expect(quickAnswer(page)).toHaveAttribute('data-updating','');
+    await page.clock.runFor(60);
+    await expect(quickAnswer(page)).toContainText('Leave one quiet');
+    await expect(oldQuestion).toBeVisible();
+  }finally{resume();}
+  await expect(quickAnswer(page)).toHaveText('Leave one quiet afternoon for gardens or a small museum.');
+  await expect(page.getByRole('button',{name:'Clarifying question: Would you prefer gardens or museums?'})).toBeEnabled();
 });
