@@ -23,8 +23,9 @@ AI Interaction is a web prototype for working with AI while a thought is still t
   - single choices apply and close
   - multi-select and include/exclude update the draft live while the popover stays open
   - typed answers apply on Enter or the small arrow
+  - the highlighted option shows the current choice, and clicking it again clears it
 
-  An "In your draft" line shows the current value with Clear. The draft gets `phrase (value)`, which stays editable.
+  The draft gets `phrase (value)`, which stays editable.
 - **Autocomplete** shows as grey text; Tab accepts and Escape dismisses.
 - **Review intent** opens a card where the inferred goal can be edited.
 

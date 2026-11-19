@@ -126,7 +126,7 @@ export function renderComposerExtension(target,family,item,choose,onResize){
       preview.hidden=!sample;onResize();
     };
     options.forEach((label,index)=>{
-      const b=button(label,()=>{list.querySelectorAll('.picker-option').forEach(o=>o.setAttribute('aria-pressed',String(o===b)));choose(label);});
+      const b=button(label,()=>{const clear=b.getAttribute('aria-pressed')==='true';list.querySelectorAll('.picker-option').forEach(o=>o.setAttribute('aria-pressed',String(!clear&&o===b)));choose(clear?'':label);});
       b.setAttribute('aria-pressed',String(saved===label));
       for(const event of ['pointerenter','focus'])b.addEventListener(event,()=>show(index));
       list.append(b);

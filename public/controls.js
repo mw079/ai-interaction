@@ -1,6 +1,6 @@
 import {renderComposerExtension} from './composer-extensions.js';
 import {INFORMATION_TYPES} from './intent.js';
-import {make,button,entry,currentLine} from './control-kit.js';
+import {make,button,entry} from './control-kit.js';
 // A tiny schematic of a response format, chosen from words in its label.
 const PREVIEW_KINDS=[['chart',/chart|graph|bar|data|number|statistic/i],['steps',/step|timeline|process|sequence|cycle|walk/i],['map',/map|place|route|location/i],
   ['grid',/compar|table|versus|vs\b|matrix/i],['visual',/visual|diagram|orbit|simulat|interactive|explore/i],['list',/list|bullet|checklist|outline|plan/i]];
@@ -24,22 +24,21 @@ export function formatPreview(value,forced){
 export function renderInformationControl(target,item,onChoose,onResize=()=>{}){
   target.replaceChildren();const {family}=INFORMATION_TYPES[item.type];target.dataset.family=family;
   const options=item.options||[];
-  const current=currentLine(item,onChoose);
   const choose=(value,opts)=>{
-    current.set(value);
-    // Mark the chosen row among single-choice options so the choice is visible wherever it is shown.
+    // The highlighted row is the only indicator of the current choice.
     target.querySelectorAll('.picker-choices:not(.picker-multi)>.picker-option,.picker-cards>.picker-option,.picker-presets>.picker-option').forEach(b=>b.setAttribute('aria-pressed',String(b.textContent===value)));
     onChoose(value,opts);
   };
   const live=value=>choose(value,{keepOpen:true});
   function option(value,{sample}={}){
-    const b=button(value,()=>choose(value),'picker-option');
+    // Clicking the selected option again clears it.
+    const b=button(value,()=>choose(b.getAttribute('aria-pressed')==='true'?'':value),'picker-option');
     b.setAttribute('aria-pressed',String(item.confirmed&&item.value===value));
     if(sample)for(const event of ['pointerenter','focus'])b.addEventListener(event,()=>sample(value));
     return b;
   }
   const rows=list=>{const g=make('div','picker-choices');g.append(...list);target.append(g);return g;};
-  const finish=()=>{target.append(current.element);onResize();};
+  const finish=()=>onResize();
   if(renderComposerExtension(target,family,item,choose,onResize)){finish();return;}
 
   if(family==='tone'||(family==='depth'&&options.length)){

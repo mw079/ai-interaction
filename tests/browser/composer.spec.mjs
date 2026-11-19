@@ -303,7 +303,7 @@ test('multi-select choices apply live in one step and the picker stays open',asy
   await expect(picker).toBeVisible();
   await picker.getByRole('button',{name:'Step-free access',exact:true}).click();
   await expect(editor).toHaveValue(requirementsDraft+' (Vegetarian meals; Step-free access)');
-  await expect(picker.locator('.picker-current-value')).toHaveText('Vegetarian meals; Step-free access');
+  await expect(picker.getByRole('button',{name:'Step-free access',exact:true})).toHaveAttribute('aria-pressed','true');
   await picker.getByRole('button',{name:'Vegetarian meals',exact:true}).click();
   await expect(editor).toHaveValue(requirementsDraft+' (Step-free access)');
   await expect(picker).toBeVisible();

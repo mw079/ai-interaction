@@ -876,7 +876,7 @@ body.intent-first[data-experience=unified].page-open #typing-assistance{backgrou
 body.intent-first[data-experience=unified].page-open #typing-assistance[hidden],body.intent-first[data-experience=unified].page-open .live-question[hidden]{display:none}
 body.intent-first[data-experience=unified].page-open .intent-panel::before{background:linear-gradient(to bottom,#f6f6f200,#f6f6f2 36px)}
 
-/* One-step controls: a field that applies on Enter, and the always-visible current value. */
+/* One-step controls: a field that applies on Enter; the highlighted option shows the choice. */
 .picker-entry{display:grid;gap:5px;padding:6px 6px 2px;font-size:12px;color:#7c8474}
 .picker-entry[hidden]{display:none}
 .picker-entry-row{position:relative;display:flex}
@@ -887,8 +887,3 @@ body.intent-first[data-experience=unified].page-open .intent-panel::before{backg
 .popover-options .picker-go:disabled,.picker-sample .picker-go:disabled{background:#e4ecdc;color:#a9b4a0;cursor:default}
 .picker-date-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:4px}
 .picker-date-row[hidden]{display:none}
-.picker-current{display:flex;align-items:baseline;gap:8px;margin:8px 4px 2px;padding:9px 10px 2px;border-top:1px solid #eef1e9;font-size:12.5px}
-.picker-current[hidden]{display:none}
-.picker-current-label{flex:none;color:#7c8474}
-.picker-current-value{flex:1;min-width:0;color:#2c3328;font-weight:600;overflow-wrap:anywhere}
-.popover-options .picker-current-clear{flex:none;width:auto;min-height:24px;padding:0 4px;border:0;background:none;color:#9a5a40;font-size:12px;text-decoration:underline;text-underline-offset:3px}
