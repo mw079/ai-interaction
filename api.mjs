@@ -1,7 +1,7 @@
 import {COMPONENT_SCHEMA,validPageHelp,validComponents,SLIDE_RECIPES,slideRecipe,matchesSlideRecipe} from './public/component-catalog.js';
 import {readSSE,partialLivePreview,partialPageAnswer} from './public/stream.js';
 import {FORMATS,validPreview,isIncompleteComparison,tidyPage} from './public/model.js';
-import {modelInstructions} from './prompts.mjs';
+import {modelInstructions,buildModelInput} from './prompts.mjs';
 
 const string={type:'string'};
 import {INFORMATION_TYPES} from './public/intent.js';
@@ -69,7 +69,7 @@ export async function handleAPI(request,upstream=fetch,env={}){
       method:check?'GET':'POST',headers:{Authorization:authorization,'Content-Type':'application/json'},redirect:'error',signal,
       ...(check?{}:{body:JSON.stringify({model,store:false,...(streaming?{stream:true}:{}),reasoning:{effort:page?'low':'none'},max_output_tokens:page?3400:pageHelp?2200:deeper?2600:1300,
         instructions:modelInstructions(payload,slideInstructions,contextInstructions),
-        input:JSON.stringify(payload),text:{format:{type:'json_schema',name:deeper?'go_deeper':pageHelp||selection?'local_assistance':'interactive_preview',strict:true,schema:deeper?DEEPER_SCHEMA:pageHelp?PAGE_HELP_SCHEMA:selection?SELECTION_SCHEMA:PREVIEW_SCHEMA}}
+        input:JSON.stringify(buildModelInput(payload,{slideLabel:recipe?.label})),text:{format:{type:'json_schema',name:deeper?'go_deeper':pageHelp||selection?'local_assistance':'interactive_preview',strict:true,schema:deeper?DEEPER_SCHEMA:pageHelp?PAGE_HELP_SCHEMA:selection?SELECTION_SCHEMA:PREVIEW_SCHEMA}}
       })})
     });
     if(!response.ok){const messages={401:'OpenAI rejected this key. Check it and try again.',403:`This key cannot access ${model}.`,404:`${model} is not available for this key.`,429:'OpenAI quota or rate limit reached. Check API billing or try again later.'};return json({retryable:response.status>=500,error:messages[response.status]||'OpenAI could not complete the request. Your page is unchanged.'},[401,403,404,429].includes(response.status)?response.status:502);}

@@ -90,8 +90,12 @@ function previewFor({phase,text}){
 }
 
 async function fixtureUpstream(options,gates){
-  const {input,stream}=JSON.parse(options.body);
-  const request=JSON.parse(input);
+  const sent=JSON.parse(options.body);
+  const {stream}=sent;
+  // The model input carries no phase; infer it the way the request itself implies it.
+  const input=JSON.parse(sent.input);
+  const phase=sent.text.format.name==='go_deeper'?'deeper':sent.model==='gpt-6.1-terra'?'page':sent.text.format.name==='local_assistance'?'page-help':'preview';
+  const request={...input,phase,text:input.request};
   const exactRewrite=request.target?.mode==='rewrite'
     ? request.text.match(/^Replace this entire (?:paragraph|note) with exactly this sentence: (.+)$/)?.[1]
     : undefined;

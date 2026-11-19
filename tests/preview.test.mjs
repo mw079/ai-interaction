@@ -19,7 +19,7 @@ test('model access checks both requested models without generation',async()=>{co
 test('uncertainty highlights concrete phrases and resolved preferences stop repeating',()=>{assert.equal(clarificationFor('hi'),null);const c=clarificationFor('Please explain physics');assert.equal(c.phrase,'physics');assert.equal(c.start,15);assert.equal(clarificationFor('Help me understand motion. With the mathematics'),null);assert.ok(quickAnswer('projectile motion').length<320);assert.equal(quickAnswer('an unsupported topic'), '');});
 test('page context is forwarded and oversized context is rejected',async()=>{
  const context='Existing plan: Italy, quiet hotel; dates not chosen';
- const upstream=async(url,opts)=>{assert.equal(JSON.parse(JSON.parse(opts.body).input).context,context);return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({...demoPreview('gravity'),kind:'planner'})}]}]});};
+ const upstream=async(url,opts)=>{assert.equal(JSON.parse(JSON.parse(opts.body).input).page,context);return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({...demoPreview('gravity'),kind:'planner'})}]}]});};
  assert.equal((await handleAPI(req({...payload,context,phase:'page'}),upstream)).status,200);
  assert.equal((await handleAPI(req({...payload,context:'x'.repeat(6001)}),()=>{throw Error('No inference');})).status,400);
 });
@@ -49,7 +49,7 @@ test('late or aborted previews never apply to a newer draft',()=>{
 
 test('automatic format and typed contextual refinements are accepted and bounded',async()=>{
  const refinement={type:'output_format',phrase:'Kepler laws',question:'How would you like to explore the laws?',options:['Orbit diagram','Mathematical derivation'],unit:''};
- const upstream=async(url,opts)=>{const request=JSON.parse(opts.body);assert.equal(JSON.parse(request.input).format,'Auto');assert.equal(request.text.format.schema.properties.information.items.properties.type.enum.length,28);return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({...demoPreview('Kepler laws'),information:[refinement]})}]}]});};
+ const upstream=async(url,opts)=>{const request=JSON.parse(opts.body);assert.equal(JSON.parse(request.input).decisions?.responseFormat,undefined,'Auto is a default, not a decision');assert.equal(request.text.format.schema.properties.information.items.properties.type.enum.length,28);return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({...demoPreview('Kepler laws'),information:[refinement]})}]}]});};
  assert.equal((await handleAPI(req({...payload,text:'Explain Kepler laws',format:'Auto'}),upstream)).status,200);
  assert.equal(validPreview({...demoPreview('Kepler laws'),information:[{...refinement,type:'execute_html'}]}),false);
 });
@@ -95,9 +95,23 @@ test('adding the other subject resumes the Luna request',async()=>{
   called=true;
   const upstream=JSON.parse(options.body);
   assert.equal(upstream.model,'gpt-6-luna');
-  assert.equal(JSON.parse(upstream.input).text,text);
+  assert.equal(JSON.parse(upstream.input).request,text);
   return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(demoPreview(text))}]}]});
  });
  assert.equal(called,true);
  assert.equal(result.status,200);
+});
+
+test('model input is ordered by authority, omits defaults and empty fields, and never duplicates the draft',async()=>{
+ const {buildModelInput,modelInstructions}=await import('../prompts.mjs');
+ const context=JSON.stringify({explicitIntent:'Revise for an exam',draft:'Explain Kepler laws (High school)',page:{title:'Orbits'},
+  confirmed:[{type:'audience',phrase:'Kepler laws',value:'High school'}],date:'2026-11-19',timezone:'Europe/Berlin'});
+ const input=buildModelInput({text:'Explain Kepler laws (High school)',audience:'',format:'Auto',phase:'page',context,stream:false,interaction:'unified'},{slideLabel:'Explore an orbit'});
+ assert.deepEqual(Object.keys(input),['request','decisions','page','today']);
+ assert.deepEqual(input.decisions,{choices:[{about:'audience',phrase:'Kepler laws',value:'High school'}],slideFormat:'Explore an orbit',intent:'Revise for an exam'});
+ assert.equal(JSON.stringify(input).includes('draft'),false,'the draft is sent once, as request');
+ assert.equal('stream' in input||'interaction' in input,false,'transport flags never reach the model');
+ assert.deepEqual(buildModelInput({text:'Hi',audience:'',format:'Auto',context:'{not json'}),{request:'Hi',page:'{not json'});
+ for(const phase of ['preview','page','page-help','selection','deeper'])
+  assert.match(modelInstructions({phase,target:{mode:'question'}},'',''),/^INPUT\. .*order of authority/,phase+' starts with the shared input contract');
 });

@@ -34,6 +34,19 @@ The model chose a fitting component for each prompt without being told: the Kepl
 
 **Decision:** keep zero-shot instructions and the strict schema, and do not add few-shot pages. The rules and schema already produce Kepler-density pages. Examples added tokens and pulled the output toward their own shape. Timing differences between runs are within network variance; the longer prompt did not make pages slower.
 
+## Prompt redesign, 2026-11-19
+
+The prompts were restructured around one input contract shared by all phases, with structured model input and an explicit order of authority. The before and after runs used the same day and server:
+
+| Check | Before | After |
+| --- | --- | --- |
+| `eval:pages` | 100 % (61/61), median 8.8 s | 100 % (61/61), median 8.8 s, same components chosen |
+| `test:luna` (3 prompts) | all pass | all pass |
+| Precedence checks (3 cases × 2 runs: decided audience not re-asked, latest request overrides a decision, instructions in page notes ignored) | 6/6 | 6/6 |
+| Model input for a typical draft | 434 bytes | 225 bytes |
+
+**Result:** behaviour is unchanged on these measures. The gain is clarity and coverage. One documented order of precedence now reaches every phase, including page help, selections and Go deeper, which previously had no user-intent guidance. The duplicate draft and the nested context string are gone.
+
 ## Limits
 
 The checks are rule-based. They cannot judge whether an explanation is correct, whether the chosen component is the *best* one, or whether the page looks good. Use the screenshots for that. Ten prompts is a small sample, so rerun it after every prompt or component change and compare.
