@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {readSSE,partialLivePreview} from '../public/shared/stream.js';
 import {liveClarificationFor,compactLiveAnswer,demoPreview} from '../public/shared/model.js';
 import {informationFor} from '../public/composer/intent.js';
-import {handleAPI} from '../api.mjs';
+import {handleAPI} from './helpers.mjs';
 const encoder=new TextEncoder(),frame=value=>encoder.encode('data: '+JSON.stringify(value)+'\n\n');
 const request=(signal,overrides={})=>new Request('http://127.0.0.1/api/preview',{method:'POST',signal,headers:{Authorization:'Bearer test-key-not-a-real-secret','Content-Type':'application/json'},body:JSON.stringify({text:'Explain Kepler laws',format:'Auto',audience:'',interaction:'unified',phase:'preview',stream:true,context:JSON.stringify({explicitIntent:'Teach high school students'}),...overrides})});
 test('SSE handles split UTF-8, CRLF frames, comments and multiline data',async()=>{

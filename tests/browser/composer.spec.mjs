@@ -15,7 +15,7 @@ test.beforeEach(async({page})=>{
   await page.route('**/*',route=>new URL(route.request().url()).origin===server.url
     ? route.continue():route.abort());
   await page.goto(server.url);
-  await expect(page.locator('#mode-label')).toHaveText('OpenAI configured');
+  await expect(page.locator('body')).toHaveClass(/\blive\b/);   // the server key is available
 });
 
 const draft=page=>page.getByRole('textbox',{name:'Your next instruction'});

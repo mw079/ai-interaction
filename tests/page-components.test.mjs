@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {validComponents,validPageHelp} from '../public/components/catalog.js';import {explicitPageQuestion,explicitPageRewrite,textDifference,patchIsCurrent} from '../public/page/patch.js';import {handleAPI} from '../api.mjs';
+import {validComponents,validPageHelp} from '../public/components/catalog.js';import {explicitPageQuestion,explicitPageRewrite,textDifference,patchIsCurrent} from '../public/page/patch.js';import {handleAPI} from './helpers.mjs';
 const cycle={id:'learning-cycle',type:'cycle',title:'Learn by explaining',prompt:'',items:[{label:'Explain',detail:'Try simple words.',value:0},{label:'Find gaps',detail:'Notice what you cannot explain.',value:0}],edges:[]};
 const req=(overrides={})=>new Request('http://127.0.0.1/api/preview',{method:'POST',headers:{Authorization:'Bearer test-key-not-a-real-secret','Content-Type':'application/json'},body:JSON.stringify({text:'What does this mean? Explain it for high school.',target:{id:'intro',text:'Explain an idea simply, then find gaps.'},audience:'',format:'Auto',phase:'page-help',...overrides})});
 test('catalog rejects executable props, duplicate ids, invalid relationships and oversized data',()=>{assert.equal(validComponents([cycle]),true);for(const invalid of [[{...cycle,onClick:'run code'}],[cycle,cycle],[{...cycle,type:'html'}],[{...cycle,id:'constructor'}],[{...cycle,items:cycle.items.map(i=>({...i,value:Infinity}))}],[{...cycle,type:'graph',edges:[{from:0,to:7,label:'bad'}]}]])assert.equal(validComponents(invalid),false);});
@@ -152,7 +152,7 @@ test('pages with a visual keep an introduction and at most three takeaways, cut 
 });
 
 test('go deeper answers every follow-up once with at most one valid component',async()=>{
- const {handleAPI,validDeeper}=await import('../api.mjs');
+ const {validDeeper}=await import('../api.mjs');const {handleAPI}=await import('./helpers.mjs');
  const followUps=['Why do boosters fade?','Are side effects common?'];
  const sections=[{answer:'Antibody levels fall over months.',components:[]},{answer:'Most are mild and short.',components:[]}];
  let sent;

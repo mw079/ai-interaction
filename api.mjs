@@ -21,15 +21,37 @@ export const DEEPER_SCHEMA={type:'object',additionalProperties:false,properties:
 const SELECTION_SCHEMA={type:'object',additionalProperties:false,properties:{answer:string,replacement:string},required:['answer','replacement']};
 const json=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}});
 const eventStream=body=>new Response(body,{headers:{'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-store','X-Accel-Buffering':'no','X-Content-Type-Options':'nosniff'}});
-export async function handleAPI(request,upstream=fetch,env={}){
-  const local=new URL(request.url).hostname==='127.0.0.1';
-  const serverKey=env.OPENAI_API_KEY&&(local||request.headers.has('oai-authenticated-user-id'));
-  if(new URL(request.url).pathname==='/api/config')return json({serverKey:!!serverKey});
+// Daily request limits, enforced here on the server: each visitor (by IP) may make DAILY_LIMIT
+// model requests per UTC day, and the whole app DAILY_TOTAL_LIMIT, a cap on the day's spending.
+// Counts live in memory: they reset when the server restarts, and each Worker isolate keeps its
+// own, so a public deployment should move them to a shared store (KV or a Durable Object).
+export function createDailyLimiter({perVisitor=200,total=2000,now=()=>Date.now()}={}){
+  let day='',visitors=new Map(),used=0;
+  const today=()=>{const d=new Date(now()).toISOString().slice(0,10);if(d!==day){day=d;visitors=new Map();used=0;}};
+  return {
+    limited(visitor){today();return used>=total||(visitors.get(visitor)||0)>=perVisitor;},
+    take(visitor){
+      today();
+      if(used>=total)return {ok:false,error:'The demo has reached today’s limit. Try again tomorrow.'};
+      const count=visitors.get(visitor)||0;
+      if(count>=perVisitor)return {ok:false,error:'You’ve reached today’s limit. Try again tomorrow.'};
+      visitors.set(visitor,count+1);used++;
+      return {ok:true,remaining:perVisitor-count-1};
+    }
+  };
+}
+let sharedLimiter;
+const limiterFor=env=>sharedLimiter??=createDailyLimiter({perVisitor:Number(env.DAILY_LIMIT)||200,total:Number(env.DAILY_TOTAL_LIMIT)||2000});
+
+// Visitors never supply a key: every request uses the server's OPENAI_API_KEY, within the daily limits.
+export async function handleAPI(request,upstream=fetch,env={},{limiter=limiterFor(env),visitor='anonymous'}={}){
+  const serverKey=!!env.OPENAI_API_KEY;
+  if(new URL(request.url).pathname==='/api/config')return json({live:serverKey,limited:serverKey&&limiter.limited(visitor)});
   if(request.method!=='POST')return json({error:'Use POST for this action.'},405);
   const origin=request.headers.get('Origin');if(origin&&origin!==new URL(request.url).origin)return json({error:'This request must come from the same website.'},403);
-  const authorization=request.headers.get('Authorization')||(serverKey?`Bearer ${env.OPENAI_API_KEY}`:'');
-  if(!/^Bearer [A-Za-z0-9_-]{16,300}$/.test(authorization))return json({error:'Add your OpenAI API key to use Luna.'},401);
-  const path=new URL(request.url).pathname;if(!['/api/check','/api/preview'].includes(path))return json({error:'Not found.'},404);
+  if(!serverKey)return json({error:'Live answers are not available right now.'},503);
+  const authorization=`Bearer ${env.OPENAI_API_KEY}`;
+  const path=new URL(request.url).pathname;if(path!=='/api/preview')return json({error:'Not found.'},404);
   let payload;
   if(path==='/api/preview'){
     if(!request.headers.get('Content-Type')?.startsWith('application/json'))return json({error:'Send a JSON request.'},415);
@@ -65,17 +87,18 @@ export async function handleAPI(request,upstream=fetch,env={}){
   const page=payload?.phase==='page';const model=page?'gpt-6.1-terra':'gpt-6-luna';
   const streamAbort=new AbortController();const streaming=payload?.stream===true&&(payload.phase==='preview'||pageHelp);
   const start=Date.now();const timeout=AbortSignal.timeout(page?45000:25000);const signal=AbortSignal.any([request.signal,timeout,streamAbort.signal]);
+  // Count only requests that will reach OpenAI: invalid ones above cost nothing and are not counted.
+  const allowance=limiter.take(visitor);
+  if(!allowance.ok)return json({error:allowance.error,limit:'daily',retryable:false},429);
   try{
-    const check=path==='/api/check';
-    const response=await upstream(check?'https://api.openai.com/v1/models/gpt-6-luna':'https://api.openai.com/v1/responses',{
-      method:check?'GET':'POST',headers:{Authorization:authorization,'Content-Type':'application/json'},redirect:'error',signal,
-      ...(check?{}:{body:JSON.stringify({model,store:false,...(streaming?{stream:true}:{}),reasoning:{effort:page?'low':'none'},max_output_tokens:page?3400:pageHelp?2200:deeper?2600:1300,
+    const response=await upstream('https://api.openai.com/v1/responses',{
+      method:'POST',headers:{Authorization:authorization,'Content-Type':'application/json'},redirect:'error',signal,
+      ...({body:JSON.stringify({model,store:false,...(streaming?{stream:true}:{}),reasoning:{effort:page?'low':'none'},max_output_tokens:page?3400:pageHelp?2200:deeper?2600:1300,
         instructions:modelInstructions(payload,slideInstructions,contextInstructions),
         input:JSON.stringify(buildModelInput(payload,{slideLabel:recipe?.label})),text:{format:{type:'json_schema',name:deeper?'go_deeper':pageHelp||selection?'local_assistance':'interactive_preview',strict:true,schema:deeper?DEEPER_SCHEMA:pageHelp?PAGE_HELP_SCHEMA:selection?SELECTION_SCHEMA:PREVIEW_SCHEMA}}
       })})
     });
-    if(!response.ok){const messages={401:'OpenAI rejected this key. Check it and try again.',403:`This key cannot access ${model}.`,404:`${model} is not available for this key.`,429:'OpenAI quota or rate limit reached. Check API billing or try again later.'};return json({retryable:response.status>=500,error:messages[response.status]||'OpenAI could not complete the request. Your page is unchanged.'},[401,403,404,429].includes(response.status)?response.status:502);}
-    if(check){const terra=await upstream('https://api.openai.com/v1/models/gpt-6.1-terra',{method:'GET',headers:{Authorization:authorization},redirect:'error',signal});if(!terra.ok)return json({error:'This key can access Luna, but GPT-6.1 Terra access could not be verified. Check model permissions and try again.'},terra.status===429?429:403);return json({connected:true,models:{preview:'gpt-6-luna',page:'gpt-6.1-terra'}});}
+    if(!response.ok){const messages={401:'Live answers are not available right now.',403:'Live answers are not available right now.',404:'Live answers are not available right now.',429:'The service is busy. Try again in a moment.'};return json({retryable:response.status>=500,error:messages[response.status]||'OpenAI could not complete the request. Your page is unchanged.'},[401,403,404].includes(response.status)?503:response.status===429?503:502);}
     const resultOptions={model,start,selection,pageHelp,recipe,activity:payload?.target?.mode,tidy:payload?.phase==='page'&&!payload.pageScope,deeper:deeper?payload.followUps.length:0};
     if(streaming)return liveStreamResponse(response,resultOptions,signal,()=>streamAbort.abort());
     return finishModelResponse(await response.json(),resultOptions);

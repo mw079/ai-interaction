@@ -137,7 +137,7 @@ body.intent-first[data-experience=unified].page-open:not(.composer-active) .comp
 body.intent-first[data-experience=unified].page-open:not(.composer-active) .composer:has(#intent-input:placeholder-shown) textarea{flex:1;min-height:0;height:26px!important;max-height:26px;line-height:26px;resize:none;overflow:hidden;white-space:nowrap}
 body.intent-first[data-experience=unified].page-open:not(.composer-active) .composer:has(#intent-input:placeholder-shown) .input-mirror-layer{display:none}
 body.intent-first[data-experience=unified].page-open:not(.composer-active) .composer:has(#intent-input:placeholder-shown) .composer-bottom{margin:0;min-height:0;flex:none}
-body.intent-first[data-experience=unified].page-open:not(.composer-active) .composer:has(#intent-input:placeholder-shown) :is(.refine-trigger,.composer-mode,#composer-scope){display:none}
+body.intent-first[data-experience=unified].page-open:not(.composer-active) .composer:has(#intent-input:placeholder-shown) :is(.refine-trigger,#composer-scope){display:none}
 
 /* Go deeper: next ideas become their own slide. */
 .atlas-next{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:26px;padding-top:18px;border-top:1px solid var(--atlas-line)}

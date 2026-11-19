@@ -14,9 +14,9 @@ import {renderControl,formatPreview} from './composer/controls.js';
 import {positionPopover} from './composer/popover.js';
 import {demoPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isIncompleteComparison, draftWordCount, completedDraft, PREVIEW_WORD_STEP, extendsPreview, workingDraftPreview, draftAnswersQuestion, projectileLaunch} from './shared/model.js';
 const $ = id => document.getElementById(id);
-const state = {key:'', live:false, requests:0, connectionRevision:0, composing:false, revision:0, format:'Auto', audience:'', controller:null, timer:null, proposal:null, component:null, history:[], uncertainty:null, popoverTimer:null, clarification:null, openClarification:null, popoverOrigin:null, suppressed:null, customDrafts:new Map(), serverKey:false, pendingSend:false, pageController:null, pageRequest:0, taskGoal:'', pageVersion:0, information:[], previousDraft:'', activeInformation:null,confirmedChoices:[],answers:[],intentOverride:'',slideChoice:undefined};
+const state = {live:false, limited:false, composing:false, revision:0, format:'Auto', audience:'', controller:null, timer:null, proposal:null, component:null, history:[], uncertainty:null, popoverTimer:null, clarification:null, openClarification:null, popoverOrigin:null, suppressed:null, customDrafts:new Map(), serverKey:false, pendingSend:false, pageController:null, pageRequest:0, taskGoal:'', pageVersion:0, information:[], previousDraft:'', activeInformation:null,confirmedChoices:[],answers:[],intentOverride:'',slideChoice:undefined};
 const node=element;
-const {modelPayload,callPreview}=createApiClient({state,pageContext:()=>pageContext(),status:(text,error)=>status(text,error)});
+const {modelPayload,callPreview}=createApiClient({state,pageContext:()=>pageContext(),status:(text,error)=>status(text,error),onLimit:message=>showLimit(message)});
 let composerExperience,workspace;
 let followUpScope=null;
 let lastPageSelection=null;
@@ -254,7 +254,6 @@ $('intent-input').addEventListener('keydown',e=>{if(e.altKey&&e.key==='ArrowDown
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('intent-popover').hidden){e.preventDefault();closeIntentPopover({restore:true,suppress:true});}});
 document.addEventListener('pointerdown',e=>{if(!$('intent-popover').hidden&&!$('intent-popover').contains(e.target)&&!$('clarify-phrase').contains(e.target)&&!$('intent-refinements').contains(e.target))closeIntentPopover({suppress:true});});
 window.addEventListener('resize',()=>{if(!$('intent-popover').hidden)positionIntentPopover();});window.addEventListener('scroll',()=>{if($('intent-popover').contains(document.activeElement))positionIntentPopover();else closeIntentPopover();},{passive:true});
-$('typing-connection').onclick=()=>{closeIntentPopover();$('connection-dialog').showModal();};
 $('build-page').onclick=()=>submitPage();
 // Go deeper: prefetch short answers for a page's follow-up questions in one Luna request.
 const deeperRequests=new WeakSet();
@@ -304,7 +303,7 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
   if(scope&&scope.version!==state.pageVersion){status('The page changed. Choose a new focus before sending.',true);return;}
   const base=scope?structuredClone(state.component):null;
   if(!text)return;
-  if(!state.live){state.pendingSend=true;$('connection-error').textContent='Connect OpenAI to create a page for your request.';$('connection-dialog').showModal();return;}
+  if(!state.live){if(!state.limited)status('Live pages are not available right now.',true);return;}
   directEdits.endBurst();closeIntentPopover();stop();state.pageController?.abort();
   const context=structuredClone(pageContext()),version=state.pageVersion,id=++state.pageRequest;
   const preferences=new Map(state.confirmedChoices.map(e=>[e.type+':'+e.phrase,e]));
@@ -432,7 +431,7 @@ function addInlineQuestion(target,selection){
   const region=node('div','inline-question');region.append(node('p','selection-quote',`“${selection.slice(0,180)}”`));
   const label=node('label','','Your question about this passage');const field=node('input');field.placeholder='What would you like to understand?';field.maxLength=500;label.append(field);
   const button=node('button','primary-button','Ask here');const answer=node('p','inline-answer');answer.setAttribute('role','status');
-  button.onclick=async()=>{if(!field.value.trim())return;button.disabled=true;answer.textContent=state.live?'Luna is preparing an explanation…':'Connect OpenAI to ask a question about this passage.';if(state.live){try{const data=await callPreview({text:`Explain this selected passage: ${selection}\nQuestion: ${field.value}`,audience:state.audience,format:'Outline'},new AbortController().signal);answer.textContent=data.preview.body.join('\n\n');}catch(error){answer.textContent=error.message;}}button.disabled=false;};
+  button.onclick=async()=>{if(!field.value.trim())return;button.disabled=true;answer.textContent=state.live?'Luna is preparing an explanation…':'Live answers are not available right now.';if(state.live){try{const data=await callPreview({text:`Explain this selected passage: ${selection}\nQuestion: ${field.value}`,audience:state.audience,format:'Outline'},new AbortController().signal);answer.textContent=data.preview.body.join('\n\n');}catch(error){answer.textContent=error.message;}}button.disabled=false;};
   region.append(label,button,answer);target.append(region);field.focus();
 }
 function livePreviewRequest(text){
@@ -461,6 +460,7 @@ function applyCachedPreview(key,text){
 async function preview(text=$('intent-input').value.trim()){
   const currentDraft=()=>$('intent-input').value.trim();
   if(!text||state.composing||isIncompleteComparison(text)||isIncompleteComparison(currentDraft()))return;
+  if(state.limited)return;
   if(!state.live){renderQuick(demoPreview(text,state.audience,state.format),'Demo');status('Demo uses built-in examples, not semantic AI. No draft text is sent.');return;}
   if(activePreview){
     previewQueued=activePreview.text!==text;
@@ -574,10 +574,8 @@ $('dismiss-button').onclick=()=>{state.proposal=null;renderProposal();};
 function setHistoryOpen(open){$('history-panel').hidden=!open;$('history-button').setAttribute('aria-expanded',String(open));if(open){renderHistory();$('close-history').focus({preventScroll:true});}}
 $('history-button').onclick=()=>setHistoryOpen($('history-panel').hidden);$('close-history').onclick=()=>{setHistoryOpen(false);$('history-button').focus();};
 $('download-button').onclick=()=>{const data={version:1,title:$('document-title').value,notes:$('document-input').value,component:state.component};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=node('a');a.href=url;a.download='ai-interaction-page.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status('Exported page data as JSON. API keys are never included.');};
-for(const [button,dialog] of [['connection-button','connection-dialog'],['about-button','about-dialog']])$(button).onclick=()=>{closeIntentPopover();$(dialog).showModal();};
-document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>{if(b.dataset.close==='connection-dialog')$('api-key').value='';$(b.dataset.close).close();});$('connection-dialog').addEventListener('close',()=>{$('api-key').value='';state.connectionRevision++;});
-$('connection-form').onsubmit=async event=>{event.preventDefault();const key=$('api-key').value.trim();if(!key&&!state.serverKey){$('connection-error').textContent='Enter an OpenAI API key, or stay in demo mode.';return;}const connectionRevision=++state.connectionRevision;$('connect-button').disabled=true;$('connection-error').textContent='Checking Luna access…';try{const response=await fetch('/api/check',{method:'POST',headers:key?{Authorization:`Bearer ${key}`}:{}});const result=await response.json();if(connectionRevision!==state.connectionRevision)return;if(!response.ok)throw new Error(result.error||'Connection failed.');stop();state.key=key;previewCache.clear();shownPreview=null;completedAnswer='';composerExperience?.stop();state.requests=0;state.live=true;document.body.classList.add('live');$('mode-label').textContent='OpenAI connected';$('typing-connection').firstChild.textContent='Connected';$('api-key').value='';$('connection-error').textContent='';$('connection-dialog').close();changed();if(state.pendingSend){state.pendingSend=false;submitPage();}}catch(error){$('connection-error').textContent=error.message;}finally{$('connect-button').disabled=false;}};
-$('disconnect-button').onclick=()=>{state.connectionRevision++;stop();composerExperience?.stop();state.pageController?.abort();state.pageRequest++;hidePageProgress();state.pendingSend=false;state.key='';previewCache.clear();state.live=false;document.body.classList.remove('live');$('mode-label').textContent='Demo mode';$('typing-connection').firstChild.textContent='Demo';$('api-key').value='';$('connection-dialog').close();changed();};
+$('about-button').onclick=()=>{closeIntentPopover();$('about-dialog').showModal();};
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());
 $('active-component').addEventListener('input',event=>{if(event.target.closest('.page-assistant'))return;state.pageVersion++;if(state.proposal?.baseVersion!==undefined)renderProposal();});
 $('document-title').addEventListener('input',event=>{markPageEdit();event.target.style.height='0';event.target.style.height=event.target.scrollHeight+'px';});
 $('document-input').addEventListener('input',markPageEdit);
@@ -619,5 +617,13 @@ setupPageAssistant({state,request:callPreview,commit(apply,id){
 }});
 
 workspace=setupWorkspace();$('page-back').onclick=()=>navigatePage(-1);$('page-forward').onclick=()=>navigatePage(1);
-window.addEventListener('pagehide',()=>{stop();state.pageController?.abort();state.key='';});changed();
-fetch('/api/config').then(r=>r.json()).then(config=>{if(!config.serverKey)return;state.serverKey=true;state.live=true;document.body.classList.add('live');$('mode-label').textContent='OpenAI configured';$('typing-connection').firstChild.textContent='OpenAI';$('disconnect-button').textContent='Pause live previews';changed();}).catch(()=>{});
+window.addEventListener('pagehide',()=>{stop();state.pageController?.abort();});changed();
+// Live help needs the server's key; a visitor over today's limit sees the try-tomorrow card instead.
+function showLimit(message){
+  state.live=false;state.limited=true;stop();composerExperience?.stop();state.pageController?.abort();hidePageProgress();
+  document.body.classList.remove('live');document.body.classList.add('limited');
+  $('typing-assistance').hidden=true;
+  if(message)$('limit-message').textContent=message;
+  $('limit-card').hidden=false;
+}
+fetch('/api/config').then(r=>r.json()).then(config=>{if(config.limited){showLimit();return;}if(!config.live)return;state.live=true;document.body.classList.add('live');changed();}).catch(()=>{});

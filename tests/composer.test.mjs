@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {confirmedChoices,requestContext,blockContextText} from '../public/composer/request-context.js';
 import {demoPreview,draftWordCount,completedDraft,extendsPreview,workingDraftPreview} from '../public/shared/model.js';
-import {handleAPI} from '../api.mjs';
+import {handleAPI} from './helpers.mjs';
 test('explicit choices survive clearing the composer and inferred choices stay separate',()=>{
  const entries=[{type:'depth',phrase:'explain',value:'Beginner',confirmed:true},{type:'tone',phrase:'explain',value:'Friendly',confirmed:false}];
  const saved=confirmedChoices(entries);entries.length=0;

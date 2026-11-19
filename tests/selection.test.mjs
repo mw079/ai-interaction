@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {canAcceptCompletion,freshCompletion} from '../public/shared/model.js';
-import {handleAPI} from '../api.mjs';
+import {handleAPI} from './helpers.mjs';
 const headers={'Content-Type':'application/json',Authorization:'Bearer test-key-not-a-real-secret',Origin:'https://example.test'};
 const req=body=>new Request('https://example.test/api/preview',{method:'POST',headers,body:JSON.stringify({text:'An ellipse is an oval-shaped curve.',audience:'',format:'Auto',...body})});
 test('completion only captures unmodified Tab at a collapsed end-of-draft caret',()=>{const p={text:'Explain orbits.',start:15,end:15,completion:'Use an example.'};assert.ok(canAcceptCompletion(p));for(const extra of [{start:0},{end:0},{composing:true},{modified:true},{completion:''}])assert.equal(canAcceptCompletion({...p,...extra}),false);});

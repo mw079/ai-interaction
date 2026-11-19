@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {COMPONENT_TYPES,SLIDE_RECIPES,validComponents,normaliseComponents} from '../public/components/catalog.js';
 import {CONTROL_FAMILIES} from '../public/composer/intent.js';
 import {applyFollowUpScope,followUpScopes} from '../public/composer/controls-extended.js';
-import {handleAPI} from '../api.mjs';
+import {handleAPI} from './helpers.mjs';
 
 test('all twenty-six slide components have a selection recipe',()=>{
   const types=Object.values(SLIDE_RECIPES).flatMap(recipe=>recipe.blocks??[]);

@@ -82,14 +82,14 @@ Empty fields are omitted, so a missing field means "not decided". Each phase's p
 
 ## Implementation and checks
 
-- **Stack:** a plain browser UI and a Node loopback server. OpenAI calls go through the server, using the ignored `.env` key on `127.0.0.1`, a per-tab key, or labelled demo examples.
+- **Stack:** a plain browser UI and a Node loopback server. OpenAI calls go through the server and always use its `.env` key; without one, the app shows labelled demo examples.
 - **Model settings:** Luna uses reasoning `none` for live help, selections, page help and Go deeper. Terra uses `low` reasoning for pages, with a 3,400-token limit.
-- **Safety and limits:** every response is checked against a strict schema. Temporary failures are retried once, and the UI caps a connection at 30 generation requests.
-- **Tests:** 98 unit and API tests, and 84 browser tests (42 scenarios at 1280 and 390 px). Every interactive component and both simulations are tested on what they draw: positions, lengths and areas are measured against the data or the physics (`tests/browser/components.spec.mjs`, plus the Kepler and projectile tests). The suite passes repeated runs under eight-worker stress.
+- **Safety and limits:** every response is checked against a strict schema. Temporary failures are retried once. The server limits each visitor to 200 requests per UTC day and the whole app to 2,000 (`DAILY_LIMIT`, `DAILY_TOTAL_LIMIT`); over the limit, a "Try again tomorrow" card appears. Counts live in server memory, so a hosted deployment needs a shared store.
+- **Tests:** 99 unit and API tests, and 86 browser tests (43 scenarios at 1280 and 390 px). Every interactive component and both simulations are tested on what they draw: positions, lengths and areas are measured against the data or the physics (`tests/browser/components.spec.mjs`, plus the Kepler and projectile tests). The suite passes repeated runs under eight-worker stress.
 - **Live quality:** `npm run eval:pages` passed 98 % of design-rule checks on ten prompts (median about 10 s to a page). After the intro rule, the three process prompts passed 100 %. The model picks a fitting component on its own: orbit, cycle, process, comparison, proportion, matrix, or plain text for an email.
 - **Version control:** this folder is its own Git repository. Work is committed on `main` through `22ae1c8`, not pushed.
 
-Run with `npm run dev` and open [127.0.0.1:4317](http://127.0.0.1:4317/). Use that exact address: `localhost` opens in demo mode because the `.env` key is only used for `127.0.0.1`.
+Run with `npm run dev` and open [127.0.0.1:4317](http://127.0.0.1:4317/). 
 
 | Command | Purpose |
 | --- | --- |

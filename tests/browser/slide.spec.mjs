@@ -12,7 +12,7 @@ test.beforeEach(async({page})=>{
   await page.route('**/*',route=>new URL(route.request().url()).origin===server.url
     ? route.continue():route.abort());
   await page.goto(server.url);
-  await expect(page.locator('#mode-label')).toHaveText('OpenAI configured');
+  await expect(page.locator('body')).toHaveClass(/\blive\b/);   // the server key is available
 });
 
 const field=page=>page.getByRole('textbox',{name:'Editable explanation'});
@@ -113,6 +113,24 @@ test('an answer opening under the intro does not move the intro',async({page})=>
   await review(page);
   await expect(page.getByRole('status',{name:'Answer'})).toHaveText(/^Surface molecules/);
   expect(Math.abs(await top()-before)).toBeLessThanOrEqual(1);
+});
+
+test('over the daily limit, the try-tomorrow card appears and the current page stays',async({page})=>{
+  await send(page,'Create an evaporation slide.',evaporationTitle);
+  server.setDailyLimit(0);                                              // today's allowance is used up
+  try{
+    const card=page.getByRole('status').filter({hasText:'That’s all for today'});
+    await expect(card).toBeHidden();
+    await page.getByRole('textbox',{name:'Your next instruction'}).fill('Create a triangle slide.');
+    await button(page,'Explore interactively').click();
+    await expect(card).toBeVisible();
+    await expect(card).toContainText('Try again tomorrow.');
+    await expect(title(page)).toHaveValue(evaporationTitle);            // the page is kept
+    await expect(page.locator('#status')).not.toContainText('limit');   // no second, duplicate message
+    await page.reload();                                                 // the server remembers the count
+    await expect(card).toBeVisible();
+    await expect(page.locator('body')).not.toHaveClass(/\blive\b/);
+  }finally{server.setDailyLimit(Infinity);}
 });
 
 test('a newer slide remains in History when applying a change from Back',async({page})=>{

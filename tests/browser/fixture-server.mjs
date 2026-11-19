@@ -1,7 +1,7 @@
 import {readFile} from 'node:fs/promises';
 import http from 'node:http';
 import {once} from 'node:events';
-import {handleAPI} from '../../api.mjs';
+import {handleAPI,createDailyLimiter} from '../../api.mjs';
 import worker from '../../dist/server/index.js';
 
 export const keplerDraft='I want to understand Kepler’s laws as an undergraduate.\nConnect all three laws to Newtonian gravity and explain the equal-areas law.';
@@ -148,6 +148,8 @@ const DEV_FILES={'/__dev/components':'components.html','/__dev/components.js':'c
 
 export async function startFixtureServer(){
   const gates=new Map();
+  // Unlimited by default; a test lowers it with setDailyLimit to see the try-tomorrow card.
+  let limiter=createDailyLimiter({perVisitor:Infinity,total:Infinity});
   const server=http.createServer(async(request,response)=>{
     try{
       const chunks=[];
@@ -164,7 +166,7 @@ export async function startFixtureServer(){
         return;
       }
       const result=url.pathname.startsWith('/api/')
-        ? await handleAPI(webRequest,(_,options)=>fixtureUpstream(options,gates),{OPENAI_API_KEY:'local-fixture-not-a-real-key'})
+        ? await handleAPI(webRequest,(_,options)=>fixtureUpstream(options,gates),{OPENAI_API_KEY:'local-fixture-not-a-real-key'},{limiter,visitor:'fixture'})
         : await worker.fetch(webRequest,{});
       response.writeHead(result.status,Object.fromEntries(result.headers));
       for await(const chunk of result.body||[])response.write(chunk);
@@ -178,6 +180,7 @@ export async function startFixtureServer(){
   await once(server,'listening');
   return {
     url:'http://127.0.0.1:'+server.address().port,
+    setDailyLimit(perVisitor){limiter=createDailyLimiter({perVisitor,total:Infinity});},
     holdPreview(text){
       const gate=Promise.withResolvers();
       gates.set(text,gate.promise);

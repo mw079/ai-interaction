@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {withSingleRetry,requestError,retryDelay} from '../public/shared/retry.js';
-import {handleAPI} from '../api.mjs';
+import {handleAPI} from './helpers.mjs';
 import {readSSE} from '../public/shared/stream.js';
 const request=(stream=false)=>new Request('http://127.0.0.1/api/preview',{method:'POST',headers:{Authorization:'Bearer test-key-not-a-real-secret','Content-Type':'application/json'},body:JSON.stringify({text:'Explain Kepler laws',format:'Auto',audience:'',phase:'preview',stream})});
 test('success makes one request and schedules no retry',async()=>{let calls=0,waits=0;assert.equal(await withSingleRetry(async()=>{calls++;return 'done';},{wait:async()=>waits++}),'done');assert.equal(calls,1);assert.equal(waits,0);});

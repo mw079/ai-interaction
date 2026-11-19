@@ -59,7 +59,6 @@
 [data-experience=unified].page-open .live-question{margin:0;bottom:calc(100% + 8px);max-height:90px}
 /* Assistance never changes the composer's geometry. Only the user's own text grows it. */
 .intent-first[data-experience=unified] .composer textarea{display:block;min-height:56px}
-.intent-first:not(.has-intent):not(.page-open) .composer-mode{visibility:hidden}
 [data-experience=unified] .completion-line{position:absolute;right:112px;bottom:20px;display:block;padding:0;margin:0;line-height:1;z-index:3}
 [data-experience=unified] #input-mirror .completion-text{font:inherit;color:#1d1d1f;white-space:pre-wrap}
 .completion-overflow{order:3;margin:8px 12px 0;padding:6px 10px;border-left:2px solid #d0d0d0;border-radius:0 7px 7px 0;background:#f0f0f0;color:#1d1d1f;font-size:.875rem;line-height:1.5;overflow-wrap:anywhere}
@@ -76,3 +75,12 @@
 .intent-edit-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:12px}
 .intent-edit-actions button{font-size:.6875rem}.intent-edit-actions button[type=button]{border:0;background:transparent;color:#6d6d6d}
 .intent-reset-button{margin-top:12px;display:block}
+/* Daily limit: one calm card above the composer. The media slot holds a short video later and
+   stays hidden while empty. While limited, the composer stays readable but cannot send. */
+.limit-card{max-width:760px;margin:0 auto 14px;padding:22px 24px;border:1px solid var(--line);border-radius:18px;background:var(--paper);text-align:center}
+.limit-card h2{margin:0 0 6px;font-size:1.125rem;font-weight:600;color:var(--ink)}
+.limit-card p{margin:0;color:var(--muted);font-size:.9375rem}
+.limit-media{margin:0 auto 16px;max-width:520px;border-radius:12px;overflow:hidden}
+.limit-media:empty{display:none}
+.limit-media video{display:block;width:100%}
+body.limited #build-page{opacity:.35;pointer-events:none}

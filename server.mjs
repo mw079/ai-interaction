@@ -14,7 +14,7 @@ const server=http.createServer(async(req,res)=>{
   const chunks=[];let bytes=0;for await(const chunk of req){bytes+=chunk.length;if(bytes>40000){res.writeHead(413);res.end('Request too large');return;}chunks.push(chunk);}
   const controller=new AbortController();res.on('close',()=>{if(!res.writableEnded)controller.abort();});
   const request=new Request(`http://${req.headers.host}${req.url}`,{method:req.method,headers:req.headers,signal:controller.signal,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});
-  const response=await worker.default.fetch(request,{OPENAI_API_KEY:process.env.OPENAI_API_KEY});res.writeHead(response.status,Object.fromEntries(response.headers));for await(const chunk of response.body||[]){if(res.destroyed)break;res.write(chunk);}res.end();
+  const response=await worker.default.fetch(request,{OPENAI_API_KEY:process.env.OPENAI_API_KEY,DAILY_LIMIT:process.env.DAILY_LIMIT,DAILY_TOTAL_LIMIT:process.env.DAILY_TOTAL_LIMIT,LOCAL_VISITOR:req.socket.remoteAddress});res.writeHead(response.status,Object.fromEntries(response.headers));for await(const chunk of response.body||[]){if(res.destroyed)break;res.write(chunk);}res.end();
  }catch{if(res.destroyed)return;if(!res.headersSent){res.writeHead(500,{'Content-Type':'text/plain'});res.end('The local server could not complete this request.');}else res.end();}
 });
 server.listen(port,'127.0.0.1',()=>console.log(`AI Interaction preview: http://127.0.0.1:${port}`));

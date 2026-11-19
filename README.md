@@ -12,10 +12,11 @@ Requires Node 22 or later. No dependencies are needed to run the app.
 npm run dev
 ```
 
-Open **http://127.0.0.1:4317** and use that exact address. The server only uses an OpenAI key for requests to `127.0.0.1`, so `localhost` opens in demo mode. Set `PORT` to use another port. The server builds the assets at startup, so restart it after changing source files.
+Open **http://127.0.0.1:4317**. Set `PORT` to use another port. The server builds the assets at startup, so restart it after changing source files.
 
-- **Live mode:** put `OPENAI_API_KEY=…` in `.env`, a file Git ignores, or connect with your own key in the browser (header → connection).
-- **Demo mode:** works without a key and gives labelled sample answers for a few built-in examples. Send needs live mode.
+- **Live mode:** put `OPENAI_API_KEY=…` in `.env`, a file Git ignores. Visitors never enter a key: every request uses the server's key.
+- **Daily limit:** each visitor (by IP address) gets `DAILY_LIMIT` requests per UTC day (default 200), counting typing help, pages, questions and Go deeper alike, and the whole app gets `DAILY_TOTAL_LIMIT` (default 2,000) as a cap on spending. Both can be set in `.env`. Over the limit, the server refuses the request and the app shows a "Try again tomorrow" card, with a slot for a short video. Counts are kept in server memory, so they reset on restart; a hosted deployment needs a shared store (KV or a Durable Object) for them.
+- **Demo mode:** without a key the app gives labelled sample answers for a few built-in examples. Send needs live mode.
 
 ## Develop and test
 
@@ -47,7 +48,7 @@ With the dev server running, two galleries show every building block with sample
 - **When live help runs:** after four newly completed words (at least 1.2 s apart), after a 100 ms pause at the end of a sentence, or after a 250 ms ordinary pause. At most one preview is in flight, recent drafts are cached, and newer typing cancels older work.
 - **What the models receive:** the browser sends the draft and request context to `api.mjs`, which validates and bounds it. `prompts.mjs` turns it into one structured input shared by both models, ordered by authority: request, decisions, target, page (background only), today. See [STATE.md](STATE.md#how-the-models-receive-user-information).
 - **What comes back:** every response must match a strict JSON schema and pass validation before it is used. The model supplies data, never HTML or code. Pages are drawn by app-owned components from the catalog in `public/components/catalog.js` ([component contracts](docs/COMPONENT_LIBRARY.md)).
-- **Failures:** temporary failures are retried once after 800 ms. Key, quota and validation errors are shown, not retried. A connection allows 30 generation requests.
+- **Failures:** temporary failures are retried once after 800 ms. Validation and service errors are shown, not retried. The daily limit is enforced on the server.
 
 ## Project layout
 
@@ -69,7 +70,7 @@ docs/                  component contracts, evaluation results, design research
 
 ## Privacy and limits
 
-- **The key stays out of the browser.** The `.env` key is used only by the loopback server and never ends up in browser assets, the build or Git. A key entered in the browser is held in memory for the tab and sent in the authorization header.
+- **The key stays out of the browser.** The `.env` key is used only by the server and never ends up in browser assets, the build or Git. Visitors cannot supply their own key; one sent by a browser is ignored.
 - **Requests are not stored by OpenAI.** They use `store:false`. Live mode still sends your draft, choices and page content through the server to OpenAI, so this is not local inference.
 - **Nothing persists across reloads.** Pages, notes, history and choices live in the tab and reload clears them. Export saves the page as JSON; there is no import yet.
 - **Not implemented:** file uploads, web search, browser or desktop actions, accounts, analytics, shared editing and local models.
