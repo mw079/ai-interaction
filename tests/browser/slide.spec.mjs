@@ -372,6 +372,15 @@ test('generation shows a quiet loading state, then reveals the page and typeset 
   await expect(progress).toBeHidden();
 });
 
+test('one over-long takeaway label does not turn the other takeaways back into prose',async({page})=>{
+  await send(page,'Explain the water cycle with one long label.','The water cycle');
+  const headings=page.locator('.atlas-body .atlas-law-heading');
+  await expect(headings).toHaveText(['Energy','Gravity']);
+  await expect(page.locator('.atlas-body')).toHaveClass(/atlas-law-overview/);
+  await expect(page.getByRole('textbox',{name:'Page paragraph 3'})).toHaveValue('Not all water follows the same path: Some stays underground for centuries.');
+  await expect(page.getByRole('textbox',{name:'Page paragraph 2'})).toHaveValue('The Sun drives evaporation.');
+});
+
 test('Kepler takeaways have bold labels and a plain editable body, and notes answers format emphasis safely',async({page})=>{
   await send(page,'Explain all three Kepler laws.','Kepler’s laws');
   const cards=page.locator('.atlas-law-overview .atlas-law-heading');

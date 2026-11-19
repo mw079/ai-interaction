@@ -55,6 +55,9 @@ function previewFor({phase,text}){
         {label:'Target shown',detail:'The vaccine shows an antigen.',value:0,latitude:null,longitude:null},
         {label:'Memory forms',detail:'Memory cells remain afterwards.',value:0,latitude:null,longitude:null}]}],
       followUps:vaccineFollowUps};
+    if(text==='Explain the water cycle with one long label.')return {...preview,title:'The water cycle',body:['Water keeps moving between land, sea and sky.',
+      'Energy: The Sun drives evaporation.','Not all water follows the same path: Some stays underground for centuries.','Gravity: It pulls rain back down.'],
+      components:[{id:'cycle',type:'cycle',title:'The cycle',prompt:'',edges:[],items:['Evaporation','Condensation','Precipitation'].map(label=>({label,detail:label+'.',value:0,latitude:null,longitude:null}))}]};
     return {...preview,kind:'kepler',body:['Change the orbit to explore Kepler’s laws.']};
   }
   if(text===completedComparison)return {...preview,body:[comparisonAnswer]};

@@ -96,15 +96,18 @@ export function renderAtlas(target,p,{titleField,onEdit}){
  const lawLabels=['Orbital shape','Equal areas','Orbital period'];
  const lawPrefixes=[/^(?:first law\s*[:.)]|1[.)])\s*/i,/^(?:second law\s*[:.)]|2[.)])\s*/i,/^(?:third law\s*[:.)]|3[.)])\s*/i];
  const overview=p.kind==='kepler'&&paragraphs.length===3&&paragraphs.every((paragraph,i)=>lawPrefixes[i].test(paragraph.trim()));
- // Any page can use the same takeaway columns: two or three "Label: one sentence" passages.
+ // Any page can use the same takeaway columns: up to three "Label: one sentence" passages.
+ // Each passage is judged on its own, so one over-long label shows as plain text in its column
+ // instead of turning every takeaway back into prose. Most passages must fit to use columns.
  const takeawayPattern=/^([^:\n]{1,32}):\s+(\S[\s\S]*)$/;
- const takeaways=!overview&&paragraphs.length>=1&&paragraphs.length<=3&&
-  paragraphs.every(paragraph=>{const m=paragraph.trim().match(takeawayPattern);return m&&m[1].trim().split(/\s+/).length<=4;});
+ const takeawayParts=paragraph=>{const m=paragraph.trim().match(takeawayPattern);return m&&m[1].trim().split(/\s+/).length<=4?m:null;};
+ const fitting=paragraphs.filter(takeawayParts).length;
+ const takeaways=!overview&&paragraphs.length>=1&&paragraphs.length<=3&&fitting>0&&fitting*2>=paragraphs.length;
  body.classList.toggle('atlas-law-overview',overview||takeaways);
  body.style.setProperty('--cols',String(paragraphs.length||3));
  paragraphs.forEach((paragraph,i)=>{
   p.edits.paragraphs??={};
-  const parts=takeaways?paragraph.trim().match(takeawayPattern):null;
+  const parts=takeaways?takeawayParts(paragraph):null;
   const original=overview?paragraph.trim().replace(lawPrefixes[i],''):parts?parts[2]:paragraph;
   const item=text(p.edits.paragraphs[i]??original,'Page paragraph '+(i+2),value=>p.edits.paragraphs[i]=value,i+1);
   if(overview||parts)item.prepend(make('h3','atlas-law-heading',overview?lawLabels[i]:parts[1].trim()));
