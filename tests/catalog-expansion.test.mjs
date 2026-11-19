@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {COMPONENT_TYPES,SLIDE_RECIPES,validComponents} from '../public/components/catalog.js';
+import {COMPONENT_TYPES,SLIDE_RECIPES,validComponents,normaliseComponents} from '../public/components/catalog.js';
 import {CONTROL_FAMILIES} from '../public/composer/intent.js';
 import {applyFollowUpScope,followUpScopes} from '../public/composer/controls-extended.js';
 import {handleAPI} from '../api.mjs';
@@ -67,4 +67,15 @@ test('page scoring flags repetition, long text and missing follow-ups',async()=>
  const failed=Object.entries(scorePage(repeated,{fitsFirstScreen:false}).checks).filter(([,ok])=>!ok).map(([name])=>name);
  assert.deepEqual(failed,['fits first screen','no repeated content','2–3 Go deeper questions']);
  assert.equal(scorePage({kind:'outline',body:['Hi team, thank you for all the work on the launch. It came together because of each of you. Enjoy the weekend!'],components:[]},{textFirst:true}).passed,2);
+});
+
+test('a decorated function name is reduced to the supported one, an ambiguous one is not',()=>{
+  const plot=prompt=>({id:'curve',type:'function_plot',title:'Curve',prompt,items:[{label:'From',detail:'',value:-6},{label:'To',detail:'',value:6}],edges:[]});
+  const [sine,square,both,code]=normaliseComponents([plot('sine (radians)'),plot('Quadratic function'),plot('sine or cube'),plot('fetch()')]);
+  assert.equal(sine.prompt,'sine');
+  assert.equal(square.prompt,'square');
+  assert.equal(both.prompt,'sine or cube');
+  assert.equal(validComponents([sine]),true);
+  assert.equal(validComponents([both]),false);
+  assert.equal(validComponents([code]),false);
 });

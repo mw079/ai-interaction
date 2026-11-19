@@ -83,12 +83,6 @@
   .dg-compare{grid-template-columns:1fr}
   .dg-footer{flex-direction:column;gap:10px}
   .dg-nav{align-self:flex-end}
-  /* Process stacks vertically on phones */
-  .dg-process::before,.dg-progress{display:none}
-  .dg-track-list{grid-template-columns:1fr;gap:4px;padding-left:4px;border-left:2px solid var(--dg-line);margin-left:18px}
-  .dg-track-list li{justify-content:flex-start}
-  .dg-node.dg-stop{flex-direction:row;gap:12px;margin-left:-24px;text-align:left}
-  .dg-stop .dg-dot{width:30px;height:30px;font-size:12px}
   .dg-node.dg-bar-row{grid-template-columns:minmax(0,40%) minmax(0,1fr) 48px;gap:10px}
 }
 @media(prefers-reduced-motion:reduce){.dg-node,.dg-arc,.dg-link,.dg-progress,.dg-stop .dg-dot,.dg-card,.dg-bar{transition:none}}
@@ -322,3 +316,11 @@
 .plot-landing{fill:#4f6b45}
 .plot-ghost{fill:none;stroke:#a9bf98;stroke-width:1.5;stroke-dasharray:4 4}
 .plot-ghost-label{font-size:11px;fill:#697063}
+
+/* Process stacks vertically whenever each step would get too little width for its label
+   (set by the component itself from its measured width, not by screen size). */
+.dg-process.dg-vertical::before,.dg-process.dg-vertical .dg-progress{display:none}
+.dg-process.dg-vertical .dg-track-list{grid-template-columns:1fr;gap:4px;padding-left:4px;border-left:2px solid var(--dg-line);margin-left:18px}
+.dg-process.dg-vertical .dg-track-list li{justify-content:flex-start}
+.dg-process.dg-vertical .dg-node.dg-stop{flex-direction:row;gap:12px;margin-left:-24px;text-align:left}
+.dg-process.dg-vertical .dg-stop .dg-dot{width:30px;height:30px;font-size:12px}

@@ -5,6 +5,20 @@ export const COMPONENT_TYPES=['cycle','graph','timeline','comparison','chart','w
 const str={type:'string'};
 export const COMPONENT_SCHEMA={type:'object',additionalProperties:false,properties:{id:str,type:{type:'string',enum:COMPONENT_TYPES},title:str,prompt:str,items:{type:'array',items:{type:'object',additionalProperties:false,properties:{label:str,detail:str,value:{type:'number'},latitude:{type:['number','null']},longitude:{type:['number','null']}},required:['label','detail','value','latitude','longitude']}},edges:{type:'array',items:{type:'object',additionalProperties:false,properties:{from:{type:'integer'},to:{type:'integer'},label:str},required:['from','to','label']}}},required:['id','type','title','prompt','items','edges']};
 const short=(v,n)=>typeof v==='string'&&v.length<=n;
+export const PLOT_FUNCTIONS=['linear','square','cube','absolute','sine'];
+const FUNCTION_NAMES={linear:'linear',square:'square',quadratic:'square',cube:'cube',cubic:'cube',absolute:'absolute',abs:'absolute',sine:'sine',sin:'sine'};
+
+// The model sometimes decorates a function name ("sine (radians)", "Square function").
+// Reduce it to the one supported name it contains; anything ambiguous is left for validation to reject.
+export function normaliseComponents(list){
+  if(!Array.isArray(list))return list;
+  return list.map(c=>{
+    if(c?.type!=='function_plot'||typeof c.prompt!=='string'||PLOT_FUNCTIONS.includes(c.prompt))return c;
+    const found=new Set((c.prompt.toLowerCase().match(/[a-z]+/g)||[]).map(word=>FUNCTION_NAMES[word]).filter(Boolean));
+    return found.size===1?{...c,prompt:[...found][0]}:c;
+  });
+}
+
 export function validComponents(list){return Array.isArray(list)&&list.length<=2&&new Set(list.map(c=>c?.id)).size===list.length&&list.every(c=>c&&Object.keys(c).every(k=>['id','type','title','prompt','items','edges'].includes(k))&&typeof c.id==='string'&&/^[a-z][a-z0-9-]{0,39}$/.test(c.id)&&!['constructor','prototype','__proto__'].includes(c.id)&&COMPONENT_TYPES.includes(c.type)&&short(c.title,100)&&short(c.prompt,200)&&Array.isArray(c.items)&&c.items.length>=2&&c.items.length<=6&&c.items.every(i=>i&&Object.keys(i).every(k=>['label','detail','value','latitude','longitude'].includes(k))&&short(i.label,80)&&short(i.detail,600)&&Number.isFinite(i.value)&&Math.abs(i.value)<=1000000)&&Array.isArray(c.edges)&&c.edges.length<=8&&c.edges.every(e=>e&&Object.keys(e).every(k=>['from','to','label'].includes(k))&&Number.isInteger(e.from)&&Number.isInteger(e.to)&&e.from>=0&&e.to>=0&&e.from<c.items.length&&e.to<c.items.length&&short(e.label,80))&&validInteraction(c));}
 function validInteraction(component){
   const {type, items, edges, prompt}=component;
@@ -26,7 +40,7 @@ function validInteraction(component){
     return groups>=2 && groups<items.length && items.every((i,index)=>
       [0,1].includes(i.value) && (i.value===1 || edges.filter(e=>e.from===index&&items[e.to].value===1).length===1));
   }
-  if(type==='function_plot')return items.length===2 && ['linear','square','cube','absolute','sine'].includes(prompt) &&
+  if(type==='function_plot')return items.length===2 && PLOT_FUNCTIONS.includes(prompt) &&
     items[0].value<items[1].value && items.every(i=>Math.abs(i.value)<=100);
   if(type==='evidence')return edges.length>0 && edges.every(e=>e.from!==e.to && e.label.trim());
   if(type==='map')return items.every(i=>Number.isFinite(i.latitude)&&Math.abs(i.latitude)<=90&&Number.isFinite(i.longitude)&&Math.abs(i.longitude)<=180);

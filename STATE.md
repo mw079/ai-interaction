@@ -85,7 +85,7 @@ Empty fields are omitted, so a missing field means "not decided". Each phase's p
 - **Stack:** a plain browser UI and a Node loopback server. OpenAI calls go through the server, using the ignored `.env` key on `127.0.0.1`, a per-tab key, or labelled demo examples.
 - **Model settings:** Luna uses reasoning `none` for live help, selections, page help and Go deeper. Terra uses `low` reasoning for pages, with a 3,400-token limit.
 - **Safety and limits:** every response is checked against a strict schema. Temporary failures are retried once, and the UI caps a connection at 30 generation requests.
-- **Tests:** 96 unit and API tests, and 78 browser tests (39 scenarios at 1280 and 390 px). Every interactive component and both simulations are tested on what they draw: positions, lengths and areas are measured against the data or the physics (`tests/browser/components.spec.mjs`, plus the Kepler and projectile tests). The suite passes repeated runs under eight-worker stress.
+- **Tests:** 98 unit and API tests, and 80 browser tests (40 scenarios at 1280 and 390 px). Every interactive component and both simulations are tested on what they draw: positions, lengths and areas are measured against the data or the physics (`tests/browser/components.spec.mjs`, plus the Kepler and projectile tests). The suite passes repeated runs under eight-worker stress.
 - **Live quality:** `npm run eval:pages` passed 98 % of design-rule checks on ten prompts (median about 10 s to a page). After the intro rule, the three process prompts passed 100 %. The model picks a fitting component on its own: orbit, cycle, process, comparison, proportion, matrix, or plain text for an email.
 - **Version control:** this folder is its own Git repository. Work is committed on `main` through `22ae1c8`, not pushed.
 
@@ -96,6 +96,7 @@ Run with `npm run dev` and open [127.0.0.1:4317](http://127.0.0.1:4317/). Use th
 | `npm test` | Unit and API tests |
 | `PLAYWRIGHT_CHANNEL=chrome npm run test:browser` | Browser tests at desktop and phone width with installed Chrome |
 | `npm run eval:pages` | Live page quality: ten prompts, screenshots and design-rule scores ([results](docs/EVALUATION.md)) |
+| `npm run eval:followups` | Live follow-up instructions on existing pages, with data checked against reference values |
 | `npm run test:luna` | Live Luna answer checks |
 | `npm run build` | Build browser assets and the server bundle |
 

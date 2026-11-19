@@ -73,6 +73,10 @@ function renderProcess(content, block, saved, onEdit, detail) {
     return b;
   });
   f.stage.append(fill, track);
+  // Stack vertically when a step would get less than ~90 px: labels must never overlap.
+  const fit = () => f.stage.classList.toggle('dg-vertical', f.stage.clientWidth > 0 && f.stage.clientWidth / items.length < 90);
+  new ResizeObserver(fit).observe(f.stage);
+  fit();
   f.onPaint(i => {
     nodes.forEach((b, j) => {
       b.setAttribute('aria-pressed', String(i === j));

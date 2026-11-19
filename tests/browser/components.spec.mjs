@@ -47,6 +47,26 @@ test('process: the progress line reaches exactly the selected stop',async({page}
   }
 });
 
+test('process: six steps in a narrow column stack vertically and no labels overlap',async({page})=>{
+  for(const width of [330,640]){
+    const result=await page.evaluate(async width=>{
+      const {renderComponent}=await import('/components/renderer.js');
+      const host=document.createElement('div');host.style.width=width+'px';document.body.append(host);
+      const labels=['Introduction','Committee review','Chamber votes','Resolve differences','President’s decision','Veto paths'];
+      renderComponent(host,{id:'law',type:'timeline',title:'A bill’s path',prompt:'',items:labels.map(label=>({label,detail:label+'.',value:0})),edges:[]},{edits:{}},{onEdit(){},ask(){}});
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+      const stage=host.querySelector('.dg-process');
+      // Measure the rendered words, not their boxes: long labels spill out of a narrow step.
+      const boxes=[...stage.querySelectorAll('.dg-label')].flatMap(label=>{const range=document.createRange();range.selectNodeContents(label);return [...range.getClientRects()];});
+      const overlap=boxes.some((a,i)=>boxes.slice(i+1).some(b=>a.left<b.right-1&&b.left<a.right-1&&a.top<b.bottom-1&&b.top<a.bottom-1));
+      host.remove();
+      return {vertical:stage.classList.contains('dg-vertical'),overlap};
+    },width);
+    expect(result.overlap,`labels overlap at ${width}px`).toBe(false);
+    expect(result.vertical).toBe(width<6*90+60);
+  }
+});
+
 test('chart: bar lengths are proportional to the values',async({page})=>{
   const c=card(page,'Chart'),values=data('Chart').items.map(i=>i.value),max=Math.max(...values);
   const widths=await c.locator('.dg-bar').evaluateAll(bars=>bars.map(b=>b.getBoundingClientRect().width));

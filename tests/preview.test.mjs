@@ -115,3 +115,13 @@ test('model input is ordered by authority, omits defaults and empty fields, and 
  for(const phase of ['preview','page','page-help','selection','deeper'])
   assert.match(modelInstructions({phase,target:{mode:'question'}},'',''),/^INPUT\. .*order of authority/,phase+' starts with the shared input contract');
 });
+
+test('a projectile page starts at the launch the model chose, clamped to the simulator',async()=>{
+  const {projectileLaunch,validPreview}=await import('../public/shared/model.js');
+  assert.deepEqual(projectileLaunch({speed:20,angle:45,world:'moon'}),{speed:20,angle:45,gravity:1.62});
+  assert.deepEqual(projectileLaunch({speed:90,angle:2,world:'mars'}),{speed:30,angle:10,gravity:3.71});
+  assert.deepEqual(projectileLaunch(undefined),{speed:20,angle:45,gravity:9.81});
+  const page={kind:'projectile',title:'',interpretation:'',audience:'',question:'',options:[],body:[],nodes:[],rows:[]};
+  assert.equal(validPreview({...page,launch:{speed:20,angle:45,world:'moon'}}),true);
+  assert.equal(validPreview({...page,launch:{speed:20,angle:45,world:'jupiter'}}),false);
+});

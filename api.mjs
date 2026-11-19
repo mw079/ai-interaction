@@ -1,6 +1,6 @@
-import {COMPONENT_SCHEMA,validPageHelp,validComponents,SLIDE_RECIPES,slideRecipe,matchesSlideRecipe} from './public/components/catalog.js';
+import {COMPONENT_SCHEMA,validPageHelp,validComponents,SLIDE_RECIPES,slideRecipe,matchesSlideRecipe,normaliseComponents} from './public/components/catalog.js';
 import {readSSE,partialLivePreview,partialPageAnswer} from './public/shared/stream.js';
-import {FORMATS,validPreview,isIncompleteComparison,tidyPage} from './public/shared/model.js';
+import {FORMATS,WORLDS,validPreview,isIncompleteComparison,tidyPage} from './public/shared/model.js';
 import {modelInstructions,buildModelInput} from './prompts.mjs';
 
 const string={type:'string'};
@@ -13,6 +13,8 @@ export const PAGE_HELP_SCHEMA={type:'object',additionalProperties:false,properti
 PREVIEW_SCHEMA.properties.slideOptions={type:'array',items:{type:'string',enum:Object.keys(SLIDE_RECIPES)}};
 PREVIEW_SCHEMA.required.push('slideOptions');
 PREVIEW_SCHEMA.properties.followUps=array(string);PREVIEW_SCHEMA.required.push('followUps');
+// The projectile simulator's starting launch, so a page about the Moon also simulates the Moon.
+PREVIEW_SCHEMA.properties.launch={type:'object',additionalProperties:false,properties:{speed:{type:'number'},angle:{type:'number'},world:{type:'string',enum:Object.keys(WORLDS)}},required:['speed','angle','world']};PREVIEW_SCHEMA.required.push('launch');
 // Put visible draft fields first so streaming delivers useful content before metadata.
 PREVIEW_SCHEMA.properties={body:PREVIEW_SCHEMA.properties.body,question:PREVIEW_SCHEMA.properties.question,phrase:PREVIEW_SCHEMA.properties.phrase,options:PREVIEW_SCHEMA.properties.options,...PREVIEW_SCHEMA.properties};
 export const DEEPER_SCHEMA={type:'object',additionalProperties:false,properties:{sections:{type:'array',items:{type:'object',additionalProperties:false,properties:{answer:string,components:{type:'array',items:COMPONENT_SCHEMA}},required:['answer','components']}}},required:['sections']};
@@ -93,6 +95,8 @@ function finishModelResponse(data,{model,start,selection=false,pageHelp=false,re
 if(data.status!=='completed')return json({retryable:false,error:'The preview was incomplete. Shorten the request or try again.'},502);
     const content=(data.output||[]).filter(i=>i.type==='message').at(-1)?.content||[];if(content.some(c=>c.type==='refusal'))return json({error:'The model declined this request. Try a different topic.'},422);
     let preview;try{preview=JSON.parse(content.filter(c=>c.type==='output_text').map(c=>c.text).join(''));}catch{return json({retryable:false,error:'The model did not return a valid preview. Your page is unchanged.'},502);}
+    if(preview?.components)preview.components=normaliseComponents(preview.components);
+    if(Array.isArray(preview?.sections))preview.sections=preview.sections.map(section=>section?.components?{...section,components:normaliseComponents(section.components)}:section);
     if(deeper){
       if(!validDeeper(preview,deeper))return json({retryable:false,error:'The follow-up answers exceeded supported limits.'},502);
       return json({preview:{kind:'outline',title:'Go deeper',interpretation:'',audience:'',question:'',phrase:'',options:[],body:[],nodes:[],rows:[],information:[],completion:'',components:[]},deeper:preview.sections,model,elapsedMs:Date.now()-start});

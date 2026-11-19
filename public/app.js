@@ -12,7 +12,7 @@ import {setupComposerExperience} from './composer/composer.js';
 import {INFORMATION_TYPES, informationFor, rebaseInformation, chooseInformation, mergeInformation} from './composer/intent.js';
 import {renderControl,formatPreview} from './composer/controls.js';
 import {positionPopover} from './composer/popover.js';
-import {demoPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isIncompleteComparison, draftWordCount, completedDraft, PREVIEW_WORD_STEP, extendsPreview, workingDraftPreview, draftAnswersQuestion} from './shared/model.js';
+import {demoPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isIncompleteComparison, draftWordCount, completedDraft, PREVIEW_WORD_STEP, extendsPreview, workingDraftPreview, draftAnswersQuestion, projectileLaunch} from './shared/model.js';
 const $ = id => document.getElementById(id);
 const state = {key:'', live:false, requests:0, connectionRevision:0, composing:false, revision:0, format:'Auto', audience:'', controller:null, timer:null, proposal:null, component:null, history:[], uncertainty:null, popoverTimer:null, clarification:null, openClarification:null, popoverOrigin:null, suppressed:null, customDrafts:new Map(), serverKey:false, pendingSend:false, pageController:null, pageRequest:0, taskGoal:'', pageVersion:0, information:[], previousDraft:'', activeInformation:null,confirmedChoices:[],answers:[],intentOverride:'',slideChoice:undefined};
 const node=element;
@@ -321,7 +321,7 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
     if(scope&&version!==state.pageVersion)throw new Error('The selected part changed while the response was being prepared.');
     const draft=scope?applyFollowUpScope(base,data.preview,scope):data.preview;
     if(scope)draft.title=$('document-title').value;
-    const p={...structuredClone(draft),revision:state.revision,baseVersion:version,source:data.model,physics:scope?draft.physics:{speed:20,angle:45,gravity:9.81},edits:scope?draft.edits:{},selected:scope?draft.selected:0};
+    const p={...structuredClone(draft),revision:state.revision,baseVersion:version,source:data.model,physics:scope?draft.physics:projectileLaunch(draft.launch),edits:scope?draft.edits:{},selected:scope?draft.selected:0};
     if(!state.component||version===state.pageVersion){
       if(state.component){timeline.save(capturePage());snapshot(scope?'Before focused change':'Before new page');}
       state.component=p;$('document-title').value=p.title;

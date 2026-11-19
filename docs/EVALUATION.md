@@ -50,3 +50,14 @@ The prompts were restructured around one input contract shared by all phases, wi
 ## Limits
 
 The checks are rule-based. They cannot judge whether an explanation is correct, whether the chosen component is the *best* one, or whether the page looks good. Use the screenshots for that. Ten prompts is a small sample, so rerun it after every prompt or component change and compare.
+
+## Follow-up instructions, 2026-11-19
+
+`npm run eval:followups` builds a page, then sends follow-up instructions to it (simplify, add a quiz, filter, re-chart, add a map city, rename quadrants via Focus, translate, promote Go deeper, change a function, change projectile gravity). It checks both instruction following and data correctness against reference values (AU distances, capital coordinates, air composition, pH). Use `EVAL_ONLY=sine,projectile` to run some scenarios.
+
+| Run | Result | Problem found and fix |
+| --- | --- | --- |
+| First full run (12 scenarios, 25 steps) | 43/45 checks | Every sine plot failed validation because the model wrote "sine (radians)"; function names are now normalised. A Moon follow-up said 1.62 m/s² while the simulator stayed on Earth; the model now sets the starting launch (speed, angle, world). |
+| After fixes (sine, projectile) | 8/8, then 4/4 twice | — |
+
+Manual checks on a live page: a question typed into a passage was answered correctly and Undo restored the text; a composer rewrite changed only the intro; Back restored the earlier version. Manual testing also found six-step process labels overlapping in the visual column; steps now stack vertically when each would get under 90 px, with a browser test that measures the rendered text.

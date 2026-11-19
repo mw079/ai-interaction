@@ -148,9 +148,16 @@ export function demoPreview(text, audience = '', format = 'Interactive page') {
     rows: [{criterion:'What matters most',a:'Add your criteria',b:'Add your criteria'},{criterion:'Trade-offs',a:'What do you gain?',b:'What do you give up?'},{criterion:'Next step',a:'What would you test?',b:'What would you test?'}]
   };
 }
+// Worlds the projectile simulator offers, and the clamped starting launch for a page.
+export const WORLDS={earth:9.81,moon:1.62,mars:3.71};
+export function projectileLaunch(launch){
+  const clamp=(value,min,max,fallback)=>Number.isFinite(value)?Math.round(Math.min(max,Math.max(min,value))):fallback;
+  return {speed:clamp(launch?.speed,5,30,20),angle:clamp(launch?.angle,10,80,45),gravity:WORLDS[launch?.world]??WORLDS.earth};
+}
+
 export function validPreview(v) {
   const short = (s, max) => typeof s === 'string' && s.length <= max;
-  return !!v && (v.followUps===undefined||(Array.isArray(v.followUps)&&v.followUps.length<=3&&v.followUps.every(s=>short(s,90)))) && (v.slideOptions===undefined||validSlideOptions(v.slideOptions)) && (v.components===undefined||validComponents(v.components)) && (v.questionKind===undefined||['clarify','explore','none'].includes(v.questionKind)) && (v.completion===undefined||short(v.completion,180)) && (v.replacement===undefined||short(v.replacement,2000)) && (v.information===undefined||validInformation(v.information)) && ['projectile','outline','planner','kepler'].includes(v.kind)
+  return !!v && (v.launch===undefined||(!!v.launch&&Number.isFinite(v.launch.speed)&&Number.isFinite(v.launch.angle)&&Object.hasOwn(WORLDS,v.launch.world))) && (v.followUps===undefined||(Array.isArray(v.followUps)&&v.followUps.length<=3&&v.followUps.every(s=>short(s,90)))) && (v.slideOptions===undefined||validSlideOptions(v.slideOptions)) && (v.components===undefined||validComponents(v.components)) && (v.questionKind===undefined||['clarify','explore','none'].includes(v.questionKind)) && (v.completion===undefined||short(v.completion,180)) && (v.replacement===undefined||short(v.replacement,2000)) && (v.information===undefined||validInformation(v.information)) && ['projectile','outline','planner','kepler'].includes(v.kind)
     && (v.phrase===undefined||short(v.phrase,120)) && short(v.title,160) && short(v.interpretation,500) && short(v.audience,120) && short(v.question,200)
     && Array.isArray(v.options) && v.options.length <= 3 && v.options.every(s=>short(s,80))
     && Array.isArray(v.body) && v.body.length <= 6 && v.body.every(s=>short(s,700))
