@@ -58,6 +58,8 @@ function renderProcess(content, block, saved, onEdit, detail) {
   const f = frame(content, detail, block, saved, onEdit);
   f.stage.classList.add('dg-process');
   const track = el('ol', 'dg-track-list');
+  // The track line and progress are positioned from the step count, so the stage needs it too.
+  f.stage.style.setProperty('--n', items.length);
   track.style.setProperty('--n', items.length);
   const fill = el('div', 'dg-progress');
   const nodes = items.map((item, i) => {

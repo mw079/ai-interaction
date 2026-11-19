@@ -408,3 +408,33 @@ test('the projectile curve itself changes with speed, angle and gravity',async({
   await expect(page.locator('.trajectory .plot-ghost')).toHaveCount(1);
   await expect(page.locator('.physics-readings')).toContainText('s in flight');
 });
+
+test('the Kepler orbit is drawn to the physics: shape, focus, timing, equal areas and speed',async({page})=>{
+  await send(page,'Explain all three Kepler laws.','Kepler’s laws');
+  const orbit=page.locator('.atlas-orbit');
+  const geometry=()=>orbit.evaluate(svg=>{
+    const track=svg.querySelector('.atlas-track'),sun=svg.querySelector('.atlas-sun'),planet=svg.querySelector('.atlas-planet');
+    return {cx:+track.getAttribute('cx'),rx:+track.getAttribute('rx'),ry:+track.getAttribute('ry'),sun:+sun.getAttribute('cx'),px:+planet.getAttribute('cx')};
+  });
+  const near=(a,b,t)=>expect(Math.abs(a-b),`${a} ≈ ${b}`).toBeLessThanOrEqual(t);
+  for(const e of [0.2,0.6]){
+    await page.getByRole('slider',{name:'Eccentricity'}).fill(String(Math.round(e*100)));
+    await page.getByRole('slider',{name:'Time through orbit'}).fill('0');
+    let g=await geometry();
+    near(g.ry/g.rx,Math.sqrt(1-e*e),0.005);          // first law: an ellipse of this eccentricity
+    near(g.sun-g.cx,g.rx*e,0.5);                      // with the Sun at a focus
+    near(g.px,g.cx+g.rx,0.5);                         // time 0 is perihelion, nearest the Sun
+    await expect(page.locator('.atlas-orbit-caption')).toContainText(`Relative speed ${Math.sqrt((1+e)/(1-e)).toFixed(2)}×`);
+    await page.getByRole('slider',{name:'Time through orbit'}).fill('50');
+    g=await geometry();
+    near(g.px,g.cx-g.rx,0.5);                         // half the period later: aphelion
+    await expect(page.locator('.atlas-orbit-caption')).toContainText(`Relative speed ${Math.sqrt((1-e)/(1+e)).toFixed(2)}×`);
+  }
+  await page.getByRole('button',{name:'Equal areas'}).click();
+  const areas=await orbit.evaluate(svg=>[...svg.querySelectorAll('.atlas-sector')].map(path=>{
+    const n=400,length=path.getTotalLength(),pts=Array.from({length:n},(_,i)=>path.getPointAtLength(length*i/n));
+    return Math.abs(pts.reduce((s,p,i)=>{const q=pts[(i+1)%n];return s+p.x*q.y-q.x*p.y;},0)/2);
+  }));
+  expect(areas).toHaveLength(2);
+  near(areas[0]/areas[1],1,0.02);                     // second law: equal areas in equal times
+});

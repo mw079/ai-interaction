@@ -1,3 +1,4 @@
+import {readFile} from 'node:fs/promises';
 import http from 'node:http';
 import {once} from 'node:events';
 import {handleAPI} from '../../api.mjs';
@@ -140,6 +141,8 @@ async function fixtureUpstream(options,gates){
   return new Response(body,{headers:{'Content-Type':'text/event-stream'}});
 }
 
+const DEV_FILES={'/__dev/components':'components.html','/__dev/components.js':'components.js','/__dev/component-fixtures.js':'component-fixtures.js','/__dev/controls':'controls.html','/__dev/controls.js':'controls.js'};
+
 export async function startFixtureServer(){
   const gates=new Map();
   const server=http.createServer(async(request,response)=>{
@@ -150,6 +153,13 @@ export async function startFixtureServer(){
       const init={method:request.method,headers:request.headers};
       if(!['GET','HEAD'].includes(request.method))init.body=Buffer.concat(chunks);
       const webRequest=new Request(url,init);
+      // Development galleries, as served by the local server, so components can be tested in isolation.
+      const devFile=DEV_FILES[url.pathname];
+      if(devFile){
+        response.writeHead(200,{'Content-Type':devFile.endsWith('.js')?'application/javascript':'text/html'});
+        response.end(await readFile(new URL('../../dev/'+devFile,import.meta.url)));
+        return;
+      }
       const result=url.pathname.startsWith('/api/')
         ? await handleAPI(webRequest,(_,options)=>fixtureUpstream(options,gates),{OPENAI_API_KEY:'local-fixture-not-a-real-key'})
         : await worker.fetch(webRequest,{});
