@@ -99,6 +99,19 @@ test('a question shows its answer before review and Apply returns focus to the p
   await expect(field(page)).toHaveValue(slideReplacement);
 });
 
+test('an answer opening under the intro does not move the intro',async({page})=>{
+  await send(page,'Explain how vaccines work.',vaccineTitle);
+  await expect(page.locator('.atlas-layout:not(.atlas-prose)')).toHaveCount(1);   // a page with a visual column
+  // Position within the page, so scrolling the window does not count as movement.
+  const top=()=>field(page).evaluate(f=>f.getBoundingClientRect().top-f.closest('.atlas-layout').getBoundingClientRect().top);
+  await page.evaluate(()=>Promise.all(document.getAnimations().map(a=>a.finished)));   // the page reveal has settled
+  const before=await top();
+  await field(page).fill('Vaccines teach the immune system to recognise a germ. Why below boiling?');
+  await review(page);
+  await expect(page.getByRole('status',{name:'Answer'})).toHaveText(/^Surface molecules/);
+  expect(Math.abs(await top()-before)).toBeLessThanOrEqual(1);
+});
+
 test('a newer slide remains in History when applying a change from Back',async({page})=>{
   await send(page,'Create an evaporation slide.',evaporationTitle);
   await send(page,'Create a triangle slide.',triangleTitle);
