@@ -122,8 +122,9 @@ test('over the daily limit, the try-tomorrow card appears and the current page s
     const card=page.getByRole('status').filter({hasText:'That’s all for today'});
     await expect(card).toBeHidden();
     await page.getByRole('textbox',{name:'Your next instruction'}).fill('Create a triangle slide.');
-    await button(page,'Explore interactively').click();
+    await page.clock.runFor(1500);                                     // the live preview is refused
     await expect(card).toBeVisible();
+    await expect(page.locator('body')).toHaveClass(/\blimited\b/);   // ...and Send is disabled
     await expect(card).toContainText('Try again tomorrow.');
     await expect(title(page)).toHaveValue(evaporationTitle);            // the page is kept
     await expect(page.locator('#status')).not.toContainText('limit');   // no second, duplicate message

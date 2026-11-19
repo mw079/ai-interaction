@@ -29,7 +29,9 @@ These rules describe how AI Interaction should look and behave today. The histor
   - The field grows only for your own text.
   - Live help never resizes it.
   - With a page open, the screen is split: the page above, the dock below, never overlapping. The page area scrolls on its own and ends at a hairline; the dock holds the live question (above the field), the field and the live answer (below it), all as plain text without cards. Typing grows the dock and the page area shrinks; the page is never scaled or covered.
-  - The answer strip under the field is reserved while typing, so an answer arriving never moves Send. Nothing empty is drawn.
+  - The answer strip under the field is reserved while typing: room for the whole answer (3 lines on wide screens, 5 on narrow ones), never a scrollbar, and an answer arriving never moves Send. It opens over 220 ms, so the page area shrinks smoothly. Nothing empty is drawn.
+  - With a page open there is one top bar: the page's own controls (versions, Undo, History, Export, The idea) replace the site header, so the page gets that height.
+  - While the first page is being made, your request stays visible above "Creating…".
   - An empty composer on an open page shrinks to a one-line bar.
 - **Stale help never comes back.** Typing clears old answers and questions, and late results cannot overwrite newer input.
 

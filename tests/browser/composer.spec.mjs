@@ -336,6 +336,7 @@ test('with a page open, the live question sits above the composer and the answer
   await draft(page).click();
   const send=page.getByRole('button',{name:'Explore interactively',exact:true});
   await draft(page).pressSequentially(japanCheckpoint+' ');
+  await page.evaluate(()=>Promise.all(document.getAnimations().map(a=>a.finished)));   // the dock has finished opening
   const sendBefore=await send.boundingBox();
   await advancePreview(page);
   await expect(page.locator('#quick-answer')).toHaveText(japanAnswer);
@@ -393,9 +394,13 @@ test('Send carries the preview the user read, and only a preview of exactly that
   await page.getByRole('button',{name:'Explore interactively',exact:true}).click();
   await expect.poll(()=>sent.length).toBe(2);
   expect(sent[1].promised).toBe(shown);                       // the line the user read
-  await draft(page).click();
-  await draft(page).pressSequentially('Add a map.');
-  await page.getByRole('button',{name:'Explore interactively',exact:true}).click();   // before any preview of this text
-  await expect.poll(()=>sent.length).toBe(3);
-  expect(sent[2].promised).toBeUndefined();
+  const resume=server.holdPreview('Add a map.');                  // this text's preview never finishes
+  try{
+    await draft(page).click();
+    await draft(page).pressSequentially('Add a map.');
+    await advancePreview(page);
+    await page.getByRole('button',{name:'Explore interactively',exact:true}).click();
+    await expect.poll(()=>sent.length).toBe(3);
+    expect(sent[2].promised).toBeUndefined();                     // an unfinished preview is not a promise
+  }finally{resume();}
 });
