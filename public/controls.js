@@ -8,7 +8,14 @@ const PREVIEW_KINDS=[['chart',/chart|graph|bar|data|number|statistic/i],['steps'
 export function formatPreview(value,forced){
   const kind=forced||PREVIEW_KINDS.find(([,pattern])=>pattern.test(value))?.[0]||'text';
   const preview=make('span','card-preview');preview.dataset.kind=kind;preview.setAttribute('aria-hidden','true');
-  const count={chart:4,steps:4,map:3,grid:4,visual:3,list:3,text:3}[kind];
+  // Fixed, app-owned sketches; no model content is inserted here.
+  const SKETCHES={
+    network:'<svg viewBox="0 0 60 36" width="60" height="36"><path d="M30 7 15 28M30 7 45 28M15 28h30" stroke="#b8c6aa" stroke-width="1.5" fill="none"/><circle cx="30" cy="7" r="4.5" fill="#4f6b45"/><circle cx="15" cy="28" r="4" fill="#7d9a6c"/><circle cx="45" cy="28" r="4" fill="#7d9a6c"/></svg>',
+    steps:'<svg viewBox="0 0 64 20" width="64" height="20"><path d="M8 10h48" stroke="#b8c6aa" stroke-width="1.5"/><circle cx="8" cy="10" r="5" fill="#4f6b45"/><circle cx="24" cy="10" r="4" fill="#a9bf98"/><circle cx="40" cy="10" r="4" fill="#cad6c2"/><circle cx="56" cy="10" r="4" fill="#cad6c2"/></svg>',
+    cycle:'<svg viewBox="0 0 40 36" width="40" height="36"><circle cx="20" cy="18" r="12" stroke="#b8c6aa" stroke-width="1.5" stroke-dasharray="3 3" fill="none"/><circle cx="20" cy="6" r="4" fill="#4f6b45"/><circle cx="32" cy="18" r="3.5" fill="#7d9a6c"/><circle cx="20" cy="30" r="3.5" fill="#7d9a6c"/><circle cx="8" cy="18" r="3.5" fill="#7d9a6c"/></svg>'
+  };
+  if(SKETCHES[kind]){preview.innerHTML=SKETCHES[kind];return preview;}
+  const count={chart:4,steps:4,map:3,grid:4,visual:3,list:3,text:3,slider:2}[kind];
   for(let i=0;i<count;i++)preview.append(make('i'));
   return preview;
 }

@@ -847,3 +847,31 @@ body.intent-first[data-experience=unified] .document-actions{gap:4px}
 @media(prefers-reduced-motion:reduce){.page-spinner,.page-assistant-status::before{animation:none}.page-assistant{animation:none}}
 .document-panel[data-generating]:not(.has-slide) .page-progress{min-height:0}
 #page-position,.document-actions .quiet-button,.document-location{white-space:nowrap}
+/* More preview shapes: network and cycle are inline SVG sketches; slider is drawn here. */
+.card-preview[data-kind=slider]{flex-direction:column;justify-content:center;gap:6px}
+.card-preview[data-kind=slider] i:nth-child(1){width:80%;height:3px;background:linear-gradient(90deg,#4f6b45 55%,#cad6c2 55%)}
+.card-preview[data-kind=slider] i:nth-child(2){width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid #4f6b45;margin-top:-10px;margin-left:10%}
+.picker-map{display:block;width:100%;height:auto;border-radius:12px;cursor:crosshair;margin:2px 0 4px}
+.picker-map-dot{fill:#4f6b45;stroke:#fff;stroke-width:1.5}
+@container (max-width:440px){
+  .dg-cycle>.dg-node{max-width:28%;padding:5px 8px;font-size:11px;gap:0}
+  .dg-cycle .dg-num{display:none}
+  .dg-cycle .dg-hub-num{display:block;font-size:11px}
+}
+/* With a bottom-anchored dock, live help sits above the composer so the composer and its
+   Send button never move when an answer appears or disappears. */
+body.intent-first[data-experience=unified].page-open .live-question{order:0}
+body.intent-first[data-experience=unified].page-open #typing-assistance{order:1;margin-bottom:8px;border-radius:12px;padding:8px 12px}
+body.intent-first[data-experience=unified].page-open .composer{order:2}
+body.intent-first[data-experience=unified].page-open #status{order:3}
+/* The composer is always the last item in the bottom dock; status, refinements and the
+   pause control stack above it, so nothing below it can shift Send. */
+body.intent-first[data-experience=unified].page-open .intent-panel>*:not(.composer){order:1}
+body.intent-first[data-experience=unified].page-open .intent-panel>.live-question{order:0}
+body.intent-first[data-experience=unified].page-open .intent-panel>.composer{order:9}
+body.intent-first[data-experience=unified].page-open #cancel-button{align-self:flex-end;margin-bottom:4px}
+/* Live help above the docked composer sits on solid cards so page text never shows through. */
+body.intent-first[data-experience=unified].page-open .intent-panel>.live-question{background:#fff;border:1px solid #e2e4da;border-radius:12px;padding:6px 12px;margin-bottom:6px;box-shadow:0 2px 10px #24252208}
+body.intent-first[data-experience=unified].page-open #typing-assistance{background:#fff;border:1px solid #e2e4da;box-shadow:0 2px 10px #24252208}
+body.intent-first[data-experience=unified].page-open #typing-assistance[hidden],body.intent-first[data-experience=unified].page-open .live-question[hidden]{display:none}
+body.intent-first[data-experience=unified].page-open .intent-panel::before{background:linear-gradient(to bottom,#f6f6f200,#f6f6f2 36px)}

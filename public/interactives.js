@@ -2,7 +2,7 @@
 // the model supplies validated content; these renderers own layout, motion and state.
 // Choosing what to look at is view state (no onEdit); only learner writing is a page edit.
 import {SVG, el, svgEl, pct, frame} from './dg-kit.js';
-import {land} from './world-land.js';
+import {worldPath} from './maps.js';
 
 const fmt = new Intl.NumberFormat(undefined, {maximumFractionDigits: 2});
 const button = (cls, text, onClick) => {
@@ -319,11 +319,6 @@ function renderEvidence(content, block, saved) {
 }
 
 /* ── Map: real coastlines, framed around the places that matter ───────────── */
-let landPath;
-function worldPath() {
-  landPath ??= land.map(ring => 'M' + ring.map(([lon, lat]) => `${(lon + 180).toFixed(2)} ${(90 - lat).toFixed(2)}`).join('L') + 'Z').join('');
-  return landPath;
-}
 function renderMap(content, block, saved, onEdit, detail) {
   const {items} = block;
   const xs = items.map(i => i.longitude + 180), ys = items.map(i => 90 - i.latitude);

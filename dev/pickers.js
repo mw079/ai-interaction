@@ -61,7 +61,7 @@ for (const [type, info] of Object.entries(INFORMATION_TYPES)) {
 }
 
 // The slide format picker, which lives in app.js, shown with its previews.
-const formats = [['See the steps', 'Follow the process one step at a time', 'steps'], ['Explore the connections', 'See how the ideas relate', 'visual'], ['Compare side by side', 'Inspect the differences', 'grid'], ['Explore the numbers', 'Inspect values in a chart', 'chart']];
+const formats = [['See the steps', 'Follow the process one step at a time', 'steps'], ['Explore the connections', 'See how the ideas relate', 'network'], ['See the loop', 'Follow steps that repeat', 'cycle'], ['Compare side by side', 'Inspect the differences', 'grid'], ['Explore the numbers', 'Inspect values in a chart', 'chart']];
 const card = document.createElement('section');
 card.innerHTML = '<div class="specimen-meta"><h2>Slide format</h2><code>slide picker</code></div>';
 const sample = document.createElement('div');

@@ -176,7 +176,8 @@ function openIntentPopover(origin='click',sourceAnchor=null){
     const target=$('popover-options');
     target.replaceChildren();
     const kinds={chart:'chart',numbers:'chart',parts:'chart',timeline:'steps',example:'steps',checklist:'steps',map:'map',compare:'grid',matrix:'grid',reveal:'grid',
-      practice:'list',flashcards:'list',prediction:'list',sorting:'list',evidence:'text'};
+      practice:'list',flashcards:'list',prediction:'list',sorting:'list',evidence:'text',
+      relationships:'network',cycle:'cycle',parameter:'slider',scenarios:'slider',function:'chart',spectrum:'slider',decision:'network',hierarchy:'network'};
     const addChoice=(id,label,detail)=>{
       const button=node('button','slide-option');
       button.type='button';

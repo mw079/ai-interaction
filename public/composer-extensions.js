@@ -1,4 +1,4 @@
-import {worldMap} from './maps.js';
+import {pickerMap} from './maps.js';
 import {blockContextText} from './request-context.js';
 
 const node=(tag,text,className)=>{
@@ -85,9 +85,9 @@ export function renderComposerExtension(target,family,item,choose,onResize){
     area.input.placeholder='Neighbourhood or city';
     area.input.required=true;
     const map=node('div');
-    const draw=(points=[])=>map.replaceChildren(worldMap({
-      label:'World map. You can also type a place or coordinates below.',
-      points,selected:0,onPick(latitude,longitude){
+    const draw=(points=[])=>map.replaceChildren(pickerMap({
+      label:'World map. Select a place, or type a place or coordinates below.',
+      point:points[0],onPick(latitude,longitude){
         area.input.value=latitude.toFixed(2)+', '+longitude.toFixed(2);
         draw([{latitude,longitude}]);
       }
