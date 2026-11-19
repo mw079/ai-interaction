@@ -8,7 +8,7 @@ assert.equal(app.hostname,'127.0.0.1','Use a loopback address for this smoke tes
 assert.ok(!app.username&&!app.password,'The URL should contain only the local app address.');
 const configResponse=await fetch(new URL('/api/config',app),{signal:AbortSignal.timeout(5000)});
 assert.ok(configResponse.ok,'Start the local app before running the smoke test.');
-assert.ok((await configResponse.json()).serverKey,'Configure the local app’s OpenAI key before running the smoke test.');
+assert.ok((await configResponse.json()).live,'Configure the local app’s OpenAI key before running the smoke test.');
 
 const cases=[
   {

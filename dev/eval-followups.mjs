@@ -164,7 +164,7 @@ async function send(page, say, focus) {
 async function run() {
   const base = new URL(process.env.EVAL_BASE_URL || 'http://127.0.0.1:4317');
   const config = await fetch(new URL('/api/config', base)).then(r => r.json()).catch(() => null);
-  if (!config?.serverKey) throw new Error('Start the local app with an OpenAI key before running this check.');
+  if (!config?.live) throw new Error('Start the local app with an OpenAI key before running this check.');
   const only = process.env.EVAL_ONLY?.split(',');
   const dir = new URL(`../artifacts/eval/followups-${new Date().toISOString().replace(/[:.]/g, '-')}/`, import.meta.url);
   await mkdir(dir, {recursive: true});

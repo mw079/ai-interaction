@@ -72,7 +72,7 @@ async function run() {
   const base = new URL(process.env.EVAL_BASE_URL || 'http://127.0.0.1:4317');
   if (base.hostname !== '127.0.0.1') throw new Error('Use the loopback address 127.0.0.1 so the local key is used.');
   const config = await fetch(new URL('/api/config', base)).then(r => r.json()).catch(() => null);
-  if (!config?.serverKey) throw new Error('Start the local app with an OpenAI key before running this check.');
+  if (!config?.live) throw new Error('Start the local app with an OpenAI key before running this check.');
   const only = process.env.EVAL_ONLY?.split(',');
   const prompts = PROMPTS.filter(p => !only || only.includes(p.id));
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');

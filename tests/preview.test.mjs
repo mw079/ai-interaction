@@ -144,3 +144,10 @@ test('a projectile page starts at the launch the model chose, clamped to the sim
   assert.equal(validPreview({...page,launch:{speed:20,angle:45,world:'moon'}}),true);
   assert.equal(validPreview({...page,launch:{speed:20,angle:45,world:'jupiter'}}),false);
 });
+test('with a page open, typing help previews what Send will do; without one it answers',async()=>{
+  const {modelInstructions}=await import('../prompts.mjs');
+  const withPage=modelInstructions({phase:'preview',text:'Explain the equations simply',context:JSON.stringify({page:{title:'Kepler’s laws'}})});
+  const without=modelInstructions({phase:'preview',text:'Explain the equations simply',context:JSON.stringify({})});
+  assert.match(withPage,/OPEN PAGE\..*starting with "Will"/);
+  assert.doesNotMatch(without,/OPEN PAGE/);
+});

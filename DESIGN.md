@@ -11,7 +11,7 @@ These rules describe how AI Interaction should look and behave today. The histor
 - **Start with one empty field.** Partial intent never becomes a form to fill in.
 - **Each kind of help has one place:**
   - one optional question above the field
-  - one short live answer under it (one sentence, at most 160 characters)
+  - one short live answer under it (one sentence, at most 160 characters). With a page open it previews what Send will do ("Will add a worked example…") instead of answering, since Send changes the page.
   - controls on highlighted phrases
   - a grey completion that is only inserted when you accept it with Tab
 - **Ask at most one question, and only when it matters.**
@@ -28,8 +28,8 @@ These rules describe how AI Interaction should look and behave today. The histor
 - **Nothing you didn't do moves the layout.**
   - The field grows only for your own text.
   - Live help never resizes it.
-  - With a page open, the live question sits above the composer and the live answer below it, both as plain text with no card. Clicking into the composer raises the dock once, leaving a strip for the answer, so an answer arriving never moves Send.
-  - Nothing empty is drawn: the live-help area appears only when it has an answer.
+  - With a page open, the screen is split: the page above, the dock below, never overlapping. The page area scrolls on its own and ends at a hairline; the dock holds the live question (above the field), the field and the live answer (below it), all as plain text without cards. Typing grows the dock and the page area shrinks; the page is never scaled or covered.
+  - The answer strip under the field is reserved while typing, so an answer arriving never moves Send. Nothing empty is drawn.
   - An empty composer on an open page shrinks to a one-line bar.
 - **Stale help never comes back.** Typing clears old answers and questions, and late results cannot overwrite newer input.
 

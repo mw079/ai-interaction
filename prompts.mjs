@@ -53,6 +53,9 @@ const DRAFT = [
   SLIDE_FORMAT_INSTRUCTIONS
 ].join('\n');
 
+// With a page open, the live answer previews what Send will do instead of answering in the composer.
+const OPEN_PAGE_DRAFT = 'OPEN PAGE. page is present, so request asks to change or ask about that page, and Send will update it. In body[0], do not answer or explain the topic; preview what Send will do in one concrete sentence starting with "Will" (max 140 characters), naming the part, example or change in the user’s own terms (for a question, its exact subject, not the general topic), for example “Will add a worked example with Earth: T = 1 year, a = 1 AU, and what each symbol means.” Leave body empty while request is not yet a usable instruction.';
+
 const COMPLETION = 'Also supply completion: suggest a short, useful continuation of request when available, ideally 3-10 words and at most 80 characters. Finish an unfinished clause before adding a sentence. Never propose a direction already decided or already present in request, including a completion the user just accepted. Write words the user could add to their own request, for example “Connect each law to Newtonian gravity.” Do not speak as the assistant or make promises. No invented personal details, opinions or commitments. Use empty when request is complete or nothing genuinely new helps.';
 
 // ── Terra: the Atlas page on Send ─────────────────────────────────────────────
@@ -97,5 +100,8 @@ export function modelInstructions(payload,slideInstructions,contextInstructions)
   if(phase==='page-help')return [INPUT_CONTRACT,payload.target?.mode==='rewrite'?PAGE_REWRITE_INSTRUCTIONS:PAGE_HELP_INSTRUCTIONS].join('\n');
   if(phase==='selection')return [INPUT_CONTRACT,SELECTION].join('\n');
   if(phase==='page')return [INPUT_CONTRACT,FULL_PAGE,slideInstructions,contextInstructions].join('\n');
-  return [INPUT_CONTRACT,DRAFT,COMPLETION].join('\n');
+  return [INPUT_CONTRACT,DRAFT,...(hasOpenPage(payload)?[OPEN_PAGE_DRAFT]:[]),COMPLETION].join('\n');
+}
+function hasOpenPage(payload){
+  try{const context=typeof payload.context==='string'&&payload.context?JSON.parse(payload.context):{};return !!(context&&context.page);}catch{return !!payload.context;}
 }
