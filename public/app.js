@@ -313,6 +313,9 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
   const base=scope?structuredClone(state.component):null;
   if(!text)return;
   if(!state.live){if(!state.limited)status('Live pages are not available right now.',true);return;}
+  // The one-line preview the user read ("Will add…") goes with the request, so Send does what it said.
+  // Only a preview of exactly this text, for the page as it is now, counts as a promise.
+  const promised=retryContext?retryContext.promised:(state.component&&shownPreview&&shownPreview.source!=='Demo'&&shownPreview.version===state.pageVersion&&shownPreview.text.trim()===text?compactLiveAnswer(shownPreview.data):'')||undefined;
   directEdits.endBurst();closeIntentPopover();stop();state.pageController?.abort();
   const context=structuredClone(pageContext()),version=state.pageVersion,id=++state.pageRequest;
   const preferences=new Map(state.confirmedChoices.map(e=>[e.type+':'+e.phrase,e]));
@@ -324,7 +327,7 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
   const progressTimer=showPageProgress();
   $('submitted-request').textContent=text;
   try{
-    const data=await callPreview({text,context,audience:state.audience,format:state.format,phase:'page',slideChoice:scope?undefined:slideChoice,pageScope:scope?{id:scope.id,text:scope.text}:undefined},controller.signal);
+    const data=await callPreview({text,context,audience:state.audience,format:state.format,phase:'page',slideChoice:scope?undefined:slideChoice,pageScope:scope?{id:scope.id,text:scope.text}:undefined,promised},controller.signal);
     if(id!==state.pageRequest)return;
     if(scope&&version!==state.pageVersion)throw new Error('The selected part changed while the response was being prepared.');
     const draft=scope?applyFollowUpScope(base,data.preview,scope):data.preview;
@@ -346,7 +349,7 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
     if(id===state.pageRequest&&error.name!=='AbortError'){
       documentPanel.removeAttribute('data-generating');
       const retry=node('button','','Retry this request');
-      retry.onclick=()=>submitPage(text,slideChoice,{scope});
+      retry.onclick=()=>submitPage(text,slideChoice,{scope,promised});
       pageProgress.replaceChildren(node('span','',error.message),retry);
     }
   }finally{

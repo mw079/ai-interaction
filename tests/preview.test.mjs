@@ -151,3 +151,16 @@ test('with a page open, typing help previews what Send will do; without one it a
   assert.match(withPage,/OPEN PAGE\..*starting with "Will"/);
   assert.doesNotMatch(without,/OPEN PAGE/);
 });
+test('the preview the user read is sent with the page request as a promise, and only there',async()=>{
+  const promised='Will add a simple example for each law’s equation and explain what every symbol means.';
+  let input;
+  const upstream=async(url,opts)=>{const body=JSON.parse(opts.body);input=JSON.parse(body.input);return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(demoPreview('gravity'))}]}]});};
+  assert.equal((await handleAPI(req({...payload,phase:'page',promised}),upstream)).status,200);
+  assert.equal(input.promised,promised);
+  assert.deepEqual(Object.keys(input).slice(0,3),['request','decisions','promised'].filter(k=>k in input));
+  const never=()=>{throw Error('No upstream call allowed');};
+  assert.equal((await handleAPI(req({...payload,phase:'preview',promised}),never)).status,400);
+  assert.equal((await handleAPI(req({...payload,phase:'page',promised:'x'.repeat(201)}),never)).status,400);
+  const {modelInstructions}=await import('../prompts.mjs');
+  assert.match(modelInstructions({phase:'page',text:'x'}),/promised: the one-line preview.*request wins/);
+});

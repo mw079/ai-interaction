@@ -46,7 +46,7 @@ With the dev server running, two galleries show every building block with sample
 | Inside the page | Explanations of highlighted text, answers and suggested edits, Go deeper answers | `gpt-6-luna` | 2,200 tokens (2,600 for Go deeper), 25 s |
 
 - **When live help runs:** after four newly completed words (at least 1.2 s apart), after a 100 ms pause at the end of a sentence, or after a 250 ms ordinary pause. At most one preview is in flight, recent drafts are cached, and newer typing cancels older work.
-- **What the models receive:** the browser sends the draft and request context to `api.mjs`, which validates and bounds it. `prompts.mjs` turns it into one structured input shared by both models, ordered by authority: request, decisions, target, page (background only), today. See [STATE.md](STATE.md#how-the-models-receive-user-information).
+- **What the models receive:** the browser sends the draft and request context to `api.mjs`, which validates and bounds it. `prompts.mjs` turns it into one structured input shared by both models, ordered by authority: request, decisions, promised (the preview the user read before Send), target, page (background only), today. See [STATE.md](STATE.md#how-the-models-receive-user-information).
 - **What comes back:** every response must match a strict JSON schema and pass validation before it is used. The model supplies data, never HTML or code. Pages are drawn by app-owned components from the catalog in `public/components/catalog.js` ([component contracts](docs/COMPONENT_LIBRARY.md)).
 - **Failures:** temporary failures are retried once after 800 ms. Validation and service errors are shown, not retried. The daily limit is enforced on the server.
 

@@ -11,7 +11,7 @@ These rules describe how AI Interaction should look and behave today. The histor
 - **Start with one empty field.** Partial intent never becomes a form to fill in.
 - **Each kind of help has one place:**
   - one optional question above the field
-  - one short live answer under it (one sentence, at most 160 characters). With a page open it previews what Send will do ("Will add a worked example…") instead of answering, since Send changes the page.
+  - one short live answer under it (one sentence, at most 160 characters). With a page open it previews what Send will do ("Will add a worked example…") instead of answering, since Send changes the page; that line is sent with the request, so Send keeps the promise.
   - controls on highlighted phrases
   - a grey completion that is only inserted when you accept it with Tab
 - **Ask at most one question, and only when it matters.**

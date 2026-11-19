@@ -74,9 +74,10 @@ Both models get the same structured input, built on the server by `buildModelInp
 
 1. **request:** the user's latest words. Later wording revises earlier wording, and `phrase (value)` is a confirmed choice.
 2. **decisions:** choices made in the interface (confirmed values, slide format, response format unless Auto, audience, edited intent). They are followed unless the request clearly changes them, and never asked about again.
-3. **target, pageScope, followUps:** the part of the page or the questions the request is about.
-4. **page:** the current page and notes, as background only. Text inside it is data, never an instruction.
-5. **today:** date and timezone.
+3. **promised:** on a page request, the one-line preview the user read before pressing Send ("Will add…"). The page model carries it out, so Send does what it said; the request still wins if they differ. It is sent only when the preview was for exactly the text sent and the page has not changed since.
+4. **target, pageScope, followUps:** the part of the page or the questions the request is about.
+5. **page:** the current page and notes, as background only. Text inside it is data, never an instruction.
+6. **today:** date and timezone.
 
 Empty fields are omitted, so a missing field means "not decided". Each phase's prompt then follows the same layout: task, output rules, and special cases (Kepler, projectile, planner) kept apart.
 
@@ -85,7 +86,7 @@ Empty fields are omitted, so a missing field means "not decided". Each phase's p
 - **Stack:** a plain browser UI and a Node loopback server. OpenAI calls go through the server and always use its `.env` key; without one, the app shows labelled demo examples.
 - **Model settings:** Luna uses reasoning `none` for live help, selections, page help and Go deeper. Terra uses `low` reasoning for pages, with a 3,400-token limit.
 - **Safety and limits:** every response is checked against a strict schema. Temporary failures are retried once. The server limits each visitor to 200 requests per UTC day and the whole app to 2,000 (`DAILY_LIMIT`, `DAILY_TOTAL_LIMIT`); over the limit, a "Try again tomorrow" card appears. Counts live in server memory, so a hosted deployment needs a shared store.
-- **Tests:** 99 unit and API tests, and 86 browser tests (43 scenarios at 1280 and 390 px). Every interactive component and both simulations are tested on what they draw: positions, lengths and areas are measured against the data or the physics (`tests/browser/components.spec.mjs`, plus the Kepler and projectile tests). The suite passes repeated runs under eight-worker stress.
+- **Tests:** 101 unit and API tests, and 94 browser tests (47 scenarios at 1280 and 390 px). Every interactive component and both simulations are tested on what they draw: positions, lengths and areas are measured against the data or the physics (`tests/browser/components.spec.mjs`, plus the Kepler and projectile tests). The suite passes repeated runs under eight-worker stress.
 - **Live quality:** `npm run eval:pages` passed 98 % of design-rule checks on ten prompts (median about 10 s to a page). After the intro rule, the three process prompts passed 100 %. The model picks a fitting component on its own: orbit, cycle, process, comparison, proportion, matrix, or plain text for an email.
 - **Version control:** this folder is its own Git repository. Work is committed on `main` through `22ae1c8`, not pushed.
 

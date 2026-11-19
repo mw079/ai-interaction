@@ -373,3 +373,24 @@ test('a chosen way to explore it is listed under What I understand and can be ch
   await page.getByRole('button',{name:'Review intent'}).click();
   await expect(details.getByRole('button',{name:'How would you like to explore this?: Compare side by side'})).toBeVisible();
 });
+
+test('Send carries the preview the user read, and only a preview of exactly that text',async({page})=>{
+  const sent=[];
+  page.on('request',request=>{if(request.url().endsWith('/api/preview')&&request.postDataJSON().phase==='page')sent.push(request.postDataJSON());});
+  await draft(page).fill('Create an evaporation slide.');
+  await page.getByRole('button',{name:'Explore interactively',exact:true}).click();
+  await expect(page.getByRole('textbox',{name:'Document title'})).toHaveValue(evaporationTitle);
+  await draft(page).click();
+  await draft(page).pressSequentially('Add a short quiz.');
+  await advancePreview(page);
+  await expect(quickAnswer(page)).toBeVisible();
+  const shown=(await page.locator('#quick-answer').textContent()).trim();
+  await page.getByRole('button',{name:'Explore interactively',exact:true}).click();
+  await expect.poll(()=>sent.length).toBe(2);
+  expect(sent[1].promised).toBe(shown);                       // the line the user read
+  await draft(page).click();
+  await draft(page).pressSequentially('Add a map.');
+  await page.getByRole('button',{name:'Explore interactively',exact:true}).click();   // before any preview of this text
+  await expect.poll(()=>sent.length).toBe(3);
+  expect(sent[2].promised).toBeUndefined();
+});

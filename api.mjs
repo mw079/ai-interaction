@@ -61,6 +61,7 @@ export async function handleAPI(request,upstream=fetch,env={},{limiter=limiterFo
     if(!payload||(payload.stream!==undefined&&typeof payload.stream!=='boolean')||(payload.interaction!==undefined&&payload.interaction!=='unified')||(payload.context!==undefined&&(typeof payload.context!=='string'||payload.context.length>6000))||(payload.phase!==undefined&&!['preview','page','selection','page-help','deeper'].includes(payload.phase))||typeof payload.text!=='string'||!payload.text.trim()||payload.text.length>4000||typeof payload.audience!=='string'||payload.audience.length>120||!FORMATS.includes(payload.format))return json({error:'Use a shorter thought, audience, and supported view.'},400);
   }
   if(payload?.sources!==undefined)return json({error:'File attachments are unsupported. Paste relevant text into your request.'},400);
+  if(payload?.promised!==undefined&&(payload.phase!=='page'||typeof payload.promised!=='string'||payload.promised.length>200))return json({error:'The preview could not be used with this request.'},400);
   if(payload?.pageScope!==undefined && (payload.phase!=='page'||!payload.pageScope||
     typeof payload.pageScope.id!=='string'||!/^(?:passage:[0-5](?::selection)?|block:[a-z][a-z0-9-]{0,39})$/.test(payload.pageScope.id)||
     typeof payload.pageScope.text!=='string'||payload.pageScope.text.length>4500))
