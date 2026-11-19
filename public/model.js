@@ -152,10 +152,26 @@ export function demoPreview(text, audience = '', format = 'Interactive page') {
 }
 export function validPreview(v) {
   const short = (s, max) => typeof s === 'string' && s.length <= max;
-  return !!v && (v.slideOptions===undefined||validSlideOptions(v.slideOptions)) && (v.components===undefined||validComponents(v.components)) && (v.questionKind===undefined||['clarify','explore','none'].includes(v.questionKind)) && (v.completion===undefined||short(v.completion,180)) && (v.replacement===undefined||short(v.replacement,2000)) && (v.information===undefined||validInformation(v.information)) && ['projectile','outline','diagram','comparison','planner','kepler'].includes(v.kind)
+  return !!v && (v.followUps===undefined||(Array.isArray(v.followUps)&&v.followUps.length<=3&&v.followUps.every(s=>short(s,90)))) && (v.slideOptions===undefined||validSlideOptions(v.slideOptions)) && (v.components===undefined||validComponents(v.components)) && (v.questionKind===undefined||['clarify','explore','none'].includes(v.questionKind)) && (v.completion===undefined||short(v.completion,180)) && (v.replacement===undefined||short(v.replacement,2000)) && (v.information===undefined||validInformation(v.information)) && ['projectile','outline','diagram','comparison','planner','kepler'].includes(v.kind)
     && (v.phrase===undefined||short(v.phrase,120)) && short(v.title,160) && short(v.interpretation,500) && short(v.audience,120) && short(v.question,200)
     && Array.isArray(v.options) && v.options.length <= 3 && v.options.every(s=>short(s,80))
     && Array.isArray(v.body) && v.body.length <= 6 && v.body.every(s=>short(s,700))
     && Array.isArray(v.nodes) && v.nodes.length <= 6 && v.nodes.every(s=>short(s,80))
     && Array.isArray(v.rows) && v.rows.length <= 6 && v.rows.every(r=>r && short(r.criterion,80)&&short(r.a,300)&&short(r.b,300));
+}
+
+// Pages with a visual keep prose short: an introduction plus up to three takeaways,
+// each cut at a sentence boundary. Kepler and projectile pages keep their own rules.
+const PAGE_TEXT_LIMIT=240;
+function firstSentences(text,max=PAGE_TEXT_LIMIT){
+ const value=text.trim();
+ if(value.length<=max)return value;
+ const cut=value.slice(0,max);
+ const end=Math.max(...['. ','! ','? '].map(mark=>cut.lastIndexOf(mark)));
+ return end>=40?cut.slice(0,end+1):value;
+}
+export function tidyPage(page){
+ if(!page||!Array.isArray(page.body)||!page.components?.length)return page;
+ const [intro='',...rest]=page.body;
+ return {...page,body:[firstSentences(intro),...rest.slice(0,3).map(text=>firstSentences(text))].filter((text,i)=>i===0||text)};
 }

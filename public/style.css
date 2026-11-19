@@ -411,3 +411,39 @@ body.intent-first[data-experience=unified] .document-panel[data-generating]:not(
 .page-assistant-close:focus-visible{outline:2px solid #9fb393;outline-offset:1px}
 .page-assistant-close:only-child{display:none}
 .page-assistant>.page-response,.page-assistant>.page-assistant-status{padding-right:30px}
+
+/* ── Phase 2: one page scroll ────────────────────────────────────────────────
+   The slide grows to its natural height and the window scrolls; there is no inner
+   scroll area. The composer floats over the bottom of the page. */
+body.intent-first[data-experience=unified].page-open .paper,
+body.intent-first[data-experience=unified].page-open.composer-active .paper{max-height:none;overflow:visible}
+body.intent-first[data-experience=unified].page-open main,
+body.intent-first[data-experience=unified].page-open.composer-active main{padding-bottom:calc(var(--composer-height,64px) + 72px)}
+body.intent-first[data-experience=unified].page-open:not(.composer-active){--dock-top:calc(100dvh - var(--composer-height,64px) - 20px)}
+/* A soft fade so content passing under the composer doesn't collide with it. */
+body.intent-first[data-experience=unified].page-open .intent-panel::before{content:'';position:absolute;z-index:-1;left:50%;width:100vw;transform:translateX(-50%);top:-36px;bottom:-40px;background:linear-gradient(to bottom,#f6f6f200,#f6f6f2 45%);pointer-events:none}
+
+/* Slim composer: an empty, unfocused composer on an open page is a one-line pill. */
+body.intent-first[data-experience=unified].page-open:not(.composer-active) .composer:has(#intent-input:placeholder-shown){display:flex;align-items:center;gap:8px;padding:6px 6px 6px 20px;border-radius:999px;cursor:text}
+body.intent-first[data-experience=unified].page-open:not(.composer-active) .composer:has(#intent-input:placeholder-shown) textarea{flex:1;min-height:0;height:26px!important;max-height:26px;line-height:26px;resize:none;overflow:hidden;white-space:nowrap}
+body.intent-first[data-experience=unified].page-open:not(.composer-active) .composer:has(#intent-input:placeholder-shown) .input-mirror-layer{display:none}
+body.intent-first[data-experience=unified].page-open:not(.composer-active) .composer:has(#intent-input:placeholder-shown) .composer-bottom{margin:0;min-height:0;flex:none}
+body.intent-first[data-experience=unified].page-open:not(.composer-active) .composer:has(#intent-input:placeholder-shown) :is(.refine-trigger,.composer-mode,#composer-scope){display:none}
+
+/* Go deeper: next ideas become their own slide. */
+.atlas-next{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:26px;padding-top:18px;border-top:1px solid var(--atlas-line)}
+.atlas-next-label{font-size:12px;color:var(--atlas-muted);margin-right:4px}
+.atlas-next-button{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid #dfe3d8;border-radius:999px;background:#fff;color:#2c3328;font:inherit;font-size:13px;cursor:pointer;transition:border-color .2s,background .2s}
+.atlas-next-button::after{content:'→';color:#7c8474;transition:transform .2s}
+.atlas-next-button:hover{border-color:#4f6b45;background:#f4f7f0}
+.atlas-next-button:hover::after{transform:translateX(2px);color:#4f6b45}
+.atlas-next-button:focus-visible{outline:2px solid #9fb393;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.atlas-next-button::after{transition:none}}
+/* With one page scroll, the composer stays anchored to the bottom and grows upward when active. */
+body.intent-first[data-experience=unified].page-open .intent-panel{top:auto;bottom:max(16px,env(safe-area-inset-bottom))}
+body.intent-first[data-experience=unified].page-open #typing-assistance{max-height:min(150px,22dvh)}
+/* Components adapt to the space they get (the visual column, the full width, or a phone). */
+.catalog-block{container-type:inline-size}
+@container (max-width:520px){.dg-compare{grid-template-columns:1fr}}
+.dg-criteria-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.dg-node.dg-criterion{border-radius:12px;padding:10px 12px;justify-content:flex-start;text-align:left}

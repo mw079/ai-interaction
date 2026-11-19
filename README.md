@@ -33,7 +33,7 @@ Edit the slide title or a passage directly. After a brief pause, Luna uses the s
 
 Direct edits can be undone with **Undo** in the slide toolbar. Nearby typing in the same field is grouped, and up to 24 direct edits stay available on that slide until reload. An answer appears first when Luna also offers an edit. Use **Review edit** to see the proposal, then **Apply** or **Reject**. Apply returns focus to the updated passage. If you edit an older version, History keeps the later slides available to restore. The composer’s Focus control limits the next Send to the selected section. File attachments are unsupported.
 
-While writing in the main composer, the page scales to 90%. Returning to the page restores full size and hides composer questions/answers. Long pages and live answers have bounded scroll regions. Motion respects reduced-motion preferences.
+While writing in the main composer, the page scales to 90%. Returning to the page restores full size and hides composer questions/answers. The page scrolls with the window, with no inner scroll area. Once a page is open, an empty composer shrinks to a one-line bar at the bottom and expands when clicked. Pages with a visual keep a one-sentence introduction and up to three "Label: sentence" takeaways (enforced on the server), and offer up to three **Go deeper** questions that open as the next slide. Motion respects reduced-motion preferences.
 
 Back/Forward preserves edits, control settings, notes and reading position without clearing an unfinished instruction. Existing history, notes, export and composer selection help remain. Versions are tab-local and reset on reload; durable save/import is not yet implemented.
 

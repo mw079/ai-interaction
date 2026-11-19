@@ -230,6 +230,7 @@ document.addEventListener('pointerdown',e=>{if(!$('intent-popover').hidden&&!$('
 window.addEventListener('resize',()=>{if(!$('intent-popover').hidden)positionIntentPopover();});window.addEventListener('scroll',()=>{if($('intent-popover').contains(document.activeElement))positionIntentPopover();else closeIntentPopover();},{passive:true});
 $('typing-connection').onclick=()=>{closeIntentPopover();$('connection-dialog').showModal();};
 $('build-page').onclick=()=>submitPage();
+document.addEventListener('page:follow-up',event=>{if(typeof event.detail==='string'&&event.detail.trim())submitPage(event.detail.trim(),undefined);});
 
 function pageContext(){
   if(!state.component)return '';

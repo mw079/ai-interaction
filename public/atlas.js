@@ -115,4 +115,17 @@ export function renderAtlas(target,p,{titleField,onEdit}){
   body.append(item);
  });
  target.append(body);
+ // Go deeper: the next ideas become their own slide instead of more text on this one.
+ if(p.followUps?.length){
+  const next=make('nav','atlas-next');
+  next.setAttribute('aria-label','Go deeper');
+  next.append(make('span','atlas-next-label','Go deeper'));
+  p.followUps.forEach(question=>{
+   const button=make('button','atlas-next-button',question);
+   button.type='button';
+   button.onclick=()=>document.dispatchEvent(new CustomEvent('page:follow-up',{detail:question}));
+   next.append(button);
+  });
+  target.append(next);
+ }
 }

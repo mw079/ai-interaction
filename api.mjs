@@ -1,6 +1,6 @@
 import {COMPONENT_SCHEMA,validPageHelp,SLIDE_RECIPES,slideRecipe,matchesSlideRecipe} from './public/component-catalog.js';
 import {readSSE,partialLivePreview,partialPageAnswer} from './public/stream.js';
-import {FORMATS,validPreview,isIncompleteComparison} from './public/model.js';
+import {FORMATS,validPreview,isIncompleteComparison,tidyPage} from './public/model.js';
 import {modelInstructions} from './prompts.mjs';
 
 const string={type:'string'};
@@ -12,6 +12,7 @@ PREVIEW_SCHEMA.properties.components={type:'array',items:COMPONENT_SCHEMA};PREVI
 export const PAGE_HELP_SCHEMA={type:'object',additionalProperties:false,properties:{answer:string,replacement:string,components:{type:'array',items:COMPONENT_SCHEMA}},required:['answer','replacement','components']};
 PREVIEW_SCHEMA.properties.slideOptions={type:'array',items:{type:'string',enum:Object.keys(SLIDE_RECIPES)}};
 PREVIEW_SCHEMA.required.push('slideOptions');
+PREVIEW_SCHEMA.properties.followUps=array(string);PREVIEW_SCHEMA.required.push('followUps');
 // Put visible draft fields first so streaming delivers useful content before metadata.
 PREVIEW_SCHEMA.properties={body:PREVIEW_SCHEMA.properties.body,question:PREVIEW_SCHEMA.properties.question,phrase:PREVIEW_SCHEMA.properties.phrase,options:PREVIEW_SCHEMA.properties.options,...PREVIEW_SCHEMA.properties};
 const SELECTION_SCHEMA={type:'object',additionalProperties:false,properties:{answer:string,replacement:string},required:['answer','replacement']};
@@ -70,7 +71,7 @@ export async function handleAPI(request,upstream=fetch,env={}){
     });
     if(!response.ok){const messages={401:'OpenAI rejected this key. Check it and try again.',403:`This key cannot access ${model}.`,404:`${model} is not available for this key.`,429:'OpenAI quota or rate limit reached. Check API billing or try again later.'};return json({retryable:response.status>=500,error:messages[response.status]||'OpenAI could not complete the request. Your page is unchanged.'},[401,403,404,429].includes(response.status)?response.status:502);}
     if(check){const terra=await upstream('https://api.openai.com/v1/models/gpt-6.1-terra',{method:'GET',headers:{Authorization:authorization},redirect:'error',signal});if(!terra.ok)return json({error:'This key can access Luna, but GPT-6.1 Terra access could not be verified. Check model permissions and try again.'},terra.status===429?429:403);return json({connected:true,models:{preview:'gpt-6-luna',page:'gpt-6.1-terra'}});}
-    const resultOptions={model,start,selection,pageHelp,recipe,activity:payload?.target?.mode};
+    const resultOptions={model,start,selection,pageHelp,recipe,activity:payload?.target?.mode,tidy:payload?.phase==='page'&&!payload.pageScope};
     if(streaming)return liveStreamResponse(response,resultOptions,signal,()=>streamAbort.abort());
     return finishModelResponse(await response.json(),resultOptions);
   }catch(error){return json({retryable:!request.signal.aborted,error:error.name==='TimeoutError'||timeout.aborted?`${model} took too long. Try again.`:'Connection interrupted. Your page is unchanged; try again.'},504);}
@@ -85,7 +86,7 @@ function validPageActivity(target){
   return mode===undefined||mode==='question'||mode==='rewrite';
 }
 
-function finishModelResponse(data,{model,start,selection=false,pageHelp=false,recipe,activity}){
+function finishModelResponse(data,{model,start,selection=false,pageHelp=false,recipe,activity,tidy=false}){
 if(data.status!=='completed')return json({retryable:false,error:'The preview was incomplete. Shorten the request or try again.'},502);
     const content=(data.output||[]).filter(i=>i.type==='message').at(-1)?.content||[];if(content.some(c=>c.type==='refusal'))return json({error:'The model declined this request. Try a different topic.'},422);
     let preview;try{preview=JSON.parse(content.filter(c=>c.type==='output_text').map(c=>c.text).join(''));}catch{return json({retryable:false,error:'The model did not return a valid preview. Your page is unchanged.'},502);}
@@ -99,6 +100,7 @@ if(data.status!=='completed')return json({retryable:false,error:'The preview was
         return json({retryable:false,error:'Local help exceeded its limits. Your page is unchanged.'},502);
       preview={kind:'outline',title:'Local help',interpretation:'',audience:'',question:'',phrase:'',options:[],body:[preview.answer],nodes:[],rows:[],information:[],completion:'',replacement:''};
     }
+    if(tidy)preview=tidyPage(preview);
     if(!validPreview(preview))return json({retryable:false,error:'The generated preview exceeded supported limits. Try a simpler request.'},502);
     if(recipe&&!matchesSlideRecipe(preview,recipe))return json({retryable:true,error:'The model missed the selected slide format. Try again.'},502);
     return json({preview,model,elapsedMs:Date.now()-start,usage:{input_tokens:data.usage?.input_tokens,output_tokens:data.usage?.output_tokens,total_tokens:data.usage?.total_tokens}});

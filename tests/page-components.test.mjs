@@ -137,3 +137,16 @@ test('explicit rewrite after an inline question has its own instruction path',as
  });
  assert.equal((await response.json()).preview.replacement,replacement);
 });
+
+test('pages with a visual keep an introduction and at most three takeaways, cut at sentence ends',async()=>{
+ const {tidyPage}=await import('../public/model.js');
+ const long='First sentence explains the idea clearly. '+'Second sentence keeps going with more detail than a takeaway needs. '.repeat(5);
+ const page={kind:'outline',components:[{id:'a'}],body:[long,'One: short.','Two: short.','Three: short.','Four: dropped.']};
+ const tidy=tidyPage(page);
+ assert.equal(tidy.body.length,4);
+ assert.ok(tidy.body[0].length<=240&&tidy.body[0].endsWith('.'));
+ assert.ok(tidy.body[0].startsWith('First sentence explains the idea clearly.'));
+ assert.deepEqual(tidy.body.slice(1),['One: short.','Two: short.','Three: short.']);
+ const prose={kind:'outline',components:[],body:[long,'a','b','c','d']};
+ assert.equal(tidyPage(prose),prose,'text-first pages keep their full deliverable');
+});

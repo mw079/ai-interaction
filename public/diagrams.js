@@ -53,9 +53,10 @@ function frame(content, detail, block, saved, onEdit, {stepper = true} = {}) {
   content.append(stage, footer);
   const painters = [];
   const current = () => Math.max(0, Math.min(saved.selected ?? 0, count - 1));
+  // Choosing what to look at is view state, not a page edit: it is saved with the page
+  // but does not bump the page version, so pending follow-ups and explanations stay valid.
   const select = i => {
     saved.selected = (i + count) % count;
-    onEdit();
     paint();
   };
   function paint() {
@@ -170,13 +171,15 @@ function renderProcess(content, block, saved, onEdit, detail) {
 /* ── Comparison: alternatives side by side ─────────────────────────────────── */
 function renderComparison(content, block, saved, onEdit, detail) {
   const {items} = block;
+  // Four or more items are criteria rather than alternatives: list them and show one at a time.
+  if (items.length > 3) return renderCriteria(content, block, saved, onEdit, detail);
   const grid = el('div', 'dg-compare');
   grid.style.setProperty('--n', Math.min(items.length, 3));
   const cards = items.map((item, i) => {
     const card = el('button', 'dg-card');
     card.type = 'button';
     card.append(el('span', 'dg-card-label', item.label), el('span', 'dg-card-detail', item.detail));
-    card.onclick = () => { saved.selected = i; onEdit(); paint(); };
+    card.onclick = () => { saved.selected = i; paint(); };
     grid.append(card);
     return card;
   });
@@ -186,6 +189,24 @@ function renderComparison(content, block, saved, onEdit, detail) {
     cards.forEach((c, j) => c.setAttribute('aria-pressed', String(i === j)));
   }
   paint();
+}
+
+function renderCriteria(content, block, saved, onEdit, detail) {
+  const {items} = block;
+  const f = frame(content, detail, block, saved, onEdit);
+  f.stage.classList.add('dg-criteria');
+  const list = el('div', 'dg-criteria-list');
+  const rows = items.map((item, i) => {
+    const b = el('button', 'dg-node dg-criterion');
+    b.type = 'button';
+    b.append(el('span', 'dg-num', String(i + 1)), el('span', 'dg-label', item.label));
+    b.onclick = () => f.select(i);
+    list.append(b);
+    return b;
+  });
+  f.stage.append(list);
+  f.onPaint(i => rows.forEach((b, j) => b.setAttribute('aria-pressed', String(i === j))));
+  f.paint();
 }
 
 /* ── Chart: labelled horizontal bars, readable at any width ────────────────── */

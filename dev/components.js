@@ -31,6 +31,16 @@ const SPECIMENS = [
     ]}
   },
   {
+    name: 'Comparison criteria', when: 'Four or more aspects of one decision, shown one at a time.',
+    block: {id: 'rent-buy-criteria', type: 'comparison', title: 'How renting and buying differ', prompt: '', edges: [], items: [
+      item('Upfront costs', 'Renting needs a deposit; buying needs a down payment plus closing costs.'),
+      item('Monthly costs', 'Rent covers housing; owners also pay interest, taxes, insurance and upkeep.'),
+      item('Flexibility', 'Renters can move at the end of a lease; selling a home takes months and fees.'),
+      item('Repairs', 'Landlords usually handle major repairs; owners pay for them.'),
+      item('Building equity', 'Mortgage payments build ownership over time; rent does not.')
+    ]}
+  },
+  {
     name: 'Chart', when: 'Supplied or well-established numbers.',
     block: {id: 'planet-distance', type: 'chart', title: 'Average distance from the Sun (AU)', prompt: '', edges: [], items: [
       item('Mercury', 'The closest planet, about two-fifths of Earth’s distance.', 0.39),
