@@ -75,6 +75,7 @@ Run the app with `npm run dev` and open [127.0.0.1:4317](http://127.0.0.1:4317/)
 | `PLAYWRIGHT_CHANNEL=chrome npm run test:browser` | Desktop and narrow browser fixtures with installed Chrome |
 | `npm run test:luna` | Live Luna checks through the local server with an OpenAI key |
 | `npm run build` | Build browser assets and the server bundle |
+| `npm run eval:pages` | Live page-quality check: ten prompts, screenshots and design-rule scores ([results](docs/EVALUATION.md)) |
 
 ## Deferred work
 

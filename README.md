@@ -23,6 +23,8 @@ The browser tests start their own loopback fixture server. They cover wrapped au
 
 With the local app running and its OpenAI key configured, run `npm run test:luna` for the separate live smoke test. It checks that Luna's answers address the Kepler, evaporation and Kyoto prompts and reports time to first streamed answer text and completion. The test sends those three sample prompts through the local server to OpenAI. Set `LUNA_BASE_URL` if the app uses a different loopback port.
 
+`npm run eval:pages` runs ten fixed prompts through the real app, saves screenshots, and scores each page against the design rules. It checks that the answer fits on the first screen, a visual carries the explanation, text stays short, nothing repeats, and Go deeper offers next steps. See [page quality evaluation](docs/EVALUATION.md).
+
 ## Current flow
 
 The empty composer starts in the center. Once a slide exists, it docks below the slide. While typing, one question can appear above the box, with editable intent, optional Tab completion, and a short streamed answer below. Luna first previews after four completed words, then after each four more words once at least 1.2 seconds have passed since the previous request started. It also refreshes after a 100 ms pause at the end of a sentence or a 250 ms ordinary pause. At most one preview is in flight, and the 20 most recent exact drafts are cached. Success does not trigger another request by itself.

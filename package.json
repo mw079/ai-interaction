@@ -7,7 +7,8 @@
     "build": "node build.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:browser": "npm run build && playwright test",
-    "test:luna": "node dev/smoke-luna.mjs"
+    "test:luna": "node dev/smoke-luna.mjs",
+    "eval:pages": "node dev/eval-pages.mjs"
   },
   "engines": {
     "node": ">=22"

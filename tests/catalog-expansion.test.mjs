@@ -55,3 +55,16 @@ test('every gallery example is valid model output for its component',async()=>{
  const covered=new Set(SPECIMENS.map(s=>s.block.type));
  assert.deepEqual(COMPONENT_TYPES.filter(type=>!covered.has(type)),[],'every component type has a gallery example');
 });
+
+test('page scoring flags repetition, long text and missing follow-ups',async()=>{
+ const {scorePage}=await import('../dev/eval-pages.mjs');
+ const step=(label,detail)=>({label,detail,value:0,latitude:null,longitude:null});
+ const good={kind:'outline',body:['Vaccines teach the immune system to recognise a germ.','Safety: They train immunity without causing the disease.'],
+  components:[{id:'v',type:'timeline',title:'Steps',prompt:'',edges:[],items:[step('Target shown','The vaccine shows a harmless antigen to immune cells.'),step('Memory forms','Long-lived memory cells remain after the response.')]}],
+  followUps:['Why do boosters fade?','Are side effects common?']};
+ assert.equal(scorePage(good,{fitsFirstScreen:true}).passed,7);
+ const repeated={...good,body:[good.body[0],'Memory: Long-lived memory cells remain after the immune response.'],followUps:[]};
+ const failed=Object.entries(scorePage(repeated,{fitsFirstScreen:false}).checks).filter(([,ok])=>!ok).map(([name])=>name);
+ assert.deepEqual(failed,['fits first screen','no repeated content','2–3 Go deeper questions']);
+ assert.equal(scorePage({kind:'outline',body:['Hi team, thank you for all the work on the launch. It came together because of each of you. Enjoy the weekend!'],components:[]},{textFirst:true}).passed,2);
+});
