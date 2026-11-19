@@ -342,10 +342,17 @@ function setProposal(data, revision, source, selection){
 function renderProposal(){
   const p=state.proposal;$('proposal').hidden=!p;
   if(!p)return;
-  $('proposal-label').textContent='Explore this suggested page';$('proposal-title').textContent=p.title;
-  $('proposal-provenance').textContent=p.source==='Demo'?'Built-in example · not model-generated':`${p.source==='Luna'||p.source==='gpt-6-luna'?'Luna':'Terra'} content · trusted interactive components`;
-  $('accept-button').disabled=p.baseVersion!==undefined?p.baseVersion!==state.pageVersion:p.revision!==state.revision;$('accept-button').firstChild.textContent=state.component?'Replace page (undo available)':'Keep this page';
-  $('proposal-content').replaceChildren();renderComponent($('proposal-content'),p);
+  const stale=p.baseVersion!==undefined?p.baseVersion!==state.pageVersion:p.revision!==state.revision;
+  $('proposal-label').textContent='A new version is ready';$('proposal-title').textContent=p.title;
+  $('proposal-reason').textContent=stale?'The page changed again after this was made. Ask again to get a version that includes your latest edits.':'You edited the page while this was being made, so it waits for you instead of replacing your work.';
+  $('proposal-provenance').textContent=state.component&&!stale?'You can go back with ←':'';
+  $('accept-button').disabled=stale;$('accept-button').textContent=state.component?'Replace page':'Keep this page';
+  // A compact summary, not a second live page: intro, then what the new version contains.
+  const content=$('proposal-content');content.replaceChildren();
+  if(p.body?.[0])content.append(node('p','proposal-intro',p.body[0]));
+  const parts=[...(p.components||[]).map(c=>c.title),...(p.kind==='kepler'?['Orbit explorer']:p.kind==='projectile'?['Launch simulator']:[]),
+    ...(p.body||[]).slice(1).map(text=>text.match(/^([^:\n]{1,32}):\s/)?.[1]).filter(Boolean)];
+  if(parts.length){const list=node('div','proposal-parts');parts.slice(0,6).forEach(part=>list.append(node('span','proposal-part',part)));content.append(list);}
 }
 function markPageEdit(){
  state.pageVersion++;

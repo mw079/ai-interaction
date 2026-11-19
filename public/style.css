@@ -777,3 +777,73 @@ body.intent-first[data-experience=unified].page-open #typing-assistance{max-heig
 .composer-choice-row>span{flex:1 1 100%}
 .popover-options .picker-apply.picker-secondary{background:#fff;color:#2c3328;border:1px solid #e1e5da}
 .popover-options .picker-apply.picker-secondary:hover{background:#f4f6f1}
+
+/* ── Phase 6: interface pieces in the shared language ─────────────────────── */
+/* Review box for a full-page version that arrived after you edited. */
+.proposal{margin-top:24px;padding:20px 22px;border:1px solid #dfe3d8;border-radius:18px;background:#fff;box-shadow:0 8px 28px rgba(40,50,35,.07)}
+.proposal-heading{gap:8px;font-size:12px;letter-spacing:.02em;color:#4f6b45;font-weight:600}
+.suggestion-marker{width:8px;height:8px;border-radius:50%;background:#4f6b45;box-shadow:0 0 0 4px #e4ecdc}
+.proposal-reason{margin:8px 0 0;font-size:13.5px;line-height:1.55;color:#7c8474}
+.proposal h3{margin:14px 0 6px;font-size:20px;letter-spacing:-.01em}
+.proposal-intro{margin:0;font-size:15px;line-height:1.6;color:#4d5546}
+.proposal-parts{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.proposal-part{padding:5px 11px;border-radius:999px;background:#f1f5ec;font-size:12.5px;color:#3f5837}
+.proposal-actions{gap:8px;margin-top:20px;justify-content:flex-end}
+.proposal-actions>.proposal-note{margin-right:auto;font-size:12px;color:#7c8474}
+.proposal-secondary{min-height:38px;padding:0 16px;border:1px solid #dfe3d8;border-radius:999px;background:#fff;color:#2c3328;font:inherit;font-size:13px;cursor:pointer}
+.proposal-secondary:hover{background:#f4f6f1}
+.proposal .primary-button,.page-review-actions .page-apply{min-height:38px;padding:0 18px;border:0;border-radius:999px;background:#4f6b45;color:#fff;font:inherit;font-size:13px;font-weight:500;cursor:pointer}
+.proposal .primary-button:hover,.page-review-actions .page-apply:hover{background:#3f5837}
+.proposal .primary-button:disabled{opacity:.4;cursor:default}
+
+/* Inline explanations and edit review: a soft card attached to the passage. */
+.page-assistant{margin:8px 0 12px;padding:14px 16px;border-radius:14px;background:#f4f7f0;animation:dg-fade .25s both}
+.page-assistant:not(:has(> :not(.page-assistant-close))){display:none}
+.page-response{border-left:0;padding:0 30px 0 0;font-size:14.5px;line-height:1.65;color:#2c3328}
+.page-response strong{color:#2c3328}
+.page-assistant-close{top:8px;right:8px}
+.page-assistant-status{display:flex;align-items:center;gap:8px;font-size:13.5px;color:#7c8474}
+.page-assistant-status::before{content:'';width:12px;height:12px;border-radius:50%;border:2px solid #cad6c2;border-top-color:#4f6b45;animation:dg-spin .8s linear infinite}
+@keyframes dg-spin{to{transform:rotate(360deg)}}
+.page-review-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+.page-review-actions .page-reject,.page-assistant>.page-reject:not(.page-offer){min-height:36px;padding:0 14px;border:1px solid #dfe3d8;border-radius:999px;background:#fff;color:#2c3328;font:inherit;font-size:13px}
+.page-assistant .page-offer{margin-top:8px;padding:0;border:0;background:none;color:#4f6b45;font:inherit;font-size:13px;font-weight:500;cursor:pointer}
+.inline-diff ins{background:#e4ecdc;color:#2c3328;border-radius:3px;padding:0 1px;text-decoration:underline;text-decoration-color:#7d9a6c;text-underline-offset:3px}
+.inline-diff del{background:none;color:#a39a92;text-decoration:line-through;text-decoration-color:#c98d73}
+.component-proposals{border-left:0;border-radius:14px;background:#fff;padding:14px}
+
+/* Toolbar: navigation grouped as one pill; secondary actions as quiet text. */
+body.intent-first[data-experience=unified] .document-actions{gap:4px}
+.document-location{font-size:12px;color:#7c8474}
+.document-location svg{display:none}
+.page-nav{width:30px;height:30px;font-size:15px;color:#4d5546}
+#page-back{border-radius:999px 0 0 999px}
+#page-forward{border-radius:0 999px 999px 0}
+#page-back,#page-forward{background:#eef1e9}
+#page-back:hover:not(:disabled),#page-forward:hover:not(:disabled){background:#e4ecdc}
+#page-back:disabled,#page-forward:disabled{color:#c4cbc0}
+#page-position{min-width:0;margin:0 10px 0 6px;font-size:12px;font-variant-numeric:tabular-nums;color:#7c8474}
+.document-actions .quiet-button{min-height:30px;padding:0 10px;border-radius:999px;font-size:12px;color:#5a6352;background:none}
+.document-actions .quiet-button:hover:not(:disabled){background:#eef1e9;color:#2c3328}
+.document-actions .quiet-button:disabled{color:#c4cbc0}
+#history-count{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:2px;padding:0 5px;border-radius:999px;background:#eef1e9;font-size:11px}
+
+/* Notes: a quiet disclosure that opens into a soft card. */
+.page-notes{margin-top:28px}
+.page-notes summary{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:12.5px;color:#7c8474;list-style:none;cursor:pointer}
+.page-notes summary::-webkit-details-marker{display:none}
+.page-notes summary::before{content:'+';font-size:15px;line-height:1;color:#4f6b45}
+.page-notes[open] summary::before{content:'−'}
+.page-notes summary:hover{background:#f1f5ec;color:#2c3328}
+.page-notes textarea{margin-top:8px;padding:12px 14px;border:1px solid #e1e5da;border-radius:14px;background:#fff;font-size:15px;line-height:1.65;min-height:84px}
+.page-notes textarea:focus-visible{outline:none;border-color:#4f6b45;box-shadow:0 0 0 3px #e4ecdc}
+
+/* Loading: a calm status pill while a page is being made. */
+.page-progress{font-size:13.5px;color:#5a6352}
+.document-panel[data-generating] .page-progress{width:fit-content;padding:8px 14px 8px 12px;border-radius:999px;background:#f1f5ec}
+.document-panel[data-generating]:not(.has-slide) .page-progress{margin:clamp(40px,12vh,110px) auto}
+.page-spinner{width:12px;height:12px;border-radius:50%;border:2px solid #cad6c2;border-top-color:#4f6b45;animation:dg-spin .8s linear infinite;background:none!important}
+.page-elapsed{font-variant-numeric:tabular-nums;color:#7c8474}
+@media(prefers-reduced-motion:reduce){.page-spinner,.page-assistant-status::before{animation:none}.page-assistant{animation:none}}
+.document-panel[data-generating]:not(.has-slide) .page-progress{min-height:0}
+#page-position,.document-actions .quiet-button,.document-location{white-space:nowrap}

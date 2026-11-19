@@ -253,7 +253,7 @@ export function setupPageAssistant({state,request,commit}){
   if(!hasProposal)return;
 
   if(answer){
-   const offer=node('button','page-reject','Review edit');
+   const offer=node('button','page-reject page-offer','Review edit');
    offer.type='button';
    output.append(offer);
    offer.onclick=()=>{offer.remove();showProposal().focus();};

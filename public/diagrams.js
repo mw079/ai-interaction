@@ -12,7 +12,7 @@ import {INTERACTIVES} from './interactives.js';
 function renderCycle(content, block, saved, onEdit, detail) {
   const {items} = block;
   const n = items.length;
-  const W = 600, H = 380, cx = 300, cy = 190, rx = 205, ry = 135;
+  const W = 600, H = 380, cx = 300, cy = 190, rx = 180, ry = 135;
   const f = frame(content, detail, block, saved, onEdit);
   const svg = canvas(f.stage, W, H, 'dg-cycle');
   const id = nextMarkerId();
