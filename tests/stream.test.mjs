@@ -53,3 +53,11 @@ test('one question prioritizes clarification and keeps exploration choices as ba
  assert.equal(exploration.questionKind,'explore');assert.equal(exploration.phrase,null);assert.equal(exploration.global,true);assert.deepEqual(exploration.options,data.options);
  assert.equal(liveClarificationFor(text,{questionKind:'none',question:''},[]),null);
 });
+
+test('clarifying questions recover missing options from matching information or useful safe presets',()=>{
+ const data={question:'How much calculus should I use?',questionKind:'clarify',options:[]};
+ assert.deepEqual(liveClarificationFor('Explain Kepler with math',data).options,['No calculus','Basic derivatives','Full derivation']);
+ const withDescriptor={...data,information:[{question:'How much calculus should I use',options:['Algebra only','Multivariable calculus']}]};
+ assert.deepEqual(liveClarificationFor('Explain Kepler with math',withDescriptor).options,['Algebra only','Multivariable calculus']);
+ assert.deepEqual(liveClarificationFor('Plan the event',{...data,question:'What is the exact date?'}).options,[]);
+});

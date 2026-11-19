@@ -4,7 +4,7 @@ A small website exploring three connected ideas: understanding intent during inp
 
 ## Run locally
 
-Requires Node 22 or later. No dependency installation.
+Requires Node 22 or later. The local app runs without installing dependencies.
 
 ```sh
 cd /Users/mufwan/Documents/CS/ai/projects/localmind/ai-interaction
@@ -13,15 +13,23 @@ npm run dev
 
 Open `http://127.0.0.1:4317`. Set `PORT` to use another port. Restart the server after source changes; it builds assets on startup. `npm test` runs the physics and API-boundary checks. `npm run build` creates a dependency-free Cloudflare Worker in `dist/server/index.js`, including browser assets and the Sites manifest.
 
+## Test locally
+
+Install the development dependencies with `npm ci`. Run the browser suite in an installed Google Chrome with `PLAYWRIGHT_CHANNEL=chrome npm run test:browser`. To use Playwright's Chromium, run `npx playwright install chromium` once, then `npm run test:browser`.
+
+The browser tests start their own loopback fixture server. They cover wrapped autocomplete and Tab, unfinished comparisons, and focus after selecting a clarification. They also cover slide Undo after reload, optional edit review, focus after Apply, and History recovery after branching, at 1280×720 and 390×720. They use fixed model responses and control the debounce and hover timers.
+
+With the local app running and its OpenAI key configured, run `npm run test:luna` for the separate live smoke test. It checks that Luna's answers address the Kepler, evaporation and Kyoto prompts and reports time to first streamed answer text and completion. The test sends those three sample prompts through the local server to OpenAI. Set `LUNA_BASE_URL` if the app uses a different loopback port.
+
 ## Current flow
 
-The composer starts near the bottom. Focus/type to raise it to a stable position, with one question above, editable intent/phrase refinements, optional sage completion (Tab accepts), and a short streamed answer below in a bounded scroll region. It uses one Luna request after a 1.1-second pause. Success does not trigger another request by itself.
+The empty composer starts in the center. Once a slide exists, it docks below the slide. While typing, one question can appear above the box, with editable intent, optional Tab completion, and a short streamed answer below. Luna receives the draft after a 1.1-second pause when it is ready to preview. Success does not trigger another request by itself.
 
 Send uses Terra to create an Atlas page. The model can choose up to two composable interactive blocks from a validated catalog: cycles, graphs, timelines, comparisons, charts and worked examples. Kepler/projectile requests retain their trusted local simulations. Text-only is valid when that is the better answer. See [component contracts](docs/COMPONENT_LIBRARY.md).
 
 Edit the slide title or a passage directly. After a brief pause, Luna uses the surrounding text and your changes to answer a typed question or propose requested wording. Highlighting text gives a brief explanation underneath. Routine wording edits can stay quiet.
 
-Proposed wording appears in the passage itself with insertion and deletion color and **Apply** and **Reject** underneath. Apply saves a new page version. Reject keeps your original text. Typing again dismisses the proposal and refreshes the response. The composer’s plus opens follow-up scope once a slide exists. File attachments are unsupported.
+Direct edits can be undone with **Undo** in the slide toolbar. Nearby typing in the same field is grouped, and up to 24 direct edits stay available on that slide after reload. An answer appears first when Luna also offers an edit. Use **Review edit** to see the proposal, then **Apply** or **Reject**. Apply returns focus to the updated passage. If you edit an older version, History keeps the later slides available to restore. The composer’s Focus control limits the next Send to the selected section. File attachments are unsupported.
 
 While writing in the main composer, the page scales to 90%. Returning to the page restores full size and hides composer questions/answers. Long pages and live answers have bounded scroll regions. Motion respects reduced-motion preferences.
 
@@ -31,11 +39,11 @@ Back/Forward preserves edits, control settings, notes and reading position witho
 
 Demo is the default and clearly labels its fixture responses. It recognizes a small set of examples; it does not perform web research, know a user's release process, or answer arbitrary questions. Network font loading does not transmit draft content.
 
-**Demo mode → Connect & enable live preview** explicitly opts into sending the current draft, audience/format choices and selected text through the website server to OpenAI. Each tester supplies their own key. The browser holds it in module memory only, clears the input after connecting/closing, and forwards it in authorization headers. The app does not write keys or prompts to disk, localStorage, cookies, source, or application logs. Hosting/network providers and OpenAI have their own data-handling policies; this is not local-only inference. The desktop Keychain entry is not accessed.
+**Demo mode → Connect & enable live preview** explicitly opts into sending the current draft, audience/format choices and selected text through the website server to OpenAI. Each tester supplies their own key. The browser holds it in module memory only, clears the input after connecting/closing, and forwards it in authorization headers. The app does not persist the API key or unsent draft. It saves the accepted workspace, including requests that generated accepted slides, to the current tab’s session storage for recovery after reload. Hosting/network providers and OpenAI have their own data-handling policies; this is not local-only inference. The desktop Keychain entry is not accessed.
 
 Live previews follow a 1.1-second typing pause; older preview results cannot replace current ones. IME composition is not submitted mid-composition. Preview requests use `gpt-6-luna`, thinking off, `store:false`, a 1,300-output-token limit and 25-second timeout. Explicit full-page requests use `gpt-6.1-terra`, low reasoning, a 2,400-token limit and 45-second timeout. Both use the same strict, validated component schema. The UI caps each connection at 30 generation requests. This is a per-tab guard, not an account-wide budget. Reconnecting explicitly starts a new allowance. Model-access checking verifies both Luna and Terra, without generation.
 
-No provider-owned/shared API key is deployed. No file uploads, browser agent, shell, external actions, analytics, account database, synchronized editing, or local 27B browser inference is implemented. Reloading loses the session; export page data to retain it.
+No provider-owned/shared API key is deployed. No file uploads, browser agent, shell, external actions, analytics, account database, synchronized editing, or local 27B browser inference is implemented. Reloading in the same tab restores the slide, interactive state, up to 40 page versions, and up to 40 History entries, within the browser storage limit. Export page data to keep a copy beyond the browser session.
 
 ## Source layout
 

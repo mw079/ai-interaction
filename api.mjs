@@ -1,6 +1,6 @@
 import {COMPONENT_SCHEMA,validPageHelp,SLIDE_RECIPES,slideRecipe,matchesSlideRecipe} from './public/component-catalog.js';
 import {readSSE,partialLivePreview} from './public/stream.js';
-import {FORMATS,validPreview} from './public/model.js';
+import {FORMATS,validPreview,isIncompleteComparison} from './public/model.js';
 import {modelInstructions} from './prompts.mjs';
 
 const string={type:'string'};
@@ -16,6 +16,7 @@ PREVIEW_SCHEMA.required.push('slideOptions');
 PREVIEW_SCHEMA.properties={body:PREVIEW_SCHEMA.properties.body,question:PREVIEW_SCHEMA.properties.question,phrase:PREVIEW_SCHEMA.properties.phrase,options:PREVIEW_SCHEMA.properties.options,...PREVIEW_SCHEMA.properties};
 const SELECTION_SCHEMA={type:'object',additionalProperties:false,properties:{answer:string,replacement:string},required:['answer','replacement']};
 const json=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}});
+const eventStream=body=>new Response(body,{headers:{'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-store','X-Accel-Buffering':'no','X-Content-Type-Options':'nosniff'}});
 export async function handleAPI(request,upstream=fetch,env={}){
   const local=new URL(request.url).hostname==='127.0.0.1';
   const serverKey=env.OPENAI_API_KEY&&(local||request.headers.has('oai-authenticated-user-id'));
@@ -42,6 +43,11 @@ export async function handleAPI(request,upstream=fetch,env={}){
   const requestedSlide=payload?.slideChoice;
   const recipe=slideRecipe(requestedSlide);
   if(requestedSlide!==undefined && (payload.phase!=='page'||!recipe))return json({error:'Choose an available slide format.'},400);
+  if(payload?.phase==='preview'&&isIncompleteComparison(payload.text)){
+    const preview={kind:'outline',title:'',interpretation:'',audience:'',questionKind:'none',question:'',phrase:'',options:[],body:[],nodes:[],rows:[],information:[],completion:'',components:[],slideOptions:[]};
+    const result={preview,waiting:true};
+    return payload.stream?eventStream('data: '+JSON.stringify({type:'done',...result})+'\n\n'):json(result);
+  }
   const slideInstructions=recipe
     ? ' The user selected '+requestedSlide+'. Make it the primary presentation. '+(recipe.kind?'Use kind='+recipe.kind+'.':'Use kind=outline and include '+recipe.blocks.join(', ')+' in components.')+' This selection takes priority over default formats. Return slideOptions empty.'
     : ' Return slideOptions empty for a generated page.';
@@ -116,5 +122,5 @@ function liveStreamResponse(upstream,{model,start,signal,abort}){
   }catch(error){if(!cancelled)send({type:'error',error:'The live preview was interrupted. Keep typing or try again.',retryable:error.retryable??(!signal.aborted||signal.reason?.name==='TimeoutError')});}
   finally{if(!cancelled)controller.close();abort();}
  },cancel(){cancelled=true;abort();}});
- return new Response(body,{headers:{'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-store','X-Accel-Buffering':'no','X-Content-Type-Options':'nosniff'}});
+ return eventStream(body);
 }

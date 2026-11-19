@@ -26,6 +26,7 @@ export function setupPageAssistant({state,request,commit}){
 
  document.addEventListener('page:render',()=>{selection=null;close();});
  document.addEventListener('page:edit',()=>{if(!committing)close();});
+ document.addEventListener('page:undo-edit',event=>{close();baselines.set(event.detail,event.detail.value);});
  document.addEventListener('intent:changed',close);
  window.addEventListener('pagehide',close);
 
@@ -161,7 +162,7 @@ export function setupPageAssistant({state,request,commit}){
   else part.anchor.after(output);
   const replacement=change?.replacement;
   const hasProposal=!!(replacement||change?.components.length);
-  if(answer&&!replacement){
+  if(answer){
    const response=node('p','page-response',answer);
    response.setAttribute('role','status');
    response.setAttribute('aria-label','Answer');
@@ -169,59 +170,73 @@ export function setupPageAssistant({state,request,commit}){
   }
   if(!hasProposal)return;
 
-  if(replacement){
-   inline=node('div',part.field.className+' inline-diff');
-   inline.setAttribute('role','status');
-   inline.setAttribute('aria-label','Proposed wording');
-   const {prefix,removed,added,suffix}=textDifference(part.original,replacement);
-   inline.append(document.createTextNode(prefix));
-   // Keep small deletions visible. Large rewrites read cleanly in place.
-   if(removed&&removed.length<=60&&(prefix||suffix))inline.append(node('del','',removed));
-   if(added)inline.append(node('ins','',added));
-   inline.append(document.createTextNode(suffix));
-   wrapper.classList.add('has-inline-review');
-   part.field.after(inline);
-   inline.onpointerdown=event=>{
-    event.preventDefault();
-    close();part.field.focus({preventScroll:true});
-   };
-  }
-  if(change.components.length){
-   const preview=node('div','component-proposals');
-   const temp={edits:{}};
-   change.components.forEach(block=>renderCatalogBlock(preview,block,temp,{onEdit(){},ask(){}}));
-   output.append(preview);
-  }
-  const actions=node('div','page-review-actions');
-  const apply=node('button','page-apply','Apply'),reject=node('button','page-reject','Reject');
-  apply.type=reject.type='button';actions.append(apply,reject);output.append(actions);
-  reject.onclick=()=>{
-   close();
-   if(part.field)baselines.set(part.field,part.field.value);
-   part.field?.focus({preventScroll:true});
-  };
-  apply.onclick=()=>{
-   const current=part.field?.value??(part.block
-    ?JSON.stringify(state.component?.components?.find(block=>block.id===part.block.id))
-    :part.anchor.textContent.trim());
-   if(!patchIsCurrent({version:change.version,currentVersion:state.pageVersion,before:part.original,current,connected:part.anchor.isConnected})){
-    close();return;
+  if(answer){
+   const offer=node('button','page-reject','Review edit');
+   offer.type='button';
+   output.append(offer);
+   offer.onclick=()=>{offer.remove();showProposal().focus();};
+  }else showProposal();
+
+  function showProposal(){
+   if(replacement){
+    inline=node('div',part.field.className+' inline-diff');
+    inline.setAttribute('role','status');
+    inline.setAttribute('aria-label','Proposed wording');
+    const {prefix,removed,added,suffix}=textDifference(part.original,replacement);
+    inline.append(document.createTextNode(prefix));
+    // Keep small deletions visible. Large rewrites read cleanly in place.
+    if(removed&&removed.length<=60&&(prefix||suffix))inline.append(node('del','',removed));
+    if(added)inline.append(node('ins','',added));
+    inline.append(document.createTextNode(suffix));
+    if(answer)output.append(inline);
+    else{
+     wrapper.classList.add('has-inline-review');
+     part.field.after(inline);
+     inline.onpointerdown=event=>{
+      event.preventDefault();
+      close();part.field.focus({preventScroll:true});
+     };
+    }
    }
-   const merged=new Map((state.component.components||[]).map(block=>[block.id,block]));
-   change.components.forEach(block=>merged.set(block.id,block));
-   const components=[...merged.values()];
-   if(!validComponents(components)){close();render(part,'This suggestion exceeds the slide’s two-component limit.');return;}
-   committing=true;
-   try{
-    commit(()=>{
-     if(change.replacement&&part.field){
-      part.field.value=change.replacement;
-      part.field.dispatchEvent(new Event('input',{bubbles:true}));
-      baselines.set(part.field,part.field.value);
-     }
-     state.component.components=components;
-    });
-   }finally{committing=false;}
-  };
+   if(change.components.length){
+    const preview=node('div','component-proposals');
+    const temp={edits:{}};
+    change.components.forEach(block=>renderCatalogBlock(preview,block,temp,{onEdit(){},ask(){}}));
+    output.append(preview);
+   }
+   const actions=node('div','page-review-actions');
+   const apply=node('button','page-apply','Apply'),reject=node('button','page-reject','Reject');
+   apply.type=reject.type='button';actions.append(apply,reject);output.append(actions);
+   reject.onclick=()=>{
+    close();
+    if(answer)render(part,answer);
+    if(part.field)baselines.set(part.field,part.field.value);
+    part.field?.focus({preventScroll:true});
+   };
+   apply.onclick=()=>{
+    const current=part.field?.value??(part.block
+     ?JSON.stringify(state.component?.components?.find(block=>block.id===part.block.id))
+     :part.anchor.textContent.trim());
+    if(!patchIsCurrent({version:change.version,currentVersion:state.pageVersion,before:part.original,current,connected:part.anchor.isConnected})){
+     close();return;
+    }
+    const merged=new Map((state.component.components||[]).map(block=>[block.id,block]));
+    change.components.forEach(block=>merged.set(block.id,block));
+    const components=[...merged.values()];
+    if(!validComponents(components)){close();render(part,'This suggestion exceeds the slide’s two-component limit.');return;}
+    committing=true;
+    try{
+     commit(()=>{
+      if(change.replacement&&part.field){
+       part.field.value=change.replacement;
+       part.field.dispatchEvent(new Event('input',{bubbles:true}));
+       baselines.set(part.field,part.field.value);
+      }
+      state.component.components=components;
+     },part.target.id);
+    }finally{committing=false;}
+   };
+   return apply;
+  }
  }
 }

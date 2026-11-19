@@ -159,10 +159,11 @@ export function renderComposerExtension(target,family,item,choose,onResize){
 
 export function renderFollowUpScope(target,scopes,active,choose){
   target.replaceChildren();
+  target.append(node('p','Only the selected part will change on Send.','picker-hint'));
   const list=node('div',undefined,'picker-choices');
   for(const scope of scopes){
     const control=button(scope.label,()=>choose(scope));
-    control.setAttribute('aria-pressed',String(scope.id===active?.id));
+    control.setAttribute('aria-pressed',String(scope.id===(active?.id||'whole')));
     const preview=scope.preview??scope.text;
     if(preview)control.append(node('span',preview.slice(0,90),'picker-scope-preview'));
     list.append(control);

@@ -18,7 +18,7 @@
 .intent-first .section-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 .intent-first .composer{position:relative;padding:18px 20px;border-color:#d7ded3;box-shadow:0 4px 20px #25332d05}
 .intent-first .composer textarea{position:relative;z-index:1;min-height:60px;line-height:1.6;font-size:1.0625rem;resize:none;background:transparent}
-.intent-first:not(.has-intent) .composer-bottom,.intent-first:not(.has-intent) .status-line,.intent-first:not(.has-intent) #cancel-button{display:none}
+.intent-first:not(.has-intent) .status-line,.intent-first:not(.has-intent) #cancel-button{display:none}
 .input-mirror-layer{position:absolute;left:20px;right:20px;top:18px;bottom:45px;overflow:hidden;pointer-events:none}
 #input-mirror{font:1.0625rem/1.6 'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;white-space:pre-wrap;overflow-wrap:break-word;color:transparent}
 #input-mirror mark{color:transparent;background:#f4e7ba;border-radius:3px;text-decoration:underline;text-decoration-color:#c5a44b;text-underline-offset:4px}
@@ -74,7 +74,6 @@
 .intent-first.page-open .workspace{display:block;width:100%}
 .intent-first.page-open .intent-panel{position:fixed;z-index:20;bottom:max(16px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:calc(100% - 40px);max-width:760px;padding:0;display:flex;flex-direction:column}
 .page-open .composer{background:#fff;box-shadow:0 8px 40px #25332d18!important;order:2}
-.intent-first.page-open:not(.has-intent) .composer-bottom{display:flex}
 .page-open #typing-assistance{order:1;background:#f8f9f6f5;border-radius:14px 14px 0 0;padding:0 18px 12px;max-height:160px;overflow:auto}
 .page-open #quick-preview{margin-top:10px}.page-open #quick-answer{font-size:.8125rem;line-height:1.6}
 .page-open #status{order:3;background:#f8f9f6;margin:5px 4px 0;max-width:none}
@@ -154,9 +153,10 @@
 [data-experience=unified].page-open .live-question{margin:0;bottom:calc(100% + 8px);max-height:90px}
 /* Assistance never changes the composer's geometry. Only the user's own text grows it. */
 .intent-first[data-experience=unified] .composer textarea{display:block;min-height:56px}
-.intent-first[data-experience=unified]:not(.has-intent) .composer-bottom{display:flex;visibility:hidden}
+.intent-first:not(.has-intent):not(.page-open) .composer-mode{visibility:hidden}
 [data-experience=unified] .completion-line{position:absolute;right:112px;bottom:20px;display:block;padding:0;margin:0;line-height:1;z-index:3}
 [data-experience=unified] #input-mirror .completion-text{font:inherit;color:#6b795f;white-space:pre-wrap}
+.completion-overflow{order:3;margin:8px 12px 0;padding:6px 10px;border-left:2px solid #c9d5bf;border-radius:0 7px 7px 0;background:#eef2e9;color:#53644c;font-size:.875rem;line-height:1.5;overflow-wrap:anywhere}
 [data-experience=unified] .completion-accept{display:block;min-height:22px;margin:0;padding:2px 5px}
 [data-experience=unified] .refine-trigger{max-width:calc(100% - 174px)}
 @media(max-width:480px){[data-experience=unified] .completion-line{right:105px;bottom:21px}[data-experience=unified] .refine-trigger{max-width:calc(100% - 158px)}}
@@ -172,8 +172,8 @@
 .intent-edit-actions button{font-size:.6875rem}.intent-edit-actions button[type=button]{border:0;background:transparent;color:#75806d}
 .intent-reset-button{margin-top:12px;display:block}
 /* Atlas: one finished page and one stable composer dock. */
-body.intent-first[data-experience=unified]{--dock-top:calc(100dvh - 174px);--atlas-ink:#282923;--atlas-muted:#73766d;--atlas-line:#e5e6df;--atlas-wash:#f1f2ec;background:#f6f6f2;color:var(--atlas-ink)}
-body.intent-first[data-experience=unified].composer-active{--dock-top:clamp(135px,52dvh,calc(100dvh - 300px))}
+body.intent-first[data-experience=unified]{--dock-top:max(52px,calc((100dvh - var(--composer-height,120px)) / 2));--atlas-ink:#282923;--atlas-muted:#73766d;--atlas-line:#e5e6df;--atlas-wash:#f1f2ec;background:#f6f6f2;color:var(--atlas-ink)}
+body.intent-first[data-experience=unified].page-open{--dock-top:calc(100dvh - 174px)}
 body.intent-first[data-experience=unified] main{min-height:100dvh;padding-top:24px}
 body.intent-first[data-experience=unified].page-open main{max-width:1180px;padding:16px 28px 210px}
 body.intent-first[data-experience=unified].page-open.composer-active main{padding-bottom:360px}
@@ -182,14 +182,14 @@ body.intent-first[data-experience=unified] .intent-panel>.section-label{display:
 body.intent-first[data-experience=unified] .composer{order:2;background:#fff;border:1px solid #e2e4da;border-radius:20px;box-shadow:0 3px 18px #24252208!important}
 body.intent-first[data-experience=unified] .composer textarea{max-height:80px}
 body.intent-first[data-experience=unified].composer-active .composer textarea{max-height:min(150px,20dvh)}
-body.intent-first[data-experience=unified].page-open .composer-bottom{visibility:visible}
-body.intent-first[data-experience=unified]:not(.composer-active) .live-question,body.intent-first[data-experience=unified]:not(.composer-active) #typing-assistance,body.intent-first[data-experience=unified]:not(.composer-active) .completion-line{display:none!important}
+body.intent-first[data-experience=unified]:not(.composer-active) .live-question,body.intent-first[data-experience=unified]:not(.composer-active) #typing-assistance,body.intent-first[data-experience=unified]:not(.composer-active) :is(.completion-line,.completion-overflow){display:none!important}
 body.intent-first[data-experience=unified] #typing-assistance{order:3;max-height:max(48px,min(170px,calc(100dvh - var(--dock-top) - var(--composer-height,128px) - 28px)));overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;background:#f6f6f2f5;padding:0 12px 10px;border-radius:0 0 12px 12px}
 body.intent-first[data-experience=unified] #quick-preview{margin:10px 0 0;max-width:none}
 body.intent-first[data-experience=unified] #quick-answer{font-size:.875rem;line-height:1.7;color:#65695e}
 body.intent-first[data-experience=unified] .live-question{background:#f6f6f2f5;padding:3px 10px;border-radius:8px;color:#666e5e}
 body.intent-first[data-experience=unified] #status{order:4;margin:8px;background:#f6f6f2}
 body.intent-first[data-experience=unified] .explore-button{background:#2a2c26;color:#fff}
+body.intent-first[data-experience=unified] .explore-button:disabled{background:#eaece5;color:#788071;opacity:1}
 body.intent-first[data-experience=unified] .document-panel{border:0;box-shadow:none;background:transparent;overflow:visible}
 body.intent-first[data-experience=unified] .document-toolbar{border:0;padding:10px 4px 20px}
 body.intent-first[data-experience=unified] .document-location{color:#777b71;font-size:.75rem}
@@ -205,7 +205,7 @@ body.intent-first[data-experience=unified] .document-title{font:400 clamp(28px,3
 .atlas-text{display:block;background:transparent;border:0;box-shadow:none;border-radius:3px;width:100%;min-height:30px;max-height:none;resize:none;overflow:hidden;padding:0;color:#666b60;font:400 15px/1.75 -apple-system,BlinkMacSystemFont,sans-serif}.atlas-text:hover,.document-title:hover{outline:1px dashed #dce0d4;outline-offset:5px}.atlas-text:focus-visible,.document-title:focus-visible{outline:2px solid #b1bc9f;outline-offset:5px}
 .atlas-equation{font:400 27px/1.5 Georgia,serif;margin-top:20px}.atlas-orbit{display:block;width:100%;height:270px}.atlas-orbit *{vector-effect:non-scaling-stroke}.atlas-track{fill:none;stroke:#d9dcd1;stroke-width:1.5}.atlas-sector{fill:#eeefe8;stroke:none}.atlas-radius{stroke:#a0a698;stroke-width:1;stroke-dasharray:3 4}.atlas-sun{fill:#fff;stroke:#45493d;stroke-width:1.4}.atlas-planet{fill:#33372d}.atlas-orbit-caption{display:flex;justify-content:space-between;gap:12px;color:var(--atlas-muted);font-size:11px}.atlas-controls{display:flex;gap:24px;margin-top:24px}.atlas-controls label{flex:1;min-width:0}.atlas-control-label{display:flex;justify-content:space-between;gap:12px;color:var(--atlas-muted);font-size:11px;margin-bottom:8px}.atlas-controls input[type=range]{width:100%;accent-color:#373c2f;margin:0}
 .atlas-laws{display:flex;flex-wrap:wrap;gap:8px;border-top:1px solid var(--atlas-line);padding-top:20px;margin-top:30px}.atlas-laws button{background:transparent;border:0;color:var(--atlas-muted);font-size:12px;font-weight:400;padding:8px 12px}.atlas-laws button[aria-pressed=true]{background:var(--atlas-wash);color:var(--atlas-ink)}.atlas-law-detail{font-size:12px;color:var(--atlas-muted);margin-top:15px}.atlas-body{max-width:760px;margin:30px auto 0;display:grid;gap:22px}.atlas-body:empty{display:none}.atlas-body .atlas-text{color:#53594c}.atlas-prose+.atlas-body{margin-top:22px}.atlas-connections{display:grid;gap:18px}.atlas-node{display:block;text-align:center;background:#f6f7f3;border:1px solid var(--atlas-line);padding:16px;border-radius:9px;max-width:100%;font-size:14px}.atlas-comparison{border-collapse:collapse;width:100%;table-layout:fixed}.atlas-comparison th{text-align:left;font-size:12px;color:#787d70;font-weight:400}.atlas-comparison td,.atlas-comparison th{padding:12px 9px;border-bottom:1px solid var(--atlas-line);vertical-align:top}.atlas-comparison .atlas-text{font-size:12px}.atlas-plan{display:grid;gap:18px}.atlas-plan label{font-size:12px;color:#777d6c}.atlas-plan input{display:block;width:100%;background:#f7f8f4;border:1px solid var(--atlas-line);border-radius:7px;padding:12px;margin-top:6px}.atlas-projectile .simulation-note{font-size:11px}.page-notes{margin-top:30px}.page-notes summary{font-size:12px;color:#929688}
-@media(max-width:700px){body.intent-first[data-experience=unified].page-open main{padding-left:14px;padding-right:14px}body.intent-first[data-experience=unified] .paper{padding:26px 22px}.atlas-layout{grid-template-columns:1fr;gap:22px}.atlas-orbit{height:230px}.atlas-equation{margin-top:10px}.atlas-controls{gap:18px}.atlas-body{gap:18px}body.intent-first[data-experience=unified] .intent-panel{width:calc(100% - 24px)}body.intent-first[data-experience=unified] .document-location{max-width:none}body.intent-first[data-experience=unified] #download-button{display:none}.atlas-text{font-size:16px}body.intent-first[data-experience=unified].composer-active{--dock-top:clamp(120px,48dvh,calc(100dvh - 300px))}}
+@media(max-width:700px){body.intent-first[data-experience=unified].page-open main{padding-left:14px;padding-right:14px}body.intent-first[data-experience=unified] .paper{padding:26px 22px}.atlas-layout{grid-template-columns:1fr;gap:22px}.atlas-orbit{height:230px}.atlas-equation{margin-top:10px}.atlas-controls{gap:18px}.atlas-body{gap:18px}body.intent-first[data-experience=unified] .intent-panel{width:calc(100% - 24px)}body.intent-first[data-experience=unified] .document-location{max-width:none}body.intent-first[data-experience=unified] #download-button{display:none}.atlas-text{font-size:16px}}
 @media(prefers-reduced-motion:reduce){body.intent-first[data-experience=unified] .intent-panel,.atlas-stage,body.intent-first[data-experience=unified] .paper{transition:none}}
 /* Keep a complete page surface above the dock, with its own reading scroll. */
 body.intent-first[data-experience=unified].page-open .site-header{height:48px}
@@ -244,7 +244,7 @@ body.intent-first[data-experience=unified].page-open .composer textarea{max-heig
 .slide-hotspot-lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .slide-hotspots .catalog-item{position:absolute;transform:translate(-50%,-50%);width:max-content;max-width:30%;min-height:40px;overflow-wrap:anywhere;text-align:center}
 
-.composer-context{color:#566550}.composer-context.has-focus{background:#e7efe1;color:#344a2c}
+.composer-context{display:inline-flex;align-items:center;gap:4px;max-width:145px;padding:5px 7px;border:0;background:transparent;color:#566550;font-size:.75rem}.composer-context span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.composer-context svg{flex:none}.composer-context.has-focus{background:#e7efe1;color:#344a2c}
 .composer-extension select,.composer-choice-row select{width:100%;min-height:38px}
 .composer-choice-row{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:5px 0;font-size:.84rem}
 .composer-choice-row select{width:auto;max-width:52%}
@@ -259,3 +259,7 @@ body.intent-first[data-experience=unified].page-open .composer textarea{max-heig
 }
 .picker-tradeoff{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .picker-tradeoff>span+span{border-left:1px solid #d7e0ce;padding-left:12px}
+
+.page-updated{outline:2px solid #bdcdb2;outline-offset:5px;border-radius:4px}
+
+.page-assistant .inline-diff{min-height:0;margin-top:6px;white-space:pre-wrap}.page-assistant>.page-reject{margin-top:4px;padding:5px 0;font-size:.75rem}

@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {canAcceptCompletion} from '../public/model.js';
+import {canAcceptCompletion,freshCompletion} from '../public/model.js';
 import {handleAPI} from '../api.mjs';
 const headers={'Content-Type':'application/json',Authorization:'Bearer test-key-not-a-real-secret',Origin:'https://example.test'};
 const req=body=>new Request('https://example.test/api/preview',{method:'POST',headers,body:JSON.stringify({text:'An ellipse is an oval-shaped curve.',audience:'',format:'Auto',...body})});
@@ -29,4 +29,15 @@ test('retired prototype requests and oversized selections stop before contacting
 test('multiple assistant messages use the final structured result, never concatenated JSON objects',async()=>{
  const response=await handleAPI(req({phase:'selection'}),async()=>Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({answer:'Earlier draft',replacement:''})}]},{type:'message',content:[{type:'output_text',text:JSON.stringify({answer:'Final scoped explanation',replacement:''})}]}]}));
  assert.equal(response.status,200);assert.equal((await response.json()).preview.body[0],'Final scoped explanation');
+});
+
+test('accepted or typed suggestions are suppressed even if Luna repeats them',()=>{
+ const sentence='We’ll connect each law to Newtonian gravity.';
+ const draft='I want to understand Kepler’s laws. '+sentence;
+ for(const suggestion of [sentence,"WE'LL connect each law to Newtonian gravity!",'Connect each law to Newtonian gravity']){
+  assert.equal(freshCompletion(draft,suggestion),'');
+  assert.equal(canAcceptCompletion({text:draft,start:draft.length,end:draft.length,completion:suggestion}),false);
+ }
+ assert.equal(freshCompletion(draft,'Show how angular momentum enters.'),'Show how angular momentum enters.');
+ assert.equal(freshCompletion('Plot x+1.','Plot x-1.'),'Plot x-1.');
 });

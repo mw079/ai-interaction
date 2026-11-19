@@ -16,7 +16,7 @@ export function renderCatalogBlock(target,block,page,{onEdit,ask}){
  content.append(detail);
  function paint(){const i=Math.min(saved.selected,block.items.length-1);choices.querySelectorAll('button').forEach((b,j)=>b.setAttribute('aria-pressed',String(i===j)));const item=block.items[i];detail.textContent=(block.type==='chart'?item.value+' — ':'')+item.detail;}
  if(['worked_example','practice'].includes(block.type)){
-  const label=node('label','practice-label','Your explanation');const practice=node('textarea','learner-practice');practice.rows=3;practice.maxLength=1500;practice.value=saved.practice;practice.placeholder=block.prompt||'Try explaining the idea in your own words…';practice.setAttribute('aria-label','Your explanation for '+block.title);practice.oninput=()=>{saved.practice=practice.value;onEdit();};label.append(practice);content.append(label);const feedback=node('button','practice-feedback','Ask about my explanation');feedback.type='button';feedback.onclick=()=>ask(section,block,practice.value);content.append(feedback);
+  const label=node('label','practice-label','Your explanation');const practice=node('textarea','learner-practice');practice.dataset.editKey='practice:'+block.id;practice.rows=3;practice.maxLength=1500;practice.value=saved.practice;practice.placeholder=block.prompt||'Try explaining the idea in your own words…';practice.setAttribute('aria-label','Your explanation for '+block.title);practice.oninput=()=>{saved.practice=practice.value;onEdit();};label.append(practice);content.append(label);const feedback=node('button','practice-feedback','Ask about my explanation');feedback.type='button';feedback.onclick=()=>ask(section,block,practice.value);content.append(feedback);
  }
  paint();target.append(section);return section;
 }

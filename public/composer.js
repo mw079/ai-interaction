@@ -1,6 +1,6 @@
 import {slideRecipe} from './component-catalog.js';
 import {positionPopover} from './popover.js';
-import {canAcceptCompletion} from './model.js';
+import {canAcceptCompletion,freshCompletion} from './model.js';
 const $=id=>document.getElementById(id);
 const make=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
 export function setupComposerExperience({state,changed,request,openDetail,closeDetail,setIntent}){
@@ -38,6 +38,7 @@ export function setupComposerExperience({state,changed,request,openDetail,closeD
  window.addEventListener('resize',closeSummary);window.addEventListener('scroll',closeSummary,{passive:true});
  const ghost=make('div','completion-line');ghost.id='completion-line';ghost.hidden=true;
  const ghostText=make('span','completion-text');const accept=make('button','completion-accept','Tab ↹');accept.type='button';accept.setAttribute('aria-label','Accept suggested sentence');ghost.append(accept);document.querySelector('.composer-actions').prepend(ghost);
+ const wrappedCompletion=make('p','completion-overflow');wrappedCompletion.hidden=true;wrappedCompletion.setAttribute('aria-hidden','true');$('typing-assistance').before(wrappedCompletion);
  const help=make('section','local-assistance');help.id='local-assistance';help.hidden=true;help.setAttribute('aria-label','Help with selected text');
  const helpHead=make('div','local-help-heading');const helpLabel=make('span','','Selected text');const dismiss=make('button','','Close');dismiss.type='button';dismiss.setAttribute('aria-label','Close local help');helpHead.append(helpLabel,dismiss);
  const helpText=make('p');helpText.setAttribute('role','status');help.append(helpHead,helpText);document.body.append(help);
@@ -49,13 +50,16 @@ export function setupComposerExperience({state,changed,request,openDetail,closeD
   ghost.hidden=!completion||!focused||!atEnd||state.composing||!summaryCard.hidden||!$('intent-popover').hidden||!help.hidden;
   accept.setAttribute('aria-label','Accept suggestion: '+completion);ghostText.textContent=' '+completion;ghostText.hidden=ghost.hidden;
   document.querySelector('.input-mirror-layer').style.height=input.clientHeight+'px';const mirror=$('input-mirror');if(!mirror.contains(ghostText))mirror.append(ghostText);
-  if(!ghostText.hidden&&mirror.scrollHeight>input.scrollTop+input.clientHeight+1)ghostText.hidden=true;
-  ghost.hidden=ghostText.hidden;
+  const wrapsOutsideField=!ghost.hidden&&mirror.scrollHeight>input.scrollTop+input.clientHeight+1;
+  if(wrapsOutsideField)ghostText.hidden=true;
+  wrappedCompletion.hidden=!wrapsOutsideField;
+  wrappedCompletion.textContent=wrapsOutsideField?completion:'';
   trigger.hidden=false;trigger.style.visibility=summary&&(focused||trigger===document.activeElement||!summaryCard.hidden||!$('intent-popover').hidden)?'visible':'hidden';
   $('refine-label').textContent=summary;trigger.setAttribute('aria-label','Review intent: '+summary);
   questionRow.hidden=!question;questionButton.disabled=!!question?.streaming;const slideLabel=question?.slideOptions ? slideRecipe(state.slideChoice)?.label : '';
   questionButton.textContent=slideLabel||question?.question||'';questionButton.setAttribute('aria-label',(question?.slideOptions?'Slide format: ':question?.questionKind==='explore'?'Explore further: ':'Clarifying question: ')+(slideLabel||question?.question||''));questionButton.setAttribute('aria-expanded',String(!questionRow.hidden&&!$('intent-popover').hidden&&state.openClarification?.question===question?.question));questionButton.setAttribute('aria-controls','intent-popover');
  }
+ new ResizeObserver(render).observe(input);
  document.addEventListener('focusin',render);document.addEventListener('focusout',()=>setTimeout(()=>{if(!composer.contains(document.activeElement)&&!summaryCard.contains(document.activeElement)&&!$('intent-popover').contains(document.activeElement))closeSummary();render();},0));input.addEventListener('keyup',render);input.addEventListener('click',render);input.addEventListener('select',render);input.addEventListener('scroll',render);input.addEventListener('compositionstart',render);input.addEventListener('compositionend',render);
  new MutationObserver(()=>{if(!$('intent-popover').hidden)closeSummary();render();}).observe($('intent-popover'),{attributes:true,attributeFilter:['hidden']});
  function acceptSentence(){const input=$('intent-input');if(!canAcceptCompletion({text:input.value,start:input.selectionStart,end:input.selectionEnd,completion,composing:state.composing}))return;input.value=input.value.trimEnd()+' '+completion;completion='';input.focus();input.setSelectionRange(input.value.length,input.value.length);changed();}
@@ -71,5 +75,5 @@ export function setupComposerExperience({state,changed,request,openDetail,closeD
  document.addEventListener('selectionchange',inspectSelection);$('intent-input').addEventListener('select',inspectSelection);
 
  window.addEventListener('pagehide',stopHelp);
- return {onMirrorRendered:render,onStream(partial){if(partial.reset)question=null;else if(typeof partial.question==='string')question=partial.question?{question:partial.question,options:[],phrase:null,streaming:true}:null;render();},onPreview(data){completion=data.completion||'';summary=state.intentOverride||data.interpretation||'';question=state.answers.some(e=>e.question===state.uncertainty?.question)?null:state.uncertainty;render();},onDraftChanged(){completion='';summary=state.intentOverride||'';question=null;stopHelp();closeSummary();render();},onPageRendered(){stopHelp();render();},stop(){stopHelp();completion='';summary='';question=null;closeSummary();render();}};
+ return {onMirrorRendered:render,onStream(partial){if(partial.reset)question=null;else if(typeof partial.question==='string')question=partial.question?{question:partial.question,options:[],phrase:null,streaming:true}:null;render();},onPreview(data){completion=freshCompletion(input.value,data.completion);summary=state.intentOverride||data.interpretation||'';question=state.answers.some(e=>e.question===state.uncertainty?.question)?null:state.uncertainty;render();},onDraftChanged(){completion='';summary=state.intentOverride||'';question=null;stopHelp();closeSummary();render();},onPageRendered(){stopHelp();render();},stop(){stopHelp();completion='';summary='';question=null;closeSummary();render();}};
 }

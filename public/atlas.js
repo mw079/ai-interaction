@@ -5,16 +5,17 @@ export function renderAtlas(target,p,{titleField,onEdit}){
  const diagram=!!p.components?.length||['kepler','diagram','comparison','planner','projectile'].includes(p.kind);
  layout.classList.toggle('atlas-prose',!diagram);
  const titleWrapper=make('div','page-field');titleField.dataset.pageField='title';titleWrapper.append(titleField);copy.append(titleWrapper);
- function text(value,label,changed,cls='atlas-text'){
-  const wrapper=make('div','page-field'),field=make('textarea',cls);
-  field.dataset.pageField=label==='Editable explanation'?'intro':label;
+ function text(value,label,changed,index,key=index===0?'intro':'passage:'+index){
+  const wrapper=make('div','page-field'),field=make('textarea','atlas-text');
+  if(index!==undefined)field.dataset.passageIndex=String(index);
+  field.dataset.pageField=key;field.dataset.editKey=key;
   field.rows=1;field.defaultValue=value;field.maxLength=2500;field.setAttribute('aria-label',label);
   const fit=()=>{field.style.height='0';field.style.height=field.scrollHeight+'px';};
   field.oninput=()=>{changed(field.value);onEdit();fit();};
   const observer=new ResizeObserver(()=>{if(field.clientWidth)fit();});observer.observe(field);observers.push(observer);queueMicrotask(fit);
   wrapper.append(field);return wrapper;
  }
- copy.append(text(p.edits.explanation??p.body[0]??'', 'Editable explanation',value=>p.edits.explanation=value));
+ copy.append(text(p.edits.explanation??p.body[0]??'', 'Editable explanation',value=>p.edits.explanation=value,0));
  const fitTitle=()=>{titleField.style.height='0';titleField.style.height=titleField.scrollHeight+'px';};const titleObserver=new ResizeObserver(()=>{if(titleField.clientWidth)fitTitle();});titleObserver.observe(titleField);observers.push(titleObserver);queueMicrotask(fitTitle);layout.append(copy);if(diagram)layout.append(visual);target.append(layout);
  const askBlock=(anchor,block,practice)=>document.dispatchEvent(new CustomEvent('page:ask',{detail:{anchor,block,practice}}));
  if(p.components?.length){p.components.forEach((c,i)=>renderCatalogBlock(i===0?visual:target,c,p,{onEdit,ask:askBlock}));}
@@ -35,14 +36,14 @@ export function renderAtlas(target,p,{titleField,onEdit}){
  }else if(p.components?.length){
   // Catalog blocks own this page's visual surface.
  }else if(p.kind==='diagram'){
-  const names=p.nodes.length?p.nodes:['The idea','Its connections'];const flow=make('div','atlas-connections');names.forEach((name,i)=>{const field=make('input','atlas-node');field.value=name;field.maxLength=80;field.setAttribute('aria-label','Diagram label '+(i+1));field.oninput=()=>{names[i]=field.value;p.nodes=names;onEdit();};flow.append(field);});visual.append(flow);
+  const names=p.nodes.length?p.nodes:['The idea','Its connections'];const flow=make('div','atlas-connections');names.forEach((name,i)=>{const field=make('input','atlas-node');field.dataset.editKey='node:'+i;field.value=name;field.maxLength=80;field.setAttribute('aria-label','Diagram label '+(i+1));field.oninput=()=>{names[i]=field.value;p.nodes=names;onEdit();};flow.append(field);});visual.append(flow);
  }else if(p.kind==='comparison'){
-  const table=make('table','atlas-comparison');const head=table.createTHead().insertRow();['Criterion','A','B'].forEach(label=>{const th=make('th','',label);th.scope='col';head.append(th);});for(const row of p.rows){const tr=table.insertRow();for(const k of ['criterion','a','b']){const cell=tr.insertCell();cell.append(text(row[k],row.criterion+' '+k,value=>row[k]=value));}}visual.append(table);
+  const table=make('table','atlas-comparison');const head=table.createTHead().insertRow();['Criterion','A','B'].forEach(label=>{const th=make('th','',label);th.scope='col';head.append(th);});for(const [i,row] of p.rows.entries()){const tr=table.insertRow();for(const k of ['criterion','a','b']){const cell=tr.insertCell();cell.append(text(row[k],row.criterion+' '+k,value=>row[k]=value,undefined,'comparison:'+i+':'+k));}}visual.append(table);
  }else if(p.kind==='planner'){
-  const fields=make('div','atlas-plan');p.rows.forEach(row=>{const label=make('label','',row.criterion);const input=make('input');input.value=row.a;input.placeholder=row.b||'Your choice';input.maxLength=300;input.oninput=()=>{row.a=input.value;onEdit();};label.append(input);fields.append(label);});visual.append(fields);
+  const fields=make('div','atlas-plan');p.rows.forEach((row,i)=>{const label=make('label','',row.criterion);const input=make('input');input.dataset.editKey='planner:'+i;input.value=row.a;input.placeholder=row.b||'Your choice';input.maxLength=300;input.oninput=()=>{row.a=input.value;onEdit();};label.append(input);fields.append(label);});visual.append(fields);
  }else if(p.kind==='projectile'){
   // The existing tested simulator is attached by the app, retaining its controls.
   visual.classList.add('atlas-projectile');
  }
- const body=make('div','atlas-body');p.body.slice(1).forEach((paragraph,i)=>{p.edits.paragraphs??={};body.append(text(p.edits.paragraphs[i]??paragraph,'Page paragraph '+(i+2),value=>p.edits.paragraphs[i]=value));});target.append(body);
+ const body=make('div','atlas-body');p.body.slice(1).forEach((paragraph,i)=>{p.edits.paragraphs??={};body.append(text(p.edits.paragraphs[i]??paragraph,'Page paragraph '+(i+2),value=>p.edits.paragraphs[i]=value,i+1));});target.append(body);
 }

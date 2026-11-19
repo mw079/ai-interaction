@@ -1,8 +1,22 @@
 import {validComponents,validSlideOptions} from './component-catalog.js';
 import {validInformation} from './intent.js';
 export const FORMATS = ['Auto','Interactive page', 'Diagram', 'Outline'];
+export function isIncompleteComparison(text){
+ const draft=text.trim().replace(/[\s.…]+$/u,'');
+ return /\bbetween\s+[^.!?]+\s+and$/iu.test(draft)||
+  /\b(?:compare|contrast)\s+[^.!?]+\s+(?:with|to|and)$/iu.test(draft)||
+  /\S\s+(?:versus|vs)$/iu.test(draft);
+}
+export function freshCompletion(text,suggestion){
+ if(typeof suggestion!=='string'||suggestion.length>180)return '';
+ const normalize=value=>(value.normalize('NFKC').toLowerCase().replace(/[’‘]/g,"'")
+  .match(/[\p{L}\p{M}\p{N}]+(?:'[\p{L}\p{M}\p{N}]+)*|[+−*/%^=<>×÷-]/gu)||[]).join(' ');
+ const candidate=normalize(suggestion);
+ if(!candidate||(' '+normalize(text)+' ').includes(' '+candidate+' '))return '';
+ return suggestion.trim();
+}
 export function canAcceptCompletion({text,start,end,completion,composing=false,modified=false}){
- return !composing&&!modified&&typeof completion==='string'&&!!completion.trim()&&completion.length<=180&&start===end&&end===text.length&&text.length+completion.length+1<=4000;
+ return !composing&&!modified&&start===end&&end===text.length&&!!freshCompletion(text,completion)&&text.length+completion.length+1<=4000;
 }
 export function clarificationFor(text) {
   if(text.trim().length<8)return null;
@@ -17,15 +31,32 @@ export function clarificationFor(text) {
 // Live ambiguity comes from the response for the complete current draft, not keyword rules.
 export function liveClarificationFor(text, data, entries=[]) {
   const priority=entries.find(e=>e.type==='audience'&&!e.confirmed&&e.question)||entries.find(e=>e.type==='prior_knowledge'&&!e.confirmed&&e.question);
-  if(!data?.question?.trim())return priority||null;
+  const questionKey=value=>value.trim().toLowerCase().replace(/[?.!]+$/,'');
+  const clean=values=>[...new Map((values||[]).filter(value=>value.trim()).map(value=>[value.trim().toLowerCase(),value.trim()])).values()].slice(0,3);
+  const withOptions=entry=>{
+    if(!entry)return null;
+    if(entry.samples?.length)return {...entry,options:entry.options.slice(0,3),samples:entry.samples.slice(0,3)};
+    const sameQuestion=item=>item?.question&&questionKey(item.question)===questionKey(entry.question);
+    const supplied=sameQuestion(data)?data.options:[];
+    const descriptor=data?.information?.find(sameQuestion);
+    const options=clean([...(supplied||[]),...(entry.options||[]),...(descriptor?.options||[])]);
+    if(options.length||entry.questionKind==='explore')return {...entry,options};
+    const question=entry.question;
+    let presets=[];
+    if(/\bcalculus\b/i.test(question))presets=['No calculus','Basic derivatives','Full derivation'];
+    else if(/\b(?:audience|who (?:is|are|will)\b.*(?:for|learn|read))\b/i.test(question)&&/\b(?:explain|learn|teach|understand)\b/i.test(text))presets=['Beginner','High school','Undergraduate'];
+    else if(/\b(?:what matters most|prioritiz\w*)\b/i.test(question)&&/\b(?:trip|travel|itinerary)\b/i.test(text))presets=['Lower cost','Less travel time','More to see'];
+    return {...entry,options:presets};
+  };
+  if(!data?.question?.trim())return withOptions(priority);
   // Missing learning context takes priority over an optional exploration.
-  if(data.questionKind==='explore')return priority||{question:data.question,questionKind:'explore',options:data.options||[],phrase:null,global:true,replace:false};
-  const matching=entries.find(e=>e.question===data.question);
-  if(matching)return matching.confirmed?null:{...matching,questionKind:'clarify'};
+  if(data.questionKind==='explore')return withOptions(priority||{question:data.question,questionKind:'explore',phrase:null,global:true,replace:false});
+  const matching=entries.find(e=>questionKey(e.question)===questionKey(data.question));
+  if(matching)return matching.confirmed?null:withOptions({...matching,questionKind:'clarify'});
   const phrase=typeof data.phrase==='string'?data.phrase.trim():'';
   const start=phrase?text.indexOf(phrase):-1;
-  return {question:data.question,questionKind:'clarify',options:data.options||[],phrase:start>=0?phrase:null,
-    ...(start>=0?{start,end:start+phrase.length}:{}),replace:false};
+  return withOptions({question:data.question,questionKind:'clarify',phrase:start>=0?phrase:null,
+    ...(start>=0?{start,end:start+phrase.length}:{}),replace:false});
 }
 export function compactLiveAnswer(data){
   const text=(data.body?.join(' ')||'').replace(/\s+/g,' ').trim();

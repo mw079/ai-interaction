@@ -2,7 +2,7 @@ import {renderFollowUpScope,followUpScopes,applyFollowUpScope} from './composer-
 import {slideRecipe} from './component-catalog.js';
 import {setupPageAssistant} from './page-assistant.js';
 import {renderAtlas} from './atlas.js';
-import {PageTimeline} from './page-timeline.js';
+import {PageTimeline,DirectEditUndo,historyLimit,readWorkspace,writeWorkspace} from './page-timeline.js';
 import {setupWorkspace} from './workspace.js';
 import {withSingleRetry,requestError} from './retry.js';
 import {readSSE} from './stream.js';
@@ -11,7 +11,7 @@ import {setupComposerExperience} from './composer.js';
 import {INFORMATION_TYPES, informationFor, rebaseInformation, chooseInformation, mergeInformation} from './intent.js';
 import {renderInformationControl} from './controls.js';
 import {positionPopover} from './popover.js';
-import {demoPreview, trajectory, validPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isCurrentPreview} from './model.js';
+import {demoPreview, trajectory, validPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isCurrentPreview, isIncompleteComparison} from './model.js';
 const $ = id => document.getElementById(id);
 const state = {key:'', live:false, requests:0, connectionRevision:0, composing:false, revision:0, format:'Auto', audience:'', controller:null, timer:null, proposal:null, component:null, history:[], blocks:[], selection:null, uncertainty:null, popoverTimer:null, clarification:null, openClarification:null, popoverOrigin:null, suppressed:null, customDrafts:new Map(), serverKey:false, pendingSend:false, pageController:null, pageRequest:0, taskGoal:'', pageVersion:0, information:[], previousDraft:'', activeInformation:null,confirmedChoices:[],answers:[],intentOverride:'',slideChoice:undefined};
 const node=(tag, cls, text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
@@ -21,14 +21,17 @@ let lastPageSelection=null;
 function syncComposerContext(){
   const button=$('composer-scope');
   button.hidden=!state.component;
-  button.setAttribute('aria-label',followUpScope?'Focus: '+followUpScope.label:'Choose follow-up scope');
+  const label=followUpScope?'Focus: '+followUpScope.label:'Focus';
+  $('focus-label').textContent=label;
+  button.setAttribute('aria-label',followUpScope?label:'Focus the next instruction');
+  button.title=followUpScope?'Only '+followUpScope.label+' will change on Send':'Choose what should change';
   button.classList.toggle('has-focus',!!followUpScope);
 }
 function openComposerContext(anchor){
   closeIntentPopover();
   const pop=$('intent-popover');
   const target=$('popover-options');
-  const title='Apply the next instruction to';
+  const title='What should change?';
   state.popoverOrigin='click';
   state.popoverAnchor=anchor;
   state.openClarification={question:title};
@@ -36,6 +39,7 @@ function openComposerContext(anchor){
   $('popover-custom-form').hidden=true;
   $('custom-answer-button').hidden=true;
   pop.hidden=false;
+  anchor.setAttribute('aria-expanded','true');
   target.replaceChildren();
   delete target.dataset.family;
   const selection=lastPageSelection?.version===state.pageVersion?lastPageSelection:null;
@@ -52,11 +56,23 @@ $('composer-scope').onclick=event=>openComposerContext(event.currentTarget);
 document.addEventListener('selectionchange',()=>{
   const field=document.activeElement;
   if(field?.tagName!=='TEXTAREA'||!field.closest('#active-component')||field.selectionStart===field.selectionEnd)return;
-  const label=field.getAttribute('aria-label')||'';
-  const index=label==='Editable explanation'?0:Number(label.match(/^Page paragraph (\d+)$/)?.[1])-1;
+  const index=Number(field.dataset.passageIndex);
   if(Number.isInteger(index))lastPageSelection={id:'passage:'+index,start:field.selectionStart,end:field.selectionEnd,length:field.selectionEnd-field.selectionStart,version:state.pageVersion};
 });
 const timeline=new PageTimeline();
+let directEdits=new DirectEditUndo();
+const paper=document.querySelector('.paper');
+let storage,saveTimer;
+try{storage=window.sessionStorage;}catch{}
+function persistWorkspace(){
+ clearTimeout(saveTimer);
+ if(state.component)writeWorkspace(storage,timeline,capturePage(),state.history);
+}
+function queueWorkspaceSave(){
+ if(!state.component)return;
+ clearTimeout(saveTimer);
+ saveTimer=setTimeout(persistWorkspace,200);
+}
 function status(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);$('status').hidden=!error;}
 function stop(){clearTimeout(state.timer);state.controller?.abort();state.controller=null;$('cancel-button').hidden=true;}
 function choices(target,values,selected,action){target.replaceChildren();values.forEach(value=>{const b=node('button','',value);b.type='button';b.setAttribute('aria-pressed',String(value===selected));b.onclick=()=>action(value);target.append(b);});}
@@ -85,7 +101,7 @@ function updateClarification(clarification){
 function renderUncertainty(){
   const input=$('intent-input'),mirror=$('input-mirror'),text=input.value;
   const entries=state.information;
-  const u=state.live?state.uncertainty:(state.uncertainty=clarificationFor(text));
+  const u=state.live||isIncompleteComparison(text)?state.uncertainty:(state.uncertainty=clarificationFor(text));
   mirror.replaceChildren();let cursor=0;
   const ranges=entries.length?entries:(u?.phrase&&Number.isInteger(u.start)?[{...u,key:'legacy'}]:[]);
   for(const entry of ranges){
@@ -113,6 +129,7 @@ function closeIntentPopover({restore=false,suppress=false}={}){
   clearTimeout(state.popoverTimer);
   const origin=state.popoverOrigin;
   const priorAnchor=state.popoverAnchor;
+  if(priorAnchor===$('composer-scope'))priorAnchor.setAttribute('aria-expanded','false');
   if(suppress)state.suppressed=state.openClarification?.question;
   $('intent-popover').hidden=true;if(!composerExperience)$('clarify-phrase').setAttribute('aria-expanded','false');
   state.openClarification=null;state.popoverOrigin=null;state.popoverAnchor=null;
@@ -163,7 +180,9 @@ function openIntentPopover(origin='click',sourceAnchor=null){
   }
   if(u.type)renderInformationControl($('popover-options'),u,applyClarification,()=>{if(!$('intent-popover').hidden)positionIntentPopover();});else choices($('popover-options'),u.options,'',applyClarification);
   $('popover-custom').value=state.customDrafts.get(u.question)||'';
-  const hasDraft=!!$('popover-custom').value||(!u.type&&!u.options?.length);
+  const hasDraft=!!$('popover-custom').value||(!u.options?.length&&(!u.type||INFORMATION_TYPES[u.type].family==='choices'));
+  $('popover-custom').placeholder=hasDraft&&!u.options?.length?'Type your answer…':'In your own words…';
+  $('custom-answer-button').textContent='Type your own answer';
   $('popover-custom-form').hidden=!hasDraft;$('custom-answer-button').hidden=hasDraft;$('custom-answer-button').setAttribute('aria-expanded',String(hasDraft));
   pop.hidden=false;
   positionIntentPopover();
@@ -208,7 +227,7 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
   const base=scope?structuredClone(state.component):null;
   if(!text)return;
   if(!state.live){state.pendingSend=true;$('connection-error').textContent='Connect OpenAI to create a page for your request.';$('connection-dialog').showModal();return;}
-  closeIntentPopover();stop();state.pageController?.abort();
+  directEdits.endBurst();closeIntentPopover();stop();state.pageController?.abort();
   const context=pageContext(),version=state.pageVersion,id=++state.pageRequest;
   const preferences=new Map(state.confirmedChoices.map(e=>[e.type+':'+e.phrase,e]));
   confirmedChoices([...state.information,...state.answers]).forEach(e=>preferences.set(e.type+':'+e.phrase,e));state.confirmedChoices=[...preferences.values()].slice(-8);
@@ -225,9 +244,17 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
     const draft=scope?applyFollowUpScope(base,data.preview,scope):data.preview;
     if(scope)draft.title=$('document-title').value;
     const p={...structuredClone(draft),revision:state.revision,baseVersion:version,source:data.model,physics:scope?draft.physics:{speed:20,angle:45,gravity:9.81},edits:scope?draft.edits:{},selected:scope?draft.selected:0};
-    if(!state.component||version===state.pageVersion){if(state.component){timeline.save(capturePage());snapshot('Before new page');}state.component=p;$('document-title').value=p.title;if(!scope)state.blocks=[];state.proposal=null;state.pageVersion++;renderActive();renderBlocks();renderProposal();timeline.append(capturePage());renderPageNavigation();workspace?.reading();}
+    if(!state.component||version===state.pageVersion){
+      if(state.component){timeline.save(capturePage());snapshot(scope?'Before focused change':'Before new page');}
+      state.component=p;$('document-title').value=p.title;
+      if(!scope){state.blocks=[];directEdits=new DirectEditUndo();}
+      else if(scope.id.startsWith('passage:'))directEdits.forget(scope.id.startsWith('passage:0')?'intro':scope.id.split(':').slice(0,2).join(':'));
+      else if(scope.id.startsWith('block:'))directEdits.forget('practice:'+scope.id.slice(6));
+      state.proposal=null;state.pageVersion++;
+      renderActive();renderBlocks();renderProposal();appendPage();renderPageNavigation();workspace?.reading();
+      showUpdatedPart(scope?.id,scope?.label);
+    }
     else{p.baseVersion=state.pageVersion;state.proposal=p;renderProposal();}
-    $('document-state').textContent='This tab only · export to save';
     status(state.proposal?'Updated page ready to review. Your existing page is preserved.':'Your page is ready. Edit it directly or ask for a change below.');
   }catch(error){if(id===state.pageRequest&&error.name!=='AbortError'){status(error.message,true);$('page-progress').textContent=error.message;const retry=node('button','','Retry this request');retry.onclick=()=>submitPage(text,slideChoice,{scope});$('page-progress').append(retry);return;}}
   finally{if(id===state.pageRequest){state.pageController=null;if($('page-progress').textContent==='Creating your page…')$('page-progress').hidden=true;}}
@@ -249,16 +276,60 @@ function renderProposal(){
 function renderActive(){
  followUpScope=null;lastPageSelection=null;syncComposerContext();
  document.dispatchEvent(new Event('page:render'));composerExperience?.onPageRendered();const target=$('active-component'),title=$('document-title');target.before(title);target.atlasDispose?.();target.replaceChildren();
- if(state.component){renderAtlas(target,state.component,{titleField:title,onEdit:()=>{state.pageVersion++;document.dispatchEvent(new Event('page:edit'));}});if(state.component.kind==='projectile'){const temp=node('div');renderComponent(temp,state.component);const sim=temp.querySelector('.physics-simulation');if(sim)target.querySelector('.atlas-visual').append(sim);}}
+ if(state.component){renderAtlas(target,state.component,{titleField:title,onEdit:()=>{state.pageVersion++;document.dispatchEvent(new Event('page:edit'));queueWorkspaceSave();}});if(state.component.kind==='projectile'){const temp=node('div');renderComponent(temp,state.component);const sim=temp.querySelector('.physics-simulation');if(sim)target.querySelector('.atlas-visual').append(sim);}}
+ for(const field of paper.querySelectorAll('[data-edit-key]'))editValues.set(field,field.value);
  renderPageNavigation();
 }
-function capturePage(){return {title:$('document-title').value,text:$('document-input').value,component:state.component,blocks:state.blocks,taskGoal:state.taskGoal,preferences:state.confirmedChoices,paperScroll:document.querySelector('.paper').scrollTop,scroll:window.scrollY};}
-function renderPageNavigation(){const b=$('page-back'),f=$('page-forward');if(!b)return;b.disabled=!timeline.canBack;f.disabled=!timeline.canForward;$('page-position').textContent=timeline.index<0?'':`${timeline.index+1} / ${timeline.pages.length}`;}
+function capturePage(){return {title:$('document-title').value,text:$('document-input').value,component:state.component,blocks:state.blocks,taskGoal:state.taskGoal,preferences:state.confirmedChoices,paperScroll:paper.scrollTop,scroll:window.scrollY,directEdits:directEdits.entries};}
+function appendPage(){
+ const displaced=timeline.append(capturePage());
+ if(displaced.length)recordHistory(displaced.reverse(),'Later version');
+ if(!$('history-panel').hidden)renderHistory();
+}
+function renderPageNavigation(){const b=$('page-back'),f=$('page-forward');if(!b)return;b.disabled=!timeline.canBack;f.disabled=!timeline.canForward;$('page-position').textContent=timeline.index<0?'':`${timeline.index+1} / ${timeline.pages.length}`;updateUndoButton();queueWorkspaceSave();}
+function showUpdatedPart(id,label,restoreFocus=false){
+ const version=state.pageVersion;
+ requestAnimationFrame(()=>{
+  if(version!==state.pageVersion)return;
+  if(!id){paper.scrollTop=0;return;}
+  const root=$('active-component');
+  const [,passageIndex]=id.match(/^passage:(\d+)/)||[];
+  const blockId=id.match(/^(?:block|component):(.+)$/)?.[1];
+  const element=blockId?[...root.querySelectorAll('[data-component-id]')].find(el=>el.dataset.componentId===blockId):
+    [...root.querySelectorAll('textarea[data-page-field]')].find(el=>passageIndex!==undefined?el.dataset.passageIndex===passageIndex:el.dataset.pageField===id);
+  if(!element)return;
+  if(restoreFocus){
+   if(blockId)element.tabIndex=-1;
+   element.focus({preventScroll:true});
+   if(!blockId)element.setSelectionRange(element.value.length,element.value.length);
+  }
+  const section=element.closest('.page-field')||element;
+  const top=section.getBoundingClientRect(),frame=paper.getBoundingClientRect();
+  if(passageIndex==='0'||id==='intro'||id==='title')paper.scrollTop=0;
+  else if(top.top<frame.top+14||top.bottom>frame.bottom-14){
+   const scale=frame.height/paper.offsetHeight||1;
+   paper.scrollTop+=(top.top-frame.top)/scale-16;
+  }
+  section.classList.add('page-updated');
+  setTimeout(()=>section.classList.remove('page-updated'),1800);
+  $('page-update').textContent=label?label+' updated':'Passage updated';
+  queueWorkspaceSave();
+ });
+}
+function restorePage(page){
+ const copy=structuredClone(page);
+ state.selection=null;$('selection-tools').hidden=true;
+ $('document-title').value=copy.title;$('document-input').value=copy.text;state.component=copy.component;state.blocks=copy.blocks;
+ state.taskGoal=copy.taskGoal||'';state.confirmedChoices=copy.preferences||[];directEdits=new DirectEditUndo(copy.directEdits);
+ openPage();$('page-progress').hidden=true;$('page-update').textContent='';
+ renderActive();renderBlocks();renderProposal();workspace?.reading();
+ const version=state.pageVersion;
+ requestAnimationFrame(()=>{if(version!==state.pageVersion)return;paper.scrollTop=copy.paperScroll||0;window.scrollTo({top:copy.scroll||0,behavior:'instant'});});
+}
 function navigatePage(delta){
  const page=timeline.move(delta,capturePage());if(!page)return;
  state.pageController?.abort();state.pageRequest++;stop();state.proposal=null;state.pageVersion++;
- $('document-title').value=page.title;$('document-input').value=page.text;state.component=page.component;state.blocks=page.blocks;state.taskGoal=page.taskGoal;state.confirmedChoices=page.preferences||[];
- $('page-progress').hidden=true;renderActive();renderBlocks();renderProposal();changed();workspace?.reading();requestAnimationFrame(()=>{document.querySelector('.paper').scrollTop=page.paperScroll||0;window.scrollTo({top:page.scroll||0,behavior:'instant'});});
+ changed();restorePage(page);queueWorkspaceSave();
 }
 
 function editableParagraph(target,text,onEdit){const label=node('label','editable-label','Edit this explanation');const field=node('textarea','editable-explanation');field.rows=2;field.maxLength=2500;field.value=text;field.setAttribute('aria-label','Editable explanation');field.oninput=()=>onEdit(field.value);const tools=node('div','inline-help');const ask=node('button','','Ask about selected text');ask.type='button';ask.onclick=()=>{const selection=field.value.slice(field.selectionStart,field.selectionEnd).trim();if(!selection){ask.textContent='Select a passage first';return;}addInlineQuestion(target,selection);};tools.append(ask);label.append(field);target.append(label,tools);}
@@ -311,7 +382,7 @@ async function callPreviewAttempt(payload,signal,onProgress){
   if(!validPreview(data.preview))throw new Error('The preview was invalid. Your page is unchanged.');return data;
 }
 async function preview(){
-  const revision=state.revision;const text=$('intent-input').value.trim();if(!text)return;
+  const revision=state.revision;const text=$('intent-input').value.trim();if(!text||isIncompleteComparison(text))return;
   if(!state.live){renderQuick(demoPreview(text,state.audience,state.format),'Demo');status('Demo uses built-in examples, not semantic AI. No draft text is sent.');return;}
   const controller=new AbortController();state.controller=controller;$('cancel-button').hidden=false;$('input-state').textContent='Preview updating · keep typing';status('Sending the current draft and choices to Luna…');
   try{const data=await callPreview({text,audience:state.audience,format:state.format,phase:'preview'},controller.signal,partial=>{
@@ -334,15 +405,37 @@ function changed(){
   sizeComposer();
   renderUncertainty();
   if(!hasText){$('quick-preview').hidden=true;updateClarification(null);return;}
+  if(isIncompleteComparison($('intent-input').value)){
+    $('input-state').textContent='Waiting for the second item to compare';status('');return;
+  }
   if(!state.live)preview();else{status('Draft changed. Luna preview follows after a pause.');state.timer=setTimeout(()=>preview(),1100);}
 }
 
-function snapshot(label){state.history.unshift({label,time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),title:$('document-title').value,text:$('document-input').value,component:structuredClone(state.component),blocks:structuredClone(state.blocks)});state.history=state.history.slice(0,8);$('history-count').textContent=state.history.length;}
-function renderHistory(){const target=$('history-list');target.replaceChildren();if(!state.history.length)target.append(node('p','status-line','Accepted changes will appear here.'));state.history.forEach((v,i)=>{const row=node('div','history-row');row.append(node('span','',`${v.label} · ${v.time}`));const b=node('button','','Restore');b.onclick=()=>{const chosen=structuredClone(v);timeline.save(capturePage());snapshot('Before restore');$('document-title').value=chosen.title;$('document-input').value=chosen.text;state.component=chosen.component;state.blocks=chosen.blocks;state.pageVersion++;state.proposal=null;renderProposal();renderActive();renderBlocks();renderHistory();timeline.append(capturePage());renderPageNavigation();status('Previous page restored. The page you left is in History.');};row.append(b);target.append(row);});}
-function renderBlocks(){const target=$('accepted-blocks');target.replaceChildren();state.blocks.forEach((block,i)=>{const section=node('section','visual-block');const heading=node('div','block-title');heading.append(node('h3','',block.title));const b=node('button','quiet-button','Remove');b.onclick=()=>{snapshot('Before removing a block');state.blocks.splice(i,1);renderBlocks();};heading.append(b);section.append(heading);renderComponent(section,block);target.append(section);});}
+function recordHistory(pages,label){
+ const time=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+ const entries=pages.map(page=>({...structuredClone(page),label,time}));
+ state.history=[...entries,...state.history].slice(0,historyLimit);
+ $('history-count').textContent=state.history.length;
+}
+function snapshot(label){recordHistory([capturePage()],label);}
+function renderHistory(){
+ const target=$('history-list');target.replaceChildren();
+ if(!state.history.length)target.append(node('p','status-line','Accepted changes will appear here.'));
+ for(const entry of state.history){
+  const row=node('div','history-row');row.append(node('span','',entry.title+' · '+entry.label+' · '+entry.time));
+  const button=node('button','','Restore');button.onclick=()=>{
+   state.pageController?.abort();state.pageRequest++;stop();
+   timeline.save(capturePage());snapshot('Before restore');state.pageVersion++;state.proposal=null;
+   restorePage(entry);appendPage();renderPageNavigation();renderHistory();
+   status('Previous page restored. The page you left is in History.');
+  };
+  row.append(button);target.append(row);
+ }
+}
+function renderBlocks(){const target=$('accepted-blocks');target.replaceChildren();state.blocks.forEach((block,i)=>{const section=node('section','visual-block');const heading=node('div','block-title');heading.append(node('h3','',block.title));const b=node('button','quiet-button','Remove');b.onclick=()=>{snapshot('Before removing a block');state.blocks.splice(i,1);renderBlocks();queueWorkspaceSave();};heading.append(b);section.append(heading);renderComponent(section,block);target.append(section);});}
 $('intent-input').oninput=()=>{if(!state.composing)changed();};$('intent-input').addEventListener('compositionstart',()=>{state.composing=true;stop();});$('intent-input').addEventListener('compositionend',()=>{state.composing=false;changed();});
 $('cancel-button').onclick=()=>{stop();status('Preview paused. Keep editing to resume.');$('input-state').textContent='Preview paused';};
-$('accept-button').onclick=()=>{const p=state.proposal;if(!p||(p.baseVersion!==undefined?p.baseVersion!==state.pageVersion:p.revision!==state.revision))return;if(p.selection&&$('document-input').value.slice(p.selection.start,p.selection.end)!==p.selection.text){status('The selected text changed. Select it again for a fresh suggestion.',true);return;}timeline.save(capturePage());snapshot(state.component?'Before replacing the page':'Before keeping the page');if(p.selection)state.blocks.push(structuredClone(p));else{state.component=structuredClone(p);$('document-title').value=p.title;}state.proposal=null;state.pageVersion++;renderActive();renderBlocks();renderProposal();timeline.append(capturePage());renderPageNavigation();$('document-state').textContent='Kept in this tab · export to save';status('Page kept. Edit it directly, or restore the previous version in History.');};
+$('accept-button').onclick=()=>{const p=state.proposal;if(!p||(p.baseVersion!==undefined?p.baseVersion!==state.pageVersion:p.revision!==state.revision))return;if(p.selection&&$('document-input').value.slice(p.selection.start,p.selection.end)!==p.selection.text){status('The selected text changed. Select it again for a fresh suggestion.',true);return;}timeline.save(capturePage());snapshot(state.component?'Before replacing the page':'Before keeping the page');if(p.selection)state.blocks.push(structuredClone(p));else{state.component=structuredClone(p);$('document-title').value=p.title;directEdits=new DirectEditUndo();}state.proposal=null;state.pageVersion++;renderActive();renderBlocks();renderProposal();appendPage();renderPageNavigation();status('Page kept. Edit it directly, or restore the previous version in History.');};
 $('dismiss-button').onclick=()=>{state.proposal=null;renderProposal();};
 $('document-input').addEventListener('select',()=>{const f=$('document-input');const text=f.value.slice(f.selectionStart,f.selectionEnd).trim();state.selection=text?{start:f.selectionStart,end:f.selectionEnd,text:f.value.slice(f.selectionStart,f.selectionEnd)}:null;$('selection-tools').hidden=!text;$('selection-label').textContent=text?`Selected: ${text.slice(0,35)}${text.length>35?'…':''}`:'Selected text';});
 async function fromSelection(kind){if(!state.selection)return;stop();const selection={...state.selection};if(!state.live){const v=demoPreview(selection.text,state.audience,kind==='diagram'?'Diagram':'Outline');v.title=kind==='diagram'?'Explore the selected idea':'A closer look';setProposal(v,state.revision,'Demo',selection);status('Sample selection response. Connect Luna for an explanation of arbitrary text.');}else{const revision=state.revision;try{const data=await callPreview({text:`${kind==='diagram'?'Make a diagram about':'Explain'} this selected text: ${selection.text}`,audience:state.audience,format:kind==='diagram'?'Diagram':'Outline'},new AbortController().signal);setProposal(data.preview,revision,'Luna',selection);}catch(e){status(e.message,true);}}}
@@ -353,11 +446,56 @@ for(const [button,dialog] of [['connection-button','connection-dialog'],['about-
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>{if(b.dataset.close==='connection-dialog')$('api-key').value='';$(b.dataset.close).close();});$('connection-dialog').addEventListener('close',()=>{$('api-key').value='';state.connectionRevision++;});
 $('connection-form').onsubmit=async event=>{event.preventDefault();const key=$('api-key').value.trim();if(!key&&!state.serverKey){$('connection-error').textContent='Enter an OpenAI API key, or stay in demo mode.';return;}const connectionRevision=++state.connectionRevision;$('connect-button').disabled=true;$('connection-error').textContent='Checking Luna access…';try{const response=await fetch('/api/check',{method:'POST',headers:key?{Authorization:`Bearer ${key}`}:{}});const result=await response.json();if(connectionRevision!==state.connectionRevision)return;if(!response.ok)throw new Error(result.error||'Connection failed.');stop();state.key=key;state.requests=0;state.live=true;document.body.classList.add('live');$('mode-label').textContent='OpenAI connected';$('typing-connection').firstChild.textContent='Connected';$('api-key').value='';$('connection-error').textContent='';$('connection-dialog').close();changed();if(state.pendingSend){state.pendingSend=false;submitPage();}}catch(error){$('connection-error').textContent=error.message;}finally{$('connect-button').disabled=false;}};
 $('disconnect-button').onclick=()=>{state.connectionRevision++;stop();composerExperience?.stop();state.pageController?.abort();state.pageRequest++;state.pendingSend=false;state.key='';state.live=false;document.body.classList.remove('live');$('mode-label').textContent='Demo mode';$('typing-connection').firstChild.textContent='Demo';$('api-key').value='';$('connection-dialog').close();changed();};
-$('active-component').addEventListener('input',event=>{if(event.target.closest('.page-assistant'))return;state.pageVersion++;if(state.proposal?.baseVersion!==undefined)renderProposal();});
-$('document-title').addEventListener('input',event=>{state.pageVersion++;event.target.style.height='0';event.target.style.height=event.target.scrollHeight+'px';});
-$('document-input').addEventListener('input',()=>state.pageVersion++);
+$('active-component').addEventListener('input',event=>{if(event.target.closest('.page-assistant'))return;state.pageVersion++;queueWorkspaceSave();if(state.proposal?.baseVersion!==undefined)renderProposal();});
+$('document-title').addEventListener('input',event=>{state.pageVersion++;event.target.style.height='0';event.target.style.height=event.target.scrollHeight+'px';queueWorkspaceSave();});
+$('document-input').addEventListener('input',()=>{state.pageVersion++;queueWorkspaceSave();});
 composerExperience=setupComposerExperience({state,changed,request:callPreview,setIntent(value){state.intentOverride=value.slice(0,500);changed();if(state.live&&$('intent-input').value.trim()){stop();preview();}},closeDetail:closeIntentPopover,openDetail(entry,origin='click',anchor=null){if(!entry)return;closeIntentPopover();updateClarification(entry);openIntentPopover(origin,anchor);}});
-setupPageAssistant({state,request:callPreview,commit(apply){timeline.save(capturePage());snapshot('Before inline change');apply();state.pageVersion++;renderActive();timeline.append(capturePage());renderPageNavigation();}});
+const editValues=new WeakMap();
+let applyingSavedEdit=false;
+const editField=key=>[...paper.querySelectorAll('[data-edit-key]')].find(field=>
+ field.dataset.editKey===key&&!field.closest('.page-assistant,#proposal,#accepted-blocks'));
+function latestDirectEdit(){return directEdits.latest(key=>editField(key)?.value);}
+function updateUndoButton(){$('undo-edit').disabled=!latestDirectEdit();}
+paper.addEventListener('input',event=>{
+ const field=event.target;
+ if(!editValues.has(field))return;
+ const before=editValues.get(field);
+ editValues.set(field,field.value);
+ if(applyingSavedEdit)return;
+ directEdits.record(field.dataset.editKey,before,field.value,Date.now());
+ updateUndoButton();
+ queueWorkspaceSave();
+},true);
+$('undo-edit').onclick=()=>{
+ const entry=latestDirectEdit();
+ if(!entry)return;
+ const field=editField(entry.key);
+ directEdits.take(entry);
+ field.value=entry.before;
+ applyingSavedEdit=true;
+ try{field.dispatchEvent(new Event('input',{bubbles:true}));}finally{applyingSavedEdit=false;}
+ document.dispatchEvent(new CustomEvent('page:undo-edit',{detail:field}));
+ field.focus({preventScroll:true});
+ field.scrollIntoView({block:'nearest'});
+ updateUndoButton();
+ queueWorkspaceSave();
+};
+setupPageAssistant({state,request:callPreview,commit(apply,id){
+ timeline.save(capturePage());snapshot('Before inline change');
+ directEdits.forget(id.startsWith('component:')?'practice:'+id.slice(10):id);
+ applyingSavedEdit=true;
+ try{apply();}finally{applyingSavedEdit=false;}
+ state.pageVersion++;renderActive();appendPage();renderPageNavigation();showUpdatedPart(id,undefined,true);
+}});
+
 workspace=setupWorkspace();$('page-back').onclick=()=>navigatePage(-1);$('page-forward').onclick=()=>navigatePage(1);
-window.addEventListener('pagehide',()=>{stop();state.pageController?.abort();state.key='';});changed();
+const saved=readWorkspace(storage);
+if(saved){
+ timeline.pages=saved.pages;timeline.index=saved.index;
+ state.history=saved.history;$('history-count').textContent=state.history.length;
+ restorePage(timeline.pages[timeline.index]);
+}
+paper.addEventListener('scroll',queueWorkspaceSave,{passive:true});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')persistWorkspace();});
+window.addEventListener('pagehide',()=>{persistWorkspace();stop();state.pageController?.abort();state.key='';});changed();
 fetch('/api/config').then(r=>r.json()).then(config=>{if(!config.serverKey)return;state.serverKey=true;state.live=true;document.body.classList.add('live');$('mode-label').textContent='OpenAI configured';$('typing-connection').firstChild.textContent='OpenAI';$('disconnect-button').textContent='Pause live previews';changed();}).catch(()=>{});
