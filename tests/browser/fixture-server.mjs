@@ -11,6 +11,7 @@ export const completedComparison='Explain the difference between evaporation and
 export const comparisonAnswer='Evaporation changes liquid to gas; sublimation changes solid directly to gas.';
 export const keplerAudienceDraft='Explain Kepler’s laws simply';
 export const keplerAudienceQuestion='Who is this explanation for?';
+export const projectileTitle='Projectile motion';
 export const vaccineTitle='How vaccines work';
 export const vaccineFollowUps=['Why do boosters fade?','Are side effects common?'];
 export const deeperAnswer=question=>'Short answer about '+question;
@@ -46,6 +47,7 @@ function previewFor({phase,text}){
       'Third law: Larger orbits take longer to complete.'
     ]};
     if(text==='Create an evaporation slide.')return {...preview,title:evaporationTitle,body:[evaporationText]};
+    if(text==='Show projectile motion.')return {...preview,kind:'projectile',title:projectileTitle,body:['Change the launch and watch the path.']};
     if(text==='Create a triangle slide.')return {...preview,title:triangleTitle,body:['Triangles have three sides.']};
     if(text==='Explain how vaccines work.')return {...preview,title:vaccineTitle,body:['Vaccines teach the immune system to recognise a germ.','Safety: They train immunity without causing the disease.'],
       components:[{id:'vaccine-steps',type:'timeline',title:'From vaccine to memory',prompt:'',edges:[],items:[

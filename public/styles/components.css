@@ -312,3 +312,13 @@
 .atlas-law-detail{font-size:15px;line-height:1.6;color:#4d5546}
 .trajectory{background:#f4f6f1;border-radius:16px}
 .physics-readings{color:#4f6b45;font-size:13px}
+
+/* Projectile plot: one metric scale on both axes, gridlines, and an Earth reference curve. */
+.plot-path{fill:none}
+.plot-grid{stroke:#e3e8dc;stroke-width:1}
+.plot-tick{font-size:11px;fill:#697063;text-anchor:middle;font-variant-numeric:tabular-nums}
+.plot-tick-y{text-anchor:end}
+.plot-apex{font-size:12px;fill:#2c3328;text-anchor:middle;font-weight:600}
+.plot-landing{fill:#4f6b45}
+.plot-ghost{fill:none;stroke:#a9bf98;stroke-width:1.5;stroke-dasharray:4 4}
+.plot-ghost-label{font-size:11px;fill:#697063}

@@ -43,6 +43,7 @@ These rules describe how AI Interaction should look and behave today. The histor
 - **Text is short and adds something.** Prose is limited to the intro and up to three "Label: one sentence" takeaways that say what the visual cannot, such as why it matters or a common misconception. The server enforces these limits. Text-first deliverables such as an email are the exception.
 - **Say each idea once.** A second component must offer a different activity. Use a cycle only for real loops; one-way steps are a process.
 - **Scrolling is optional depth.** Bigger topics continue through Go deeper, not longer pages. Go deeper answers are fetched ahead, open in place one at a time, and can be promoted to a full slide.
+- **An interactive visual must be truthful.** When a control changes a quantity, the drawing changes in proportion, on a fixed scale that keeps the comparison readable. A visual must never redraw itself to fit, which hides the change, and only the numbers moving is not enough. Every interactive simulation has a browser test that measures the drawing itself, not just the readout.
 - **Explanations sit next to what they explain.** Highlighting text shows an explanation that adds something new. It closes with ×, Escape or by clearing the highlight.
 
 ## Change and trust

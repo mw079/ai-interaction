@@ -1,7 +1,7 @@
 import {expect,test} from '@playwright/test';
 import {
   startFixtureServer,evaporationTitle,evaporationText,triangleTitle,slideAnswer,slideReplacement,windQuestion,windAnswer,windReplacement,
-  vaccineTitle,vaccineFollowUps,deeperAnswer
+  vaccineTitle,vaccineFollowUps,deeperAnswer,projectileTitle
 } from './fixture-server.mjs';
 
 let server;
@@ -388,4 +388,23 @@ test('go deeper tabs show prefetched answers in place and can still open a full 
   await page.getByRole('tab',{name:vaccineFollowUps[1]}).click();
   await button(page,'Make this the main slide').click();
   await expect(page.getByText('2 / 2')).toBeVisible();
+});
+
+test('the projectile curve itself changes with speed, angle and gravity',async({page})=>{
+  await send(page,'Show projectile motion.',projectileTitle);
+  const curve=page.locator('.trajectory .plot-path');
+  const box=async()=>{const b=await curve.boundingBox();return {width:b.width,height:b.height};};
+  const start=await box();
+  await page.getByRole('slider',{name:'Launch speed'}).fill('30');
+  const faster=await box();
+  expect(faster.width).toBeGreaterThan(start.width*1.8);   // range grows with speed squared
+  expect(faster.height).toBeGreaterThan(start.height*1.8);
+  await page.getByRole('slider',{name:'Launch angle'}).fill('75');
+  const steeper=await box();
+  expect(steeper.height).toBeGreaterThan(faster.height);
+  expect(steeper.width).toBeLessThan(faster.width);
+  await expect(page.locator('.trajectory .plot-ghost')).toHaveCount(0);
+  await page.getByRole('combobox',{name:'Gravity'}).selectOption('1.62');
+  await expect(page.locator('.trajectory .plot-ghost')).toHaveCount(1);
+  await expect(page.locator('.physics-readings')).toContainText('s in flight');
 });
