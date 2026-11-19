@@ -291,5 +291,8 @@ body.intent-first[data-experience=unified].page-open .intent-panel>*{width:100%;
 /* The answer strip sits under the field and keeps its height while the dock is active, so an answer
    arriving never moves the field or Send. */
 body.intent-first[data-experience=unified].page-open #typing-assistance{position:static;order:10;margin:6px auto 0;padding:0 20px;max-height:none;height:auto;overflow:visible}
-body.intent-first[data-experience=unified].page-open.composer-active #typing-assistance{display:block!important;min-height:44px;max-height:44px;overflow:auto}
+/* Room for the whole answer (at most 160 characters) without scrolling: 3 lines on wide screens,
+   5 on narrow ones. The page area gives up that space while you type. */
+body.intent-first[data-experience=unified].page-open.composer-active #typing-assistance{display:block!important;min-height:calc(3 * 1.7 * 14px);max-height:none;overflow:visible}
+@media(max-width:600px){body.intent-first[data-experience=unified].page-open.composer-active #typing-assistance{min-height:calc(5 * 1.7 * 14px)}}
 body.intent-first[data-experience=unified].page-open.composer-active #typing-assistance #quick-answer{margin:0}

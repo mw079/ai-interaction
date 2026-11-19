@@ -350,6 +350,11 @@ test('with a page open, the live question sits above the composer and the answer
     expect(look,panel+' has no card').toBe('rgba(0, 0, 0, 0) 0px');
   }
   await expectSameGeometry(send,sendBefore);   // the answer appearing never moves Send
+  // The longest answer allowed (160 characters) is read whole: no scrolling, and Send still stays put.
+  await page.locator('#quick-answer').evaluate(e=>{e.textContent=('Will add a worked example for each law, with Earth at T = 1 year and a = 1 AU, then what every symbol means and how Mars compares with Earth in each.').padEnd(160,'.').slice(0,160);});
+  expect(await page.locator('#typing-assistance').evaluate(e=>e.scrollHeight<=e.clientHeight+1),'answer fits without scrolling').toBe(true);
+  await expect(page.locator('#quick-answer')).toBeInViewport({ratio:1});
+  await expectSameGeometry(send,sendBefore);
 });
 
 test('a chosen way to explore it is listed under What I understand and can be changed',async({page})=>{
