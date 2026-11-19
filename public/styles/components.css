@@ -2,7 +2,7 @@
 /* ── Prebuilt diagram components (public/diagrams.js) ───────────────────────
    One anatomy everywhere: a visual stage, one caption line, a quiet stepper.
    One item is in focus; the rest stay as calm context. */
-.component-block{--dg-ink:#2c3328;--dg-muted:#7c8474;--dg-line:#dfe3d8;--dg-soft:#eef2e8;--dg-accent:#4f6b45;--dg-accent-soft:#e4ecdc}
+.component-block{--dg-ink:#2c3328;--dg-muted:#697063;--dg-line:#dfe3d8;--dg-soft:#eef2e8;--dg-accent:#4f6b45;--dg-accent-soft:#e4ecdc}
 .dg-stage{position:relative;width:100%;outline:none;border-radius:16px}
 .dg-stage:focus-visible{box-shadow:0 0 0 2px #fff,0 0 0 4px #9fb393}
 .dg-canvas{max-height:420px;margin:0 auto}
@@ -97,7 +97,7 @@
 @keyframes dg-fade{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){.dg-canvas>.dg-node.dg-moving{transition:none}.dg-map-graph g>*{animation:none}}
 .page-assistant{position:relative}
-.page-assistant-close{position:absolute;top:0;right:0;width:26px;height:26px;border:0;border-radius:50%;background:none;color:#8a9182;font-size:18px;line-height:1;cursor:pointer;z-index:1}
+.page-assistant-close{position:absolute;top:0;right:0;width:26px;height:26px;border:0;border-radius:50%;background:none;color:#6a6f63;font-size:18px;line-height:1;cursor:pointer;z-index:1}
 .page-assistant-close:hover{background:#eef2e8;color:#2c3328}
 .page-assistant-close:focus-visible{outline:2px solid #9fb393;outline-offset:1px}
 .page-assistant-close:only-child{display:none}
