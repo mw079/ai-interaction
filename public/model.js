@@ -137,9 +137,7 @@ export function demoPreview(text, audience = '', format = 'Interactive page') {
   const physics = /projectile|trajectory|throw|launch|motion|gravity/i.test(text);
   const compare = /compar|versus|\bvs\b/i.test(text);
   const presentation = /presentation|slides|release process/i.test(text);
-  let kind = physics ? 'projectile' : compare ? 'comparison' : presentation ? 'outline' : 'diagram';
-  if (format === 'Diagram') kind = 'diagram';
-  if (format === 'Outline') kind = 'outline';
+  const kind = physics ? 'projectile' : 'outline';
   const topic = physics ? 'Projectile motion' : compare ? 'Two approaches, side by side' : presentation ? 'A clearer release process' : 'Give your idea some shape';
   return {
     kind, title: topic,
@@ -152,7 +150,7 @@ export function demoPreview(text, audience = '', format = 'Interactive page') {
 }
 export function validPreview(v) {
   const short = (s, max) => typeof s === 'string' && s.length <= max;
-  return !!v && (v.followUps===undefined||(Array.isArray(v.followUps)&&v.followUps.length<=3&&v.followUps.every(s=>short(s,90)))) && (v.slideOptions===undefined||validSlideOptions(v.slideOptions)) && (v.components===undefined||validComponents(v.components)) && (v.questionKind===undefined||['clarify','explore','none'].includes(v.questionKind)) && (v.completion===undefined||short(v.completion,180)) && (v.replacement===undefined||short(v.replacement,2000)) && (v.information===undefined||validInformation(v.information)) && ['projectile','outline','diagram','comparison','planner','kepler'].includes(v.kind)
+  return !!v && (v.followUps===undefined||(Array.isArray(v.followUps)&&v.followUps.length<=3&&v.followUps.every(s=>short(s,90)))) && (v.slideOptions===undefined||validSlideOptions(v.slideOptions)) && (v.components===undefined||validComponents(v.components)) && (v.questionKind===undefined||['clarify','explore','none'].includes(v.questionKind)) && (v.completion===undefined||short(v.completion,180)) && (v.replacement===undefined||short(v.replacement,2000)) && (v.information===undefined||validInformation(v.information)) && ['projectile','outline','planner','kepler'].includes(v.kind)
     && (v.phrase===undefined||short(v.phrase,120)) && short(v.title,160) && short(v.interpretation,500) && short(v.audience,120) && short(v.question,200)
     && Array.isArray(v.options) && v.options.length <= 3 && v.options.every(s=>short(s,80))
     && Array.isArray(v.body) && v.body.length <= 6 && v.body.every(s=>short(s,700))

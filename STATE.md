@@ -91,7 +91,6 @@ Run with `npm run dev` and open [127.0.0.1:4317](http://127.0.0.1:4317/). Use th
 
 - The checks are rule-based. Nobody outside development has used the app yet, so whether the interaction helps people understand faster is unproven.
 - A failed Send does not restore the draft. There is no import for exported pages.
-- The older `slide-interactions.js` and `slide-extensions.js` remain only as fallbacks; the canvas `worldMap` is used only there.
 - Out of scope: file attachments, web research, browser or desktop control, shared workspaces and local inference.
 
 ## Next milestone

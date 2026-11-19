@@ -41,7 +41,7 @@ function keplerEquations(){
 
 export function renderAtlas(target,p,{titleField,onEdit}){
  target.atlasDispose?.();const observers=[];target.atlasDispose=()=>observers.forEach(o=>o.disconnect());p.edits??={};const layout=make('div','atlas-layout'),copy=make('div','atlas-copy'),visual=make('div','atlas-visual');
- const diagram=!!p.components?.length||['kepler','diagram','comparison','planner','projectile'].includes(p.kind);
+ const diagram=!!p.components?.length||['kepler','planner','projectile'].includes(p.kind);
  layout.classList.toggle('atlas-prose',!diagram);
  const titleWrapper=make('div','page-field');titleField.dataset.pageField='title';titleWrapper.append(titleField);copy.append(titleWrapper);
  function text(value,label,changed,index,key=index===0?'intro':'passage:'+index){
@@ -85,10 +85,6 @@ export function renderAtlas(target,p,{titleField,onEdit}){
   showLaw();draw();
  }else if(p.components?.length){
   // Catalog blocks own this page's visual surface.
- }else if(p.kind==='diagram'){
-  const names=p.nodes.length?p.nodes:['The idea','Its connections'];const flow=make('div','atlas-connections');names.forEach((name,i)=>{const field=make('input','atlas-node');field.dataset.editKey='node:'+i;field.value=name;field.maxLength=80;field.setAttribute('aria-label','Diagram label '+(i+1));field.oninput=()=>{names[i]=field.value;p.nodes=names;onEdit();};flow.append(field);});visual.append(flow);
- }else if(p.kind==='comparison'){
-  const table=make('table','atlas-comparison');const head=table.createTHead().insertRow();['Criterion','A','B'].forEach(label=>{const th=make('th','',label);th.scope='col';head.append(th);});for(const [i,row] of p.rows.entries()){const tr=table.insertRow();for(const k of ['criterion','a','b']){const cell=tr.insertCell();cell.append(text(row[k],row.criterion+' '+k,value=>row[k]=value,undefined,'comparison:'+i+':'+k));}}visual.append(table);
  }else if(p.kind==='planner'){
   const fields=make('div','atlas-plan');p.rows.forEach((row,i)=>{const label=make('label','',row.criterion);const input=make('input');input.dataset.editKey='planner:'+i;input.value=row.a;input.placeholder=row.b||'Your choice';input.maxLength=300;input.oninput=()=>{row.a=input.value;onEdit();};label.append(input);fields.append(label);});visual.append(fields);
  }else if(p.kind==='projectile'){

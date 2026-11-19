@@ -13,7 +13,7 @@ import {renderInformationControl,formatPreview} from './controls.js';
 import {positionPopover} from './popover.js';
 import {demoPreview, trajectory, validPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isIncompleteComparison, draftWordCount, completedDraft, PREVIEW_WORD_STEP, extendsPreview, workingDraftPreview, draftAnswersQuestion} from './model.js';
 const $ = id => document.getElementById(id);
-const state = {key:'', live:false, requests:0, connectionRevision:0, composing:false, revision:0, format:'Auto', audience:'', controller:null, timer:null, proposal:null, component:null, history:[], blocks:[], selection:null, uncertainty:null, popoverTimer:null, clarification:null, openClarification:null, popoverOrigin:null, suppressed:null, customDrafts:new Map(), serverKey:false, pendingSend:false, pageController:null, pageRequest:0, taskGoal:'', pageVersion:0, information:[], previousDraft:'', activeInformation:null,confirmedChoices:[],answers:[],intentOverride:'',slideChoice:undefined};
+const state = {key:'', live:false, requests:0, connectionRevision:0, composing:false, revision:0, format:'Auto', audience:'', controller:null, timer:null, proposal:null, component:null, history:[], uncertainty:null, popoverTimer:null, clarification:null, openClarification:null, popoverOrigin:null, suppressed:null, customDrafts:new Map(), serverKey:false, pendingSend:false, pageController:null, pageRequest:0, taskGoal:'', pageVersion:0, information:[], previousDraft:'', activeInformation:null,confirmedChoices:[],answers:[],intentOverride:'',slideChoice:undefined};
 const node=(tag, cls, text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
 let composerExperience,workspace;
 let followUpScope=null;
@@ -323,11 +323,11 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
     if(!state.component||version===state.pageVersion){
       if(state.component){timeline.save(capturePage());snapshot(scope?'Before focused change':'Before new page');}
       state.component=p;$('document-title').value=p.title;
-      if(!scope){state.blocks=[];directEdits=new DirectEditUndo();}
+      if(!scope)directEdits=new DirectEditUndo();
       else if(scope.id.startsWith('passage:'))directEdits.forget(scope.id.startsWith('passage:0')?'intro':scope.id.split(':').slice(0,2).join(':'));
       else if(scope.id.startsWith('block:'))directEdits.forget('practice:'+scope.id.slice(6));
       state.proposal=null;state.pageVersion++;
-      renderActive();renderBlocks();renderProposal();appendPage();renderPageNavigation();workspace?.reading();
+      renderActive();renderProposal();appendPage();renderPageNavigation();workspace?.reading();
       showUpdatedPart(scope?.id,scope?.label);
     }
     else{p.baseVersion=state.pageVersion;state.proposal=p;renderProposal();}
@@ -348,11 +348,6 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
   }
 }
 
-function setProposal(data, revision, source, selection){
-  if(revision!==state.revision||!validPreview(data))return;
-  state.proposal={...structuredClone(data),revision,source,selection,physics:{speed:20,angle:45,gravity:9.81},edits:{},selected:0};
-  renderProposal();
-}
 function renderProposal(){
   const p=state.proposal;$('proposal').hidden=!p;
   if(!p)return;
@@ -377,11 +372,11 @@ function renderActive(){
  if(state.component)$('intent-input').placeholder='Ask a question or change this page…';
  followUpScope=null;lastPageSelection=null;syncComposerContext();
  document.dispatchEvent(new Event('page:render'));composerExperience?.onPageRendered();const target=$('active-component'),title=$('document-title');target.before(title);target.atlasDispose?.();target.replaceChildren();
- if(state.component){renderAtlas(target,state.component,{titleField:title,onEdit:markPageEdit});if(state.component.kind==='projectile'){const temp=node('div');renderComponent(temp,state.component);const sim=temp.querySelector('.physics-simulation');if(sim)target.querySelector('.atlas-visual').append(sim);}}
+ if(state.component){renderAtlas(target,state.component,{titleField:title,onEdit:markPageEdit});if(state.component.kind==='projectile'){const sim=renderProjectile(state.component);if(sim)target.querySelector('.atlas-visual').append(sim);}}
  for(const field of paper.querySelectorAll('[data-edit-key]'))editValues.set(field,field.value);
  renderPageNavigation();
 }
-function capturePage(){return {title:$('document-title').value,text:$('document-input').value,component:state.component,blocks:state.blocks,taskGoal:state.taskGoal,preferences:state.confirmedChoices,paperScroll:paper.scrollTop,scroll:window.scrollY,directEdits:directEdits.entries};}
+function capturePage(){return {title:$('document-title').value,text:$('document-input').value,component:state.component,taskGoal:state.taskGoal,preferences:state.confirmedChoices,paperScroll:paper.scrollTop,scroll:window.scrollY,directEdits:directEdits.entries};}
 function appendPage(){
  const displaced=timeline.append(capturePage());
  if(displaced.length)recordHistory(displaced.reverse(),'Later version');
@@ -418,11 +413,10 @@ function showUpdatedPart(id,label,restoreFocus=false){
 }
 function restorePage(page){
  const copy=structuredClone(page);
- state.selection=null;$('selection-tools').hidden=true;
- $('document-title').value=copy.title;$('document-input').value=copy.text;state.component=copy.component;state.blocks=copy.blocks;
+ $('document-title').value=copy.title;$('document-input').value=copy.text;state.component=copy.component;
  state.taskGoal=copy.taskGoal||'';state.confirmedChoices=copy.preferences||[];directEdits=new DirectEditUndo(copy.directEdits);
  openPage();hidePageProgress();$('page-update').textContent='';
- renderActive();renderBlocks();renderProposal();workspace?.reading();
+ renderActive();renderProposal();workspace?.reading();
  const version=state.pageVersion;
  requestAnimationFrame(()=>{if(version!==state.pageVersion)return;paper.scrollTop=copy.paperScroll||0;window.scrollTo({top:copy.scroll||0,behavior:'instant'});});
 }
@@ -432,7 +426,6 @@ function navigatePage(delta){
  restorePage(page);changed();
 }
 
-function editableParagraph(target,text,onEdit){const label=node('label','editable-label','Edit this explanation');const field=node('textarea','editable-explanation');field.rows=2;field.maxLength=2500;field.value=text;field.setAttribute('aria-label','Editable explanation');field.oninput=()=>onEdit(field.value);const tools=node('div','inline-help');const ask=node('button','','Ask about selected text');ask.type='button';ask.onclick=()=>{const selection=field.value.slice(field.selectionStart,field.selectionEnd).trim();if(!selection){ask.textContent='Select a passage first';return;}addInlineQuestion(target,selection);};tools.append(ask);label.append(field);target.append(label,tools);}
 function addInlineQuestion(target,selection){
   const region=node('div','inline-question');region.append(node('p','selection-quote',`“${selection.slice(0,180)}”`));
   const label=node('label','','Your question about this passage');const field=node('input');field.placeholder='What would you like to understand?';field.maxLength=500;label.append(field);
@@ -440,31 +433,16 @@ function addInlineQuestion(target,selection){
   button.onclick=async()=>{if(!field.value.trim())return;button.disabled=true;answer.textContent=state.live?'Luna is preparing an explanation…':'Connect OpenAI to ask a question about this passage.';if(state.live){try{const data=await callPreview({text:`Explain this selected passage: ${selection}\nQuestion: ${field.value}`,audience:state.audience,format:'Outline'},new AbortController().signal);answer.textContent=data.preview.body.join('\n\n');}catch(error){answer.textContent=error.message;}}button.disabled=false;};
   region.append(label,button,answer);target.append(region);field.focus();
 }
-function renderComponent(target,p){
-  const intro=p.body[0]||'Add an explanation in your own words.';
-  if(p.kind==='projectile'){
+// The trusted projectile simulator, placed in the Atlas visual column.
+function renderProjectile(p){
+  const target=node('div');
     const sim=node('div','physics-simulation');const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 540 230');svg.setAttribute('role','img');svg.setAttribute('aria-label','Ideal projectile trajectory in metres');svg.classList.add('trajectory');sim.append(svg);
     const readings=node('div','physics-readings');readings.setAttribute('aria-live','polite');sim.append(readings);
     const controls=node('div','simulation-controls');
     function draw(){const r=trajectory(p.physics.speed,p.physics.angle,p.physics.gravity);const sx=x=>36+x/(r.range*1.08)*470;const sy=y=>193-y/(r.height*1.25)*165;svg.replaceChildren();const add=(tag,attrs,text)=>{const n=document.createElementNS(svg.namespaceURI,tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,String(v)));if(text)n.textContent=text;svg.append(n);return n;};add('line',{x1:36,y1:193,x2:515,y2:193,class:'plot-axis'});add('line',{x1:36,y1:20,x2:36,y2:193,class:'plot-axis'});add('path',{d:r.points.map((pt,i)=>`${i?'L':'M'}${sx(pt.x).toFixed(2)},${sy(pt.y).toFixed(2)}`).join(' '),fill:'none',class:'plot-path'});const peak=r.points[30];add('circle',{cx:sx(peak.x),cy:sy(peak.y),r:5,class:'plot-point'});add('text',{x:36,y:215,class:'plot-label'},'0');add('text',{x:400,y:215,class:'plot-label'},`${r.range.toFixed(1)} m range`);add('text',{x:45,y:22,class:'plot-label'},`${r.height.toFixed(1)} m peak`);readings.textContent=`${r.duration.toFixed(2)} s in flight · ${r.range.toFixed(1)} m horizontal distance`;}
     [['speed','Launch speed',5,30,'m/s'],['angle','Launch angle',10,80,'°']].forEach(([key,title,min,max,unit])=>{const label=node('label');const top=node('span','control-label');const out=node('output','',`${p.physics[key]}${unit==='°'?'':' '}${unit}`);top.append(node('span','',title),out);const range=node('input');range.type='range';range.min=min;range.max=max;range.value=p.physics[key];range.setAttribute('aria-label',title);range.oninput=()=>{p.physics[key]=Number(range.value);out.textContent=`${range.value}${unit==='°'?'':' '}${unit}`;draw();};label.append(top,range);controls.append(label);});
     const glabel=node('label','gravity-control','Gravity');const gravity=node('select');gravity.setAttribute('aria-label','Gravity');[['9.81','Earth · 9.81 m/s²'],['1.62','Moon · 1.62 m/s²'],['3.71','Mars · 3.71 m/s²']].forEach(([v,t])=>{const o=node('option','',t);o.value=v;gravity.append(o);});gravity.value=String(p.physics.gravity);gravity.onchange=()=>{p.physics.gravity=Number(gravity.value);draw();};glabel.append(gravity);controls.append(glabel);sim.append(controls,node('p','simulation-note','Ideal model: no air resistance; launch and landing at the same height. Axes rescale to fit.'));target.append(sim);draw();
-  } else if(p.kind==='planner'){
-    const grid=node('div','planner-fields');
-    p.rows.forEach(row=>{const label=node('label','planner-field',row.criterion);const field=node('input');field.value=row.a;field.placeholder=row.b||'Your choice…';field.maxLength=300;field.setAttribute('aria-label',row.criterion);field.oninput=()=>row.a=field.value;label.append(field);if(row.b)label.append(node('span','field-hint',row.b));grid.append(label);});
-    target.append(grid);
-    const steps=node('div','planner-steps');p.body.slice(1).forEach((text,i)=>{const section=node('section');section.append(node('span','step-number',String(i+1).padStart(2,'0')),node('p','',text));steps.append(section);});target.append(steps);
-    const update=node('button','primary-button','Update with these choices');update.onclick=()=>submitPage('Update this plan using the choices I edited on the page. Keep the other preferences.');if(p===state.component)target.append(update);
-  } else if(p.kind==='comparison'){
-    const t=node('table');const head=t.createTHead().insertRow();['Criterion','Approach A','Approach B'].forEach(s=>{const th=node('th','',s);th.scope='col';head.append(th);});const body=t.createTBody();p.rows.forEach(row=>{const tr=body.insertRow();['criterion','a','b'].forEach(key=>{const cell=tr.insertCell();const input=node('input');input.value=row[key];input.maxLength=300;input.setAttribute('aria-label',`${row.criterion} ${key==='criterion'?'criterion':key==='a'?'Approach A':'Approach B'}`);input.oninput=()=>row[key]=input.value;cell.append(input);});});target.append(t);
-  } else if(p.kind==='diagram'){
-    const flow=node('div','interactive-flow');const detail=node('div','node-detail');const names=p.nodes.length?p.nodes:['Start','Explore','Decide'];
-    const paint=()=>{flow.replaceChildren();names.forEach((name,i)=>{const b=node('button','flow-node',name);b.setAttribute('aria-pressed',String(p.selected===i));b.onclick=()=>{p.selected=i;paint();};flow.append(b);});detail.replaceChildren();const label=node('label','',`Edit ${names[p.selected]}`);const input=node('input');input.value=names[p.selected];input.maxLength=80;input.oninput=()=>{names[p.selected]=input.value;flow.children[p.selected].textContent=input.value;};label.append(input);detail.append(label);};paint();target.append(flow,detail);
-  } else {
-    const list=node('div','outline-builder');const sections=p.edits.sections??p.body.map((s,i)=>({title:s.split(' — ')[0]||`Section ${i+1}`,note:s.split(' — ').slice(1).join(' — '),done:false}));p.edits.sections=sections;
-    function paint(){list.replaceChildren();sections.forEach((s,i)=>{const row=node('div','outline-row');const check=node('input');check.type='checkbox';check.checked=s.done;check.setAttribute('aria-label',`Mark ${s.title} complete`);check.onchange=()=>s.done=check.checked;const fields=node('div');const title=node('input');title.value=s.title;title.maxLength=180;title.setAttribute('aria-label',`Section ${i+1} title`);title.oninput=()=>s.title=title.value;const note=node('textarea');note.rows=1;note.value=s.note;note.placeholder='Add your own detail…';note.setAttribute('aria-label',`Section ${i+1} note`);note.oninput=()=>s.note=note.value;fields.append(title,note);const up=node('button','quiet-button','Move up');up.disabled=i===0;up.onclick=()=>{[sections[i-1],sections[i]]=[sections[i],sections[i-1]];paint();};row.append(check,fields,up);list.append(row);});}paint();target.append(list);
-  }
-  editableParagraph(target,p.edits.explanation??intro,value=>p.edits.explanation=value);
+  return target.querySelector('.physics-simulation');
 }
 function modelPayload(payload,onProgress){
   return {...payload,stream:typeof onProgress==='function'&&['preview','page-help'].includes(payload.phase),context:requestContext({explicitIntent:state.intentOverride,draft:payload.text,page:payload.context??pageContext(),confirmed:[...state.confirmedChoices,...confirmedChoices([...state.information,...state.answers])],date:new Date().toLocaleDateString('en-CA'),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone})};
@@ -615,16 +593,12 @@ function renderHistory(){
   row.append(button);target.append(row);
  }
 }
-function renderBlocks(){const target=$('accepted-blocks');target.replaceChildren();state.blocks.forEach((block,i)=>{const section=node('section','visual-block');const heading=node('div','block-title');heading.append(node('h3','',block.title));const b=node('button','quiet-button','Remove');b.onclick=()=>{snapshot('Before removing a block');state.blocks.splice(i,1);renderBlocks();};heading.append(b);section.append(heading);renderComponent(section,block);target.append(section);});}
 $('intent-input').oninput=event=>{if(!state.composing)changed({typing:event.inputType==='insertText'&&event.data?.length===1});};$('intent-input').addEventListener('compositionstart',()=>{state.composing=true;stop();});$('intent-input').addEventListener('compositionend',()=>{state.composing=false;changed();});
 $('cancel-button').onclick=()=>{stop();showQuickAnswer(completedAnswer);composerExperience?.onStream({reset:true});status('Preview paused. Keep editing to resume.');$('input-state').textContent='Preview paused';};
-$('accept-button').onclick=()=>{const p=state.proposal;if(!p||(p.baseVersion!==undefined?p.baseVersion!==state.pageVersion:p.revision!==state.revision))return;if(p.selection&&$('document-input').value.slice(p.selection.start,p.selection.end)!==p.selection.text){status('The selected text changed. Select it again for a fresh suggestion.',true);return;}timeline.save(capturePage());snapshot(state.component?'Before replacing the page':'Before keeping the page');if(p.selection)state.blocks.push(structuredClone(p));else{state.component=structuredClone(p);$('document-title').value=p.title;directEdits=new DirectEditUndo();}state.proposal=null;state.pageVersion++;renderActive();renderBlocks();renderProposal();appendPage();renderPageNavigation();status('Page kept. Edit it directly, or restore the previous version in History.');};
+$('accept-button').onclick=()=>{const p=state.proposal;if(!p||(p.baseVersion!==undefined?p.baseVersion!==state.pageVersion:p.revision!==state.revision))return;timeline.save(capturePage());snapshot(state.component?'Before replacing the page':'Before keeping the page');state.component=structuredClone(p);$('document-title').value=p.title;directEdits=new DirectEditUndo();state.proposal=null;state.pageVersion++;renderActive();renderProposal();appendPage();renderPageNavigation();status('Page kept. Edit it directly, or restore the previous version in History.');};
 $('dismiss-button').onclick=()=>{state.proposal=null;renderProposal();};
-$('document-input').addEventListener('select',()=>{const f=$('document-input');const text=f.value.slice(f.selectionStart,f.selectionEnd).trim();state.selection=text?{start:f.selectionStart,end:f.selectionEnd,text:f.value.slice(f.selectionStart,f.selectionEnd)}:null;$('selection-tools').hidden=!text;$('selection-label').textContent=text?`Selected: ${text.slice(0,35)}${text.length>35?'…':''}`:'Selected text';});
-async function fromSelection(kind){if(!state.selection)return;stop();const selection={...state.selection};if(!state.live){const v=demoPreview(selection.text,state.audience,kind==='diagram'?'Diagram':'Outline');v.title=kind==='diagram'?'Explore the selected idea':'A closer look';setProposal(v,state.revision,'Demo',selection);status('Sample selection response. Connect Luna for an explanation of arbitrary text.');}else{const revision=state.revision;try{const data=await callPreview({text:`${kind==='diagram'?'Make a diagram about':'Explain'} this selected text: ${selection.text}`,audience:state.audience,format:kind==='diagram'?'Diagram':'Outline'},new AbortController().signal);setProposal(data.preview,revision,'Luna',selection);}catch(e){status(e.message,true);}}}
-$('diagram-selection').onclick=()=>fromSelection('diagram');$('explain-selection').onclick=()=>fromSelection('outline');
 $('history-button').onclick=()=>{$('history-panel').hidden=!$('history-panel').hidden;renderHistory();};$('close-history').onclick=()=>$('history-panel').hidden=true;
-$('download-button').onclick=()=>{const data={version:1,title:$('document-title').value,notes:$('document-input').value,component:state.component,blocks:state.blocks};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=node('a');a.href=url;a.download='ai-interaction-page.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status('Exported page data as JSON. API keys are never included.');};
+$('download-button').onclick=()=>{const data={version:1,title:$('document-title').value,notes:$('document-input').value,component:state.component};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=node('a');a.href=url;a.download='ai-interaction-page.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status('Exported page data as JSON. API keys are never included.');};
 for(const [button,dialog] of [['connection-button','connection-dialog'],['about-button','about-dialog']])$(button).onclick=()=>{closeIntentPopover();$(dialog).showModal();};
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>{if(b.dataset.close==='connection-dialog')$('api-key').value='';$(b.dataset.close).close();});$('connection-dialog').addEventListener('close',()=>{$('api-key').value='';state.connectionRevision++;});
 $('connection-form').onsubmit=async event=>{event.preventDefault();const key=$('api-key').value.trim();if(!key&&!state.serverKey){$('connection-error').textContent='Enter an OpenAI API key, or stay in demo mode.';return;}const connectionRevision=++state.connectionRevision;$('connect-button').disabled=true;$('connection-error').textContent='Checking Luna access…';try{const response=await fetch('/api/check',{method:'POST',headers:key?{Authorization:`Bearer ${key}`}:{}});const result=await response.json();if(connectionRevision!==state.connectionRevision)return;if(!response.ok)throw new Error(result.error||'Connection failed.');stop();state.key=key;previewCache.clear();shownPreview=null;completedAnswer='';composerExperience?.stop();state.requests=0;state.live=true;document.body.classList.add('live');$('mode-label').textContent='OpenAI connected';$('typing-connection').firstChild.textContent='Connected';$('api-key').value='';$('connection-error').textContent='';$('connection-dialog').close();changed();if(state.pendingSend){state.pendingSend=false;submitPage();}}catch(error){$('connection-error').textContent=error.message;}finally{$('connect-button').disabled=false;}};
@@ -636,7 +610,7 @@ composerExperience=setupComposerExperience({state,changed,request:callPreview,se
 const editValues=new WeakMap();
 let applyingSavedEdit=false;
 const editField=key=>[...paper.querySelectorAll('[data-edit-key]')].find(field=>
- field.dataset.editKey===key&&!field.closest('.page-assistant,#proposal,#accepted-blocks'));
+ field.dataset.editKey===key&&!field.closest('.page-assistant,#proposal'));
 function latestDirectEdit(){return directEdits.latest(key=>editField(key)?.value);}
 function updateUndoButton(){$('undo-edit').disabled=!latestDirectEdit();}
 paper.addEventListener('input',event=>{

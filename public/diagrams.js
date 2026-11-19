@@ -292,8 +292,6 @@ const RENDERERS = {
   ...INTERACTIVES
 };
 
-export const DIAGRAM_TYPES = Object.keys(RENDERERS);
-
 export function renderDiagram(content, block, saved, onEdit, detail, ctx = {}) {
   const render = RENDERERS[block.type];
   if (!render || !Array.isArray(block.items) || !block.items.length) return false;
