@@ -127,7 +127,8 @@ function renderUncertainty(){
   state.answers.forEach(entry=>{const b=node('button','phrase-access',entry.value);b.type='button';b.setAttribute('aria-label',entry.question+': '+entry.value);b.onclick=()=>{updateClarification({...entry,type:undefined});openIntentPopover('click');};rail.append(b);});
   composerExperience?.onMirrorRendered();
 }
-function applyClarification(value){
+// keepOpen: multi-value controls apply each change live and leave the picker open.
+function applyClarification(value,{keepOpen=false}={}){
   const input=$('intent-input'),u=state.openClarification||state.clarification;
   if(u&&(!u.phrase||u.global)){value=value.trim();if(!value)return;state.answers=state.answers.filter(e=>e.question!==u.question);state.answers.push({type:u.type||'goal',phrase:u.question,question:u.question,options:u.options||[],value,confirmed:true,global:true});}
   else if(u?.type){
@@ -140,9 +141,21 @@ function applyClarification(value){
       return;
     }
     input.value=result.text;state.information=result.entries;state.previousDraft=result.text;
+    // Track the updated entry so the next live change replaces this value instead of adding one.
+    const updated=result.entries.find(entry=>entry.key===u.key);
+    if(updated&&state.openClarification)state.openClarification={...state.openClarification,...updated};
   }
   else{value=value.trim();if(!value)return;const phrase=u?.phrase;if(!phrase)return;const entry={...u,type:'goal',key:'legacy',annotation:'',value:'',confirmed:false};const entries=[...state.information.filter(e=>e.end+(e.annotation?.length||0)<=entry.start||e.start>=entry.end),entry].sort((a,b)=>a.start-b.start);const result=chooseInformation(input.value,entries,'legacy',value);if(!result)return;input.value=result.text;state.information=result.entries;state.previousDraft=result.text;}
   if(u)state.customDrafts.delete(u.question);
+  if(keepOpen){
+    changed({keepPopover:true});composerExperience?.onMirrorRendered?.();
+    // The phrase highlight is re-rendered; keep the popover anchored to its new element.
+    const key=state.openClarification?.key;
+    const mark=key&&[...$('input-mirror').querySelectorAll('mark')].find(m=>m.dataset.key===key);
+    if(mark&&state.popoverAnchor?.isConnected===false)state.popoverAnchor=mark;
+    if(!$('intent-popover').hidden)positionIntentPopover();
+    return;
+  }
   closeIntentPopover();changed({immediate:true});state.suppressed=u?.question;input.focus();
 }
 function closeIntentPopover({restore=false,suppress=false}={}){
@@ -543,7 +556,7 @@ async function preview(text=$('intent-input').value.trim()){
 }
 function sizeComposer(){const input=$('intent-input');input.style.height='0px';input.style.height=Math.min(220,Math.max(56,input.scrollHeight))+'px';}
 window.addEventListener('resize',sizeComposer);
-function changed({immediate=false,typing=false}={}){
+function changed({immediate=false,typing=false,keepPopover=false}={}){
   if(!$('intent-input').value.trim()){state.slideChoice=undefined;state.slideDecided=false;}
   document.dispatchEvent(new Event('intent:changed'));
   const input=$('intent-input'),text=input.value.trim();
@@ -558,7 +571,7 @@ function changed({immediate=false,typing=false}={}){
   state.information=rebaseInformation(state.previousDraft,input.value,state.information).filter(e=>e.confirmed);state.previousDraft=input.value;
   state.revision++;state.uncertainty=null;
   if(!keep)completedAnswer='';
-  showQuickAnswer(keep?(completedAnswer||$('quick-answer').textContent):'',keep);state.suppressed=null;closeIntentPopover();
+  showQuickAnswer(keep?(completedAnswer||$('quick-answer').textContent):'',keep);state.suppressed=null;if(!keepPopover)closeIntentPopover();
   if(state.proposal&&state.proposal.baseVersion===undefined){$('accept-button').disabled=true;$('proposal-label').textContent='Earlier page · explore again to use the latest intent';}
   const hasText=!!text;if(!hasText)state.answers=[];document.body.classList.toggle('has-intent',hasText);$('typing-assistance').hidden=!hasText;
   $('build-page').disabled=!hasText;

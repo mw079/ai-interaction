@@ -1,7 +1,8 @@
 import {expect,test} from '@playwright/test';
 import {
   startFixtureServer,keplerDraft,keplerCompletion,keplerFollowUp,keplerAudienceDraft,keplerAudienceQuestion,unfinishedComparison,
-  completedComparison,comparisonAnswer,japanCheckpoint,japanQuestion,japanAnswer,travelDraft,travelQuestion,kyotoChoice,kyotoAnswer
+  completedComparison,comparisonAnswer,japanCheckpoint,japanQuestion,japanAnswer,travelDraft,travelQuestion,kyotoChoice,kyotoAnswer,
+  requirementsDraft,requirementsQuestion
 } from './fixture-server.mjs';
 
 let server;
@@ -288,4 +289,22 @@ test('a long continued draft keeps live help visible until a newer response arri
   }finally{resume();}
   await expect(quickAnswer(page)).toHaveText('Leave one quiet afternoon for gardens or a small museum.');
   await expect(page.getByRole('button',{name:'Clarifying question: Would you prefer gardens or museums?'})).toBeEnabled();
+});
+
+test('multi-select choices apply live in one step and the picker stays open',async({page})=>{
+  const editor=draft(page);
+  await editor.fill(requirementsDraft);
+  await advancePreview(page);
+  await page.getByRole('button',{name:'Clarifying question: '+requirementsQuestion}).click();
+  const picker=page.locator('#intent-popover');
+  await expect(picker.getByRole('button',{name:/^Use (this|these|\d)/})).toHaveCount(0);
+  await picker.getByRole('button',{name:'Vegetarian meals',exact:true}).click();
+  await expect(editor).toHaveValue(requirementsDraft+' (Vegetarian meals)');
+  await expect(picker).toBeVisible();
+  await picker.getByRole('button',{name:'Step-free access',exact:true}).click();
+  await expect(editor).toHaveValue(requirementsDraft+' (Vegetarian meals; Step-free access)');
+  await expect(picker.locator('.picker-current-value')).toHaveText('Vegetarian meals; Step-free access');
+  await picker.getByRole('button',{name:'Vegetarian meals',exact:true}).click();
+  await expect(editor).toHaveValue(requirementsDraft+' (Step-free access)');
+  await expect(picker).toBeVisible();
 });

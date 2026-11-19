@@ -1,5 +1,5 @@
 import {readFile,mkdir,writeFile} from 'node:fs/promises';
-const files=['index.html','style.css','app.js','model.js','popover.js','intent.js','controls.js','composer.js','request-context.js','stream.js','retry.js','atlas.js','component-catalog.js','component-renderer.js','diagrams.js','dg-kit.js','interactives.js','slide-interactions.js','slide-extensions.js','maps.js','world-land.js','composer-extensions.js','page-assistant.js','page-patch.js','workspace.js','page-timeline.js','mark.svg'];
+const files=['index.html','style.css','app.js','model.js','popover.js','intent.js','controls.js','composer.js','request-context.js','stream.js','retry.js','atlas.js','component-catalog.js','component-renderer.js','diagrams.js','dg-kit.js','interactives.js','control-kit.js','slide-interactions.js','slide-extensions.js','maps.js','world-land.js','composer-extensions.js','page-assistant.js','page-patch.js','workspace.js','page-timeline.js','mark.svg'];
 const types={'html':'text/html; charset=utf-8','css':'text/css; charset=utf-8','js':'application/javascript; charset=utf-8','svg':'image/svg+xml'};
 const assets={};for(const name of files)assets['/'+name]={body:await readFile(new URL('./public/'+name,import.meta.url),'utf8'),type:types[name.split('.').at(-1)]};
 const intent=await readFile(new URL('./public/intent.js',import.meta.url),'utf8');

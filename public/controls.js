@@ -1,7 +1,6 @@
 import {renderComposerExtension} from './composer-extensions.js';
 import {INFORMATION_TYPES} from './intent.js';
-const make=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
-const button=(text,action,cls='')=>{const b=make('button',cls,text);b.type='button';b.onclick=action;return b;};
+import {make,button,entry,currentLine} from './control-kit.js';
 // A tiny schematic of a response format, chosen from words in its label.
 const PREVIEW_KINDS=[['chart',/chart|graph|bar|data|number|statistic/i],['steps',/step|timeline|process|sequence|cycle|walk/i],['map',/map|place|route|location/i],
   ['grid',/compar|table|versus|vs\b|matrix/i],['visual',/visual|diagram|orbit|simulat|interactive|explore/i],['list',/list|bullet|checklist|outline|plan/i]];
@@ -20,104 +19,104 @@ export function formatPreview(value,forced){
   return preview;
 }
 // One renderer per family. Values and suggestions belong to the descriptor, never the template.
+// Choosing is committing: single choices apply and close; multi-value controls apply each change
+// live and stay open; typed answers apply on Enter. Nothing needs a separate "Use this" step.
 export function renderInformationControl(target,item,onChoose,onResize=()=>{}){
   target.replaceChildren();const {family}=INFORMATION_TYPES[item.type];target.dataset.family=family;
   const options=item.options||[];
-  function option(value){const b=button(value,()=>onChoose(value),'picker-option');b.setAttribute('aria-pressed',String(item.value===value));return b;}
-  function field(label,type='text',value=''){const l=make('label','picker-field',label);const f=make('input');f.type=type;f.value=value;f.maxLength=300;l.append(f);return {label:l,input:f};}
-  function form(){const f=make('form','picker-form');target.append(f);return f;}
-  function submit(f,getValue){const b=make('button','picker-apply','Use this');b.type='submit';f.append(b);f.onsubmit=e=>{e.preventDefault();if(!f.reportValidity())return;const v=getValue();if(v?.trim())onChoose(v);};}
-  if(renderComposerExtension(target,family,item,onChoose,onResize)){
-    if(item.confirmed)target.append(button('Clear this choice',()=>onChoose(''),'picker-clear'));
-    return;
+  const current=currentLine(item,onChoose);
+  const choose=(value,opts)=>{
+    current.set(value);
+    // Mark the chosen row among single-choice options so the choice is visible wherever it is shown.
+    target.querySelectorAll('.picker-choices:not(.picker-multi)>.picker-option,.picker-cards>.picker-option,.picker-presets>.picker-option').forEach(b=>b.setAttribute('aria-pressed',String(b.textContent===value)));
+    onChoose(value,opts);
+  };
+  const live=value=>choose(value,{keepOpen:true});
+  function option(value,{sample}={}){
+    const b=button(value,()=>choose(value),'picker-option');
+    b.setAttribute('aria-pressed',String(item.confirmed&&item.value===value));
+    if(sample)for(const event of ['pointerenter','focus'])b.addEventListener(event,()=>sample(value));
+    return b;
   }
-  if(family==='depth'&&options.length>=2){
-    const group=form();
-    const label=make('label','picker-field','Explanation depth');
-    const range=make('input');
-    range.type='range';
-    range.min='0';
-    range.max=String(options.length-1);
-    range.step='1';
-    range.value=String(Math.max(0,options.indexOf(item.value)));
-    const value=make('output','picker-depth-value');
-    const update=()=>{
-      value.textContent=options[Number(range.value)];
-      range.setAttribute('aria-valuetext',value.textContent);
-      group.querySelectorAll('.picker-tick').forEach((t,i)=>t.setAttribute('aria-pressed',String(i===Number(range.value))));
-    };
-    range.oninput=update;
-    update();
-    label.append(range);
-    const ticks=make('div','picker-ticks');ticks.style.setProperty('--n',options.length);
-    options.forEach((o,i)=>{const t=button(o,()=>{range.value=String(i);update();},'picker-tick');ticks.append(t);});
-    group.append(label,ticks,value);
-    submit(group,()=>options[Number(range.value)]);
-  }else if(family==='tone'&&options.length){
-    const group=form();
-    let index=Math.max(0,options.indexOf(item.value));
-    const tones=make('div','picker-presets');
+  const rows=list=>{const g=make('div','picker-choices');g.append(...list);target.append(g);return g;};
+  const finish=()=>{target.append(current.element);onResize();};
+  if(renderComposerExtension(target,family,item,choose,onResize)){finish();return;}
+
+  if(family==='tone'||(family==='depth'&&options.length)){
+    // Ordered rows (brief to detailed for depth). Tone previews its sample on hover or focus.
     const sample=make('blockquote','picker-tone-sample');
-    const buttons=options.map((tone,i)=>button(tone,()=>{index=i;update();},'picker-option'));
-    function update(){
-      buttons.forEach((control,i)=>control.setAttribute('aria-pressed',String(i===index)));
-      sample.textContent=item.samples?.[index]||'';
-      sample.hidden=!sample.textContent;
-      onResize();
-    }
-    tones.append(...buttons);
-    group.append(tones,sample);
-    submit(group,()=>options[index]);
-    update();
-  }else if(['choices','cards','depth','tone','goal_comparison','example','tradeoff'].includes(family)){
+    const show=value=>{const text=item.samples?.[options.indexOf(value)]||'';sample.textContent=text;sample.hidden=!text;onResize();};
+    rows(options.map(o=>option(o,{sample:family==='tone'?show:null})));
+    if(family==='tone'){target.append(sample);show(item.confirmed&&options.includes(item.value)?item.value:options[0]);}
+  }else if(['choices','cards','goal_comparison','example','tradeoff'].includes(family)){
     const grid=make('div',family==='cards'?'picker-cards':'picker-choices');
-    options.forEach(value=>{const b=option(value);if(family==='cards')b.prepend(formatPreview(value));grid.append(b);});target.append(grid);
+    options.forEach(value=>{const b=option(value);if(family==='cards')b.prepend(formatPreview(value));grid.append(b);});
+    target.append(grid);
   }else if(family==='search'){
-    const f=field('Find an option or enter your own','search',item.value);f.input.placeholder='Search suggestions…';target.append(f.label);const results=make('div','picker-choices');target.append(results);
-    const draw=()=>{results.replaceChildren();options.filter(o=>o.toLocaleLowerCase().includes(f.input.value.toLocaleLowerCase())).forEach(o=>results.append(option(o)));if(!results.children.length)results.append(make('p','picker-hint','Use your own value below.'));onResize();};f.input.oninput=draw;draw();
-    const custom=form();const use=make('button','picker-apply','Use this value');use.type='submit';custom.append(use);custom.onsubmit=e=>{e.preventDefault();if(f.input.value.trim())onChoose(f.input.value.trim());};
+    const results=make('div','picker-choices');
+    const find=entry('Search or enter your own',{value:item.confirmed?item.value:'',placeholder:'Type to filter…',maxLength:300,onCommit:value=>choose(value)});
+    find.input.type='search';
+    const draw=()=>{const q=find.input.value.toLocaleLowerCase();results.replaceChildren(...options.filter(o=>o.toLocaleLowerCase().includes(q)).map(o=>option(o)));
+      if(!results.children.length)results.append(make('p','picker-hint','Press Enter to use what you typed.'));onResize();};
+    find.input.addEventListener('input',draw);
+    target.append(find.element,results);draw();
   }else if(family==='number'){
     if(options.length){const presets=make('div','picker-presets');options.forEach(v=>presets.append(option(v)));target.append(presets);}
-    const f=form();const row=make('div','picker-number-row');const numbers=item.value.match(/\d+(?:\.\d+)?/g)||[];const n=field(item.type==='budget'?'From (optional)':'Amount','number',numbers[0]||'');n.input.min='0';n.input.step=item.type==='quantity'?'1':'any';n.input.required=item.type!=='budget';row.append(n.label);
-    let upper;if(item.type==='budget'){upper=field('To (optional)','number',numbers[1]||'');upper.input.min='0';upper.input.step='any';row.append(upper.label);}
-    const u=field(item.type==='budget'?'Currency / unit':'Unit','text',item.unit);u.input.maxLength=30;if(item.type!=='quantity')row.append(u.label);f.append(row);
-    submit(f,()=>{const a=n.input.value,b=upper?.input.value;if(upper&&!a&&!b){n.input.setCustomValidity('Enter an amount.');n.input.reportValidity();n.input.oninput=()=>n.input.setCustomValidity('');return '';}
-      if(upper&&a&&b&&Number(b)<Number(a)){upper.input.setCustomValidity('The upper amount must be at least the lower amount.');upper.input.reportValidity();upper.input.oninput=()=>upper.input.setCustomValidity('');return '';}
-      return `${upper?(a&&b?`${a}–${b}`:a?`from ${a}`:`up to ${b}`):a}${u.input.value.trim()?' '+u.input.value.trim():''}`;});
+    const numbers=(item.confirmed?item.value:'').match(/\d+(?:\.\d+)?/g)||[];
+    const unit=item.unit?' '+item.unit:'';
+    if(item.type==='budget'){
+      // A range reads naturally as one line: "100–200 EUR per night". Enter applies it.
+      const range=entry('Your own range'+(item.unit?' ('+item.unit+')':''),{value:numbers.length?numbers.join('–'):'',placeholder:'e.g. 100–200',maxLength:40,
+        validate:v=>/^\d+(?:\.\d+)?(?:\s*[–-]\s*\d+(?:\.\d+)?)?$/.test(v)?(()=>{const [a,b]=v.split(/[–-]/).map(Number);return b!==undefined&&b<a?'The upper amount must be at least the lower amount.':'';})():'Enter an amount or a range like 100–200.',
+        onCommit:v=>choose(v.replace(/\s*[–-]\s*/,'–')+unit)});
+      target.append(range.element);
+    }else{
+      const amount=entry('Your own'+(item.unit?' ('+item.unit+')':''),{type:'number',value:numbers[0]||'',placeholder:'Amount',maxLength:12,
+        validate:v=>Number(v)>=0?'':'Enter a positive number.',onCommit:v=>choose(v+unit)});
+      amount.input.min='0';amount.input.step=item.type==='quantity'?'1':'any';
+      target.append(amount.element);
+    }
   }else if(family==='datetime'){
-    const f=form();let a,b,zone;
-    if(item.type==='time'){a=field('Time','time',(item.value.match(/\b\d{2}:\d{2}\b/)||[''])[0]);zone=field('Timezone','text',Intl.DateTimeFormat().resolvedOptions().timeZone||'');zone.input.maxLength=80;f.append(a.label,zone.label);}
-    else{const dates=item.value.match(/\d{4}-\d{2}-\d{2}/g)||[];a=field(item.type==='date_range'?'Start date':'Date','date',dates[0]||'');f.append(a.label);if(item.type==='date_range'){b=field('End date','date',dates[1]||'');b.input.required=true;f.append(b.label);}}
-    a.input.required=true;if(b)a.input.oninput=()=>{b.input.min=a.input.value;};
-    submit(f,()=>`${a.input.value}${b?' to '+b.input.value:''}${zone?.input.value?' '+zone.input.value.trim():''}`);
+    // Dates apply as soon as they are picked; a range applies once both ends are set.
+    const row=make('div','picker-date-row');
+    const dates=(item.confirmed?item.value:'').match(/\d{4}-\d{2}-\d{2}/g)||[];
+    const field=(label,type,value)=>{const l=make('label','picker-entry');l.append(make('span','picker-entry-label',label));const i=make('input');i.type=type;i.value=value;l.append(i);row.append(l);return i;};
+    if(item.type==='time'){
+      const time=field('Time','time',((item.confirmed?item.value:'').match(/\b\d{2}:\d{2}\b/)||[''])[0]);
+      const zone=Intl.DateTimeFormat().resolvedOptions().timeZone||'';
+      time.onchange=()=>{if(time.value)choose(time.value+(zone?' '+zone:''));};
+    }else if(item.type==='date_range'){
+      const start=field('Start','date',dates[0]||''),end=field('End','date',dates[1]||'');
+      const apply=()=>{end.min=start.value;if(start.value&&end.value&&end.value>=start.value)choose(start.value+' to '+end.value);else if(start.value&&!end.value)end.focus();};
+      start.onchange=end.onchange=apply;
+    }else{
+      const date=field('Date','date',dates[0]||'');
+      date.onchange=()=>{if(date.value)choose(date.value);};
+    }
+    target.append(row);
     if(options.length){const presets=make('div','picker-presets');options.forEach(v=>presets.append(option(v)));target.append(presets);}
   }else if(family==='list'){
-    // Multi-select: options toggle with a check; chosen items form an ordered list for priorities.
+    // Multi-select applies live: each toggle or reorder updates the draft; the picker stays open.
     const ordered=item.type==='priorities';
-    let selected=item.value?item.value.split(ordered?' → ':'; ').filter(Boolean):[];
+    let selected=item.confirmed&&item.value?item.value.split(ordered?' → ':'; ').filter(Boolean):[];
     const all=()=>[...options,...selected.filter(v=>!options.includes(v))];
     const choices=make('div','picker-choices picker-multi');target.append(choices);
-    const list=make('ol','picker-list');const hint=make('p','picker-hint','Order matters: the first is most important.');if(ordered)target.append(hint,list);
-    const addToggle=button('+ Add your own',()=>{add.hidden=false;addToggle.hidden=true;custom.input.focus();onResize();},'picker-add-toggle');
-    const add=make('form','picker-add');add.hidden=true;const custom=field('Your own','text');custom.input.maxLength=100;custom.input.placeholder='Type and press Enter';
-    const addButton=make('button','picker-add-apply','Add');addButton.type='submit';add.append(custom.label,addButton);
-    add.onsubmit=e=>{e.preventDefault();const value=custom.input.value.trim();if(value&&!selected.includes(value)&&selected.length<8){selected.push(value);custom.input.value='';draw();}};
-    target.append(addToggle,add);
-    const commit=button('',()=>{const value=selected.join(ordered?' → ':'; ');if(value.length>300){target.querySelector('.picker-error')?.remove();target.append(make('p','picker-error','Keep your choices under 300 characters.'));return;}if(value)onChoose(value);},'picker-apply');
-    target.append(commit);
+    const hint=make('p','picker-hint','Order matters: the first is most important.');
+    const list=make('ol','picker-list');if(ordered)target.append(hint,list);
+    const apply=()=>{const value=selected.join(ordered?' → ':'; ');if(value.length>300)return;live(value);draw();};
+    const own=entry('Add your own',{placeholder:'Type and press Enter',maxLength:100,goLabel:'Add',onCommit:v=>{if(!selected.includes(v)&&selected.length<8){selected.push(v);own.input.value='';own.input.dispatchEvent(new Event('input'));apply();}}});
+    target.append(own.element);
     function draw(){
-      choices.replaceChildren(...all().map(value=>{const b=button(value,()=>{selected=selected.includes(value)?selected.filter(s=>s!==value):[...selected,value];draw();},'picker-option');b.setAttribute('aria-pressed',String(selected.includes(value)));return b;}));
+      choices.replaceChildren(...all().map(value=>{const b=button(value,()=>{selected=selected.includes(value)?selected.filter(s=>s!==value):[...selected,value];apply();},'picker-option');b.setAttribute('aria-pressed',String(selected.includes(value)));return b;}));
       list.replaceChildren(...(ordered?selected:[]).map((value,index)=>{
         const li=make('li');li.append(make('span','picker-rank',String(index+1)),make('span','',value));
-        const up=button('↑',()=>{[selected[index-1],selected[index]]=[selected[index],selected[index-1]];draw();},'picker-icon');up.disabled=index===0;up.setAttribute('aria-label','Move '+value+' up');
-        const down=button('↓',()=>{[selected[index+1],selected[index]]=[selected[index],selected[index+1]];draw();},'picker-icon');down.disabled=index===selected.length-1;down.setAttribute('aria-label','Move '+value+' down');
+        const up=button('↑',()=>{[selected[index-1],selected[index]]=[selected[index],selected[index-1]];apply();},'picker-icon');up.disabled=index===0;up.setAttribute('aria-label','Move '+value+' up');
+        const down=button('↓',()=>{[selected[index+1],selected[index]]=[selected[index],selected[index+1]];apply();},'picker-icon');down.disabled=index===selected.length-1;down.setAttribute('aria-label','Move '+value+' down');
         li.append(up,down);return li;}));
       list.hidden=hint.hidden=!selected.length;
-      commit.disabled=!selected.length;
-      commit.textContent=selected.length?`Use ${selected.length} selected`:'Select at least one';
       onResize();
     }
     draw();
   }
-  if(item.confirmed)target.append(button('Clear this choice',()=>onChoose(''),'picker-clear'));
+  finish();
 }

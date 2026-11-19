@@ -1,4 +1,5 @@
 import {pickerMap} from './maps.js';
+import {entry} from './control-kit.js';
 import {blockContextText} from './request-context.js';
 
 const node=(tag,text,className)=>{
@@ -12,26 +13,6 @@ function button(text,action){
   element.type='button';
   element.onclick=action;
   return element;
-}
-function field(label,type='text',value=''){
-  const wrapper=node('label',label,'picker-field');
-  const input=node('input');
-  input.type=type;
-  input.value=value;
-  input.maxLength=160;
-  wrapper.append(input);
-  return {wrapper,input};
-}
-function submit(form,read,choose,label='Use this'){
-  const element=node('button',label,'picker-apply');
-  element.type='submit';
-  form.append(element);
-  form.onsubmit=event=>{
-    event.preventDefault();
-    if(!form.reportValidity())return;
-    const value=read();
-    if(value!==null&&value!=='')choose(value);
-  };
 }
 
 // Segmented switch shared by composer controls: value lives on `state.value`.
@@ -51,124 +32,106 @@ function segmented(label,choices,state,onChange){
   return {element,paint};
 }
 
+// Newer control families. Like controls.js, choosing is committing: no "Use this" step.
+// `choose(value, {keepOpen})` writes the value into the draft; keepOpen leaves the picker open.
 export function renderComposerExtension(target,family,item,choose,onResize){
   const options=item.options||[];
-  const form=node('form',undefined,'picker-form composer-extension');
+  const saved=item.confirmed?item.value||'':'';
+  const live=value=>choose(value,{keepOpen:true});
   if(family==='flexible_dates'){
-    // A segmented switch instead of a dropdown: all three choices are visible at once.
-    const mode={value:'flexible'};
-    const seg=segmented('Date preference',[['flexible','Flexible'],['exact','Exact dates'],['any','No preference']],mode,()=>update());
-    const windowField=field('When could it happen?','text',item.value?.startsWith('Flexible: ')?item.value.slice(10):'');
-    windowField.input.placeholder='Any weekend in June';
-    const dates=item.value?.match(/\d{4}-\d{2}-\d{2}/g)||[];
-    const start=field('Start date','date',dates[0]||'');
-    const end=field('End date (optional)','date',dates[1]||'');
-    const update=()=>{
-      const exact=mode.value==='exact',flexible=mode.value==='flexible';
-      start.wrapper.hidden=end.wrapper.hidden=!exact;
-      windowField.wrapper.hidden=!flexible;
-      start.input.required=exact;
-      windowField.input.required=flexible;
-      end.input.min=start.input.value;
-      seg.paint();
-      onResize();
-    };
-    mode.value=dates.length?'exact':item.value==='No date preference'?'any':'flexible';
-    start.input.oninput=update;
-    form.append(seg.element,windowField.wrapper,start.wrapper,end.wrapper);
-    submit(form,()=>mode.value==='exact'?start.input.value+(end.input.value?' to '+end.input.value:''):mode.value==='flexible'?'Flexible: '+windowField.input.value.trim():'No date preference',choose);
-    target.append(form);update();
+    const dates=saved.match(/\d{4}-\d{2}-\d{2}/g)||[];
+    const mode={value:dates.length?'exact':saved==='No date preference'?'any':'flexible'};
+    const windowField=entry('When could it happen?',{value:saved.startsWith('Flexible: ')?saved.slice(10):'',placeholder:'Any weekend in June',onCommit:v=>choose('Flexible: '+v)});
+    const row=node('div',undefined,'picker-date-row');
+    const date=(label,value)=>{const l=node('label',undefined,'picker-entry');l.append(node('span',label,'picker-entry-label'));const i=node('input');i.type='date';i.value=value;l.append(i);row.append(l);return i;};
+    const start=date('Start',dates[0]||''),end=date('End (optional)',dates[1]||'');
+    const applyDates=()=>{end.min=start.value;if(start.value)live(start.value+(end.value&&end.value>=start.value?' to '+end.value:''));};
+    start.onchange=end.onchange=applyDates;
+    const seg=segmented('Date preference',[['flexible','Flexible'],['exact','Exact dates'],['any','No preference']],mode,()=>{
+      update();
+      if(mode.value==='any')choose('No date preference');
+      else (mode.value==='exact'?start:windowField.input).focus();
+    });
+    function update(){windowField.element.hidden=mode.value!=='flexible';row.hidden=mode.value!=='exact';seg.paint();onResize();}
+    target.append(seg.element,windowField.element,row);update();
     return true;
   }
   if(family==='area_map'){
-    const area=field('Place or coordinates','text',item.value);
-    area.input.placeholder='Neighbourhood or city';
-    area.input.required=true;
+    const area=entry('Place or coordinates',{value:saved,placeholder:'Neighbourhood or city',onCommit:v=>choose(v)});
     const map=node('div');
-    const draw=(points=[])=>map.replaceChildren(pickerMap({
-      label:'World map. Select a place, or type a place or coordinates below.',
-      point:points[0],onPick(latitude,longitude){
-        area.input.value=latitude.toFixed(2)+', '+longitude.toFixed(2);
-        draw([{latitude,longitude}]);
+    const draw=point=>map.replaceChildren(pickerMap({
+      label:'World map. Select a place, or type a place or coordinates below.',point,
+      onPick(latitude,longitude){
+        const value=latitude.toFixed(2)+', '+longitude.toFixed(2);
+        area.input.value=value;area.input.dispatchEvent(new Event('input'));
+        draw({latitude,longitude});live(value);
       }
     }));
     draw();
-    const optionsRow=node('div',undefined,'picker-presets');
-    options.forEach(name=>optionsRow.append(button(name,()=>{area.input.value=name;draw();})));
-    form.append(map,optionsRow,area.wrapper);
-    submit(form,()=>area.input.value.trim(),choose);
-    target.append(form);
+    const presets=node('div',undefined,'picker-presets');
+    options.forEach(name=>presets.append(button(name,()=>choose(name))));
+    target.append(map,presets,area.element);
     return true;
   }
   if(family==='audience_knowledge'){
-    const saved=(item.value||'').match(/^Audience: (.*?) · Prior knowledge: (.*)$/);
-    const audience=field('Who is this for?','text',saved?.[1]||'');
-    const knowledge=field('What do they already know?','text',saved?.[2]||'');
-    audience.input.required=true;knowledge.input.required=true;
-    audience.input.maxLength=100;knowledge.input.maxLength=120;
-    knowledge.input.placeholder='New to the topic';
+    // Pick who it is for in one click; optionally add what they know (Enter applies both).
+    const parsed=saved.match(/^Audience: (.*?)(?: · Prior knowledge: (.*))?$/);
+    const state={audience:parsed?.[1]||'',knowledge:parsed?.[2]||''};
+    const value=()=>'Audience: '+state.audience+(state.knowledge?' · Prior knowledge: '+state.knowledge:'');
     const row=node('div',undefined,'picker-presets');
-    options.forEach(label=>row.append(button(label,()=>{audience.input.value=label;knowledge.input.focus();})));
-    form.append(row,audience.wrapper,knowledge.wrapper);
-    submit(form,()=>'Audience: '+audience.input.value.trim()+' · Prior knowledge: '+knowledge.input.value.trim(),choose);
-    target.append(form);
+    const chips=options.map(label=>{const b=button(label,()=>{state.audience=label;paint();live(value());knowledge.input.focus();});row.append(b);return [label,b];});
+    const own=entry('Someone else',{placeholder:'Who is this for?',maxLength:100,onCommit:v=>{state.audience=v;paint();live(value());knowledge.input.focus();}});
+    const knowledge=entry('What do they already know? (optional)',{value:state.knowledge,placeholder:'New to the topic',maxLength:120,
+      validate:()=>state.audience?'':'Choose who it is for first.',onCommit:v=>{state.knowledge=v;choose(value());}});
+    function paint(){chips.forEach(([label,b])=>b.setAttribute('aria-pressed',String(state.audience===label)));}
+    target.append(row,own.element,knowledge.element);paint();
     return true;
   }
   if(family==='include_exclude'){
-    const configured=new Map((item.value||'').split(' · ').flatMap(part=>{
+    // Each switch applies live; the picker stays open while topics are sorted.
+    const configured=new Map(saved.split(' · ').flatMap(part=>{
       const [mode,labels]=part.split(': ');
       return (labels||'').split('; ').map(label=>[label,mode]);
     }));
+    const value=()=>['Include','Exclude'].map(mode=>{
+      const labels=inputs.filter(([,state])=>state.value===mode).map(([label])=>label);
+      return labels.length?mode+': '+labels.join('; '):'';
+    }).filter(Boolean).join(' · ');
     const inputs=options.map(label=>{
       const row=node('div',undefined,'composer-choice-row');
       const state={value:configured.get(label)||'Undecided'};
-      const seg=segmented(label,[['Include','Include'],['Undecided','Maybe'],['Exclude','Leave out']],state,()=>seg.paint());
-      row.append(node('span',label),seg.element);form.append(row);seg.paint();return [label,state];
+      const seg=segmented(label,[['Include','Include'],['Undecided','Maybe'],['Exclude','Leave out']],state,()=>{seg.paint();live(value());});
+      row.append(node('span',label),seg.element);target.append(row);seg.paint();return [label,state];
     });
-    submit(form,()=>['Include','Exclude'].map(mode=>{
-      const labels=inputs.filter(([,select])=>select.value===mode).map(([label])=>label);
-      return labels.length?mode+': '+labels.join('; '):'';
-    }).filter(Boolean).join(' · '),choose);
-    target.append(form);
     return true;
   }
   if(family==='assumption'){
     const assumption=options[0]||item.phrase;
-    const correction=field('Correction','text',item.value&&item.value!==assumption?item.value:'');
-    correction.input.placeholder='What should we assume instead?';
-    correction.input.required=true;
-    const confirm=button('Yes, that’s right',()=>choose(assumption));confirm.className='picker-apply';
-    target.append(node('p',assumption,'picker-tone-sample'),confirm);
-    form.append(correction.wrapper);
-    submit(form,()=>correction.input.value.trim(),choose,'Use correction');
-    form.querySelector('.picker-apply').className='picker-apply picker-secondary';
-    target.append(form);
+    const confirm=node('button','Yes, that’s right','picker-apply');confirm.type='button';confirm.onclick=()=>choose(assumption);
+    const correction=entry('Or correct it',{value:saved&&saved!==assumption?saved:'',placeholder:'What should we assume instead?',onCommit:v=>choose(v)});
+    target.append(node('p',assumption,'picker-tone-sample'),confirm,correction.element);
     return true;
   }
   if(['goal_comparison','example','tradeoff'].includes(family)&&options.length){
-    let selected=Math.max(0,options.indexOf(item.value));
+    // Rows apply on click; hovering or focusing a row previews what it would mean.
     const list=node('div',undefined,'picker-choices');
     const preview=node('div',undefined,'picker-tone-sample');
     preview.setAttribute('aria-live','polite');
-    const controls=options.map((label,index)=>button(label,()=>{
-      selected=index;paint();
-    }));
-    const paint=()=>{
-      controls.forEach((control,index)=>control.setAttribute('aria-pressed',String(index===selected)));
-      const sample=item.samples?.[selected]||'';
+    const show=index=>{
+      const sample=item.samples?.[index]||'';
       if(family==='tradeoff'&&sample.includes(' | ')){
         preview.classList.add('picker-tradeoff');
         preview.replaceChildren(...sample.split(' | ').slice(0,2).map(value=>node('span',value)));
-      }else{
-        preview.classList.remove('picker-tradeoff');
-        preview.textContent=sample;
-      }
-      preview.hidden=!sample;
-      onResize();
+      }else{preview.classList.remove('picker-tradeoff');preview.textContent=sample;}
+      preview.hidden=!sample;onResize();
     };
-    list.append(...controls);form.append(list,preview);
-    submit(form,()=>options[selected],choose);
-    target.append(form);paint();
+    options.forEach((label,index)=>{
+      const b=button(label,()=>{list.querySelectorAll('.picker-option').forEach(o=>o.setAttribute('aria-pressed',String(o===b)));choose(label);});
+      b.setAttribute('aria-pressed',String(saved===label));
+      for(const event of ['pointerenter','focus'])b.addEventListener(event,()=>show(index));
+      list.append(b);
+    });
+    target.append(list,preview);show(Math.max(0,options.indexOf(saved)));
     return true;
   }
   return false;

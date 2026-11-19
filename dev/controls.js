@@ -49,15 +49,11 @@ for (const [type, info] of Object.entries(INFORMATION_TYPES)) {
   heading.textContent = fixture.question;
   const options = document.createElement('div');
   options.className = 'popover-options';
-  const chosen = document.createElement('p');
-  chosen.className = 'chosen';
   sample.append(heading, options);
-  card.append(meta, sample, chosen);
+  card.append(meta, sample);
   grid.append(card);
   const item = {type, phrase: info.label, question: fixture.question, options: fixture.options, samples: fixture.samples || [], unit: fixture.unit || '', value: '', confirmed: false};
-  renderInformationControl(options, item, value => {
-    chosen.replaceChildren('Inserts: ', Object.assign(document.createElement('b'), {textContent: value || '(cleared)'}));
-  });
+  renderInformationControl(options, item, () => {});
 }
 
 // The slide format picker, which lives in app.js, shown with its previews.

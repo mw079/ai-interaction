@@ -19,7 +19,12 @@ AI Interaction is a web prototype for working with AI while a thought is still t
 - **Starting and docking:** the empty composer starts in the centre. Once a page exists, it docks at the bottom as a one-line bar and expands when clicked. The composer is always the last item in the dock. Live questions, answers, status and refinement links stack above it on solid cards, so Send never moves while they appear or disappear.
 - **When live help runs:** Luna first runs after four completed words, then after every four more, at least 1.2 s apart. It also runs after a 100 ms pause at the end of a sentence or a 250 ms ordinary pause. At most one preview is in flight, exact repeats are served from a 20-entry cache, and a change of direction cancels older work.
 - **Questions:** one at a time, above the field. When both are open, "How would you like to explore this?" (format) comes before "Who is this explanation for?" (audience). The chosen format is kept until the draft is cleared or sent. An audience chosen earlier in the session is not asked again.
-- **Highlighted phrases** open a control from the composer library. Choosing a value inserts `phrase (value)` and keeps it editable.
+- **Highlighted phrases** open a control from the composer library. Choosing is committing; there is no "Use this" step:
+  - single choices apply and close
+  - multi-select and include/exclude update the draft live while the popover stays open
+  - typed answers apply on Enter or the small arrow
+
+  An "In your draft" line shows the current value with Clear. The draft gets `phrase (value)`, which stays editable.
 - **Autocomplete** shows as grey text; Tab accepts and Escape dismisses.
 - **Review intent** opens a card where the inferred goal can be edited.
 
@@ -39,7 +44,7 @@ There are two libraries and one shared visual language (`public/style.css`). In 
 
 | Library | Inventory | Code | Gallery |
 | --- | --- | --- | --- |
-| Composer controls (text field) | 28 information types in 16 control families, plus the slide format picker with preview sketches | `public/intent.js`, `public/controls.js`, `public/composer-extensions.js` | `/__dev/pickers` |
+| Composer controls (text field) | 28 information types in 16 control families, plus the slide format picker with preview sketches | `public/intent.js`, `public/controls.js`, `public/composer-extensions.js` | `/__dev/controls` |
 | Page components (Atlas) | 24 block types plus the Kepler and projectile simulations, for 26 slide formats | `public/component-catalog.js`, `public/diagrams.js`, `public/interactives.js`, `public/dg-kit.js` | `/__dev/components` |
 
 **Page components:**

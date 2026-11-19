@@ -14,6 +14,8 @@ export const keplerAudienceQuestion='Who is this explanation for?';
 export const vaccineTitle='How vaccines work';
 export const vaccineFollowUps=['Why do boosters fade?','Are side effects common?'];
 export const deeperAnswer=question=>'Short answer about '+question;
+export const requirementsDraft='Plan a quiet weekend trip with vegetarian food';
+export const requirementsQuestion='What must the trip include?';
 export const japanCheckpoint='Plan a Japan trip';
 export const japanQuestion='Which part of Japan should the trip focus on?';
 export const japanAnswer='Start by choosing a region to anchor the trip.';
@@ -53,6 +55,10 @@ function previewFor({phase,text}){
     return {...preview,kind:'kepler',body:['Change the orbit to explore Kepler’s laws.']};
   }
   if(text===completedComparison)return {...preview,body:[comparisonAnswer]};
+  if(text.startsWith(requirementsDraft.slice(0,20)))return {
+    ...preview,questionKind:'clarify',question:requirementsQuestion,phrase:'vegetarian food',options:['Vegetarian meals','Step-free access'],body:['Pick a base with good vegetarian options.'],
+    information:[{type:'requirements',phrase:'vegetarian food',question:requirementsQuestion,options:['Vegetarian meals','Step-free access'],unit:'',samples:[]}]
+  };
   if(text.includes(kyotoChoice))return {...preview,body:[kyotoAnswer],interpretation:'Plan five days in Kyoto.'};
   if(text===keplerAudienceDraft)return {
     ...preview,questionKind:'clarify',question:'Who should this simple explanation be for?',phrase:'simply',
