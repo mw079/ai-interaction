@@ -2,7 +2,7 @@
 
 The model selects up to two visual blocks per page. A block has a stable `id`, a supported `type`, a title, a `prompt`, 2–6 items (`label`, `detail`, numeric `value`, and `latitude`/`longitude`, which are null except for maps), and up to eight indexed connections (`from`, `to`, `label`). The server validates this contract; the browser maps it to trusted renderers. No generated HTML, event handlers or model-supplied code is executed.
 
-There are 18 block types:
+There are 24 block types:
 
 | Type | Use it for |
 | --- | --- |
@@ -24,20 +24,26 @@ There are 18 block types:
 | evidence | Claims linked to provided sources; never invented evidence |
 | map | Places with accurate latitude and longitude |
 | linked_scenarios | One shared parameter with two named outcomes per input value |
+| proportion | Parts of one whole as a stacked bar with a legend |
+| matrix | Four quadrants on two dimensions; prompt is "x-axis | y-axis" |
+| checklist | Practical steps the reader ticks off, with progress |
+| flashcards | Question and answer cards the reader flips |
+| spectrum | Items placed on a 0–100 scale; prompt is "low end | high end" |
+| key_numbers | Two to four grounded figures as large numbers |
 
 Dedicated Kepler and projectile renderers remain available for their specific trusted simulations. The generic families are intentionally bounded; they are not an arbitrary chart editor or generated website runtime. Visuals are preferred where they help explain the request; text-only remains appropriate for writing tasks.
 
 ## Slide format recipes
 
-`SLIDE_RECIPES` defines 20 slide formats that the composer can offer (up to three at a time) before Send: cycle, example, practice, relationships, timeline, compare, chart, hotspots, parameter, prediction, decision, reveal, hierarchy, sorting, function, evidence, map, scenarios, orbit and projectile. The user can pick one or let Terra decide.
+`SLIDE_RECIPES` defines 26 slide formats that the composer can offer (up to three at a time) before Send: cycle, example, practice, relationships, timeline, compare, chart, hotspots, parameter, prediction, decision, reveal, hierarchy, sorting, function, evidence, map, scenarios, parts, matrix, checklist, flashcards, spectrum, numbers, orbit and projectile. The user can pick one or let Terra decide.
 
 ## Where the code lives
 
 The schema, validators, recipes and model-facing descriptions live in `public/component-catalog.js`. `public/component-renderer.js` sets up each block and its local state.
 
-Prebuilt diagram components in `public/diagrams.js` draw cycle (a ring), timeline (a process track), comparison (cards), chart (labelled bars), hierarchy and decision_tree (a tree that highlights the path to the selection), and graph and hotspot_diagram (a focus map whose selected idea moves to the centre). They share one anatomy: a visual stage with one item in focus, a one-sentence caption for that item, and a "2 / 5" stepper that also responds to the arrow keys. The remaining types still use `public/slide-interactions.js` and `public/slide-extensions.js`.
+Prebuilt diagram components in `public/diagrams.js` draw cycle (a ring), timeline (a process track), comparison (cards), chart (labelled bars), hierarchy and decision_tree (a tree that highlights the path to the selection), and graph and hotspot_diagram (a focus map whose selected idea moves to the centre). They share one anatomy: a visual stage with one item in focus, a one-sentence caption for that item, and a "2 / 5" stepper that also responds to the arrow keys. `public/interactives.js` draws the activities and explorers: parameter explorer, prediction, before/after, sorting, function plot, evidence, map, linked scenarios, worked example, practice and the six newest types. Both files share `public/dg-kit.js`. The older `slide-interactions.js` and `slide-extensions.js` remain only as fallbacks.
 
-With the local server running, `http://127.0.0.1:4317/__dev/components` shows every prebuilt component with sample content. Components use plain DOM/SVG and the existing Atlas style, with no new framework dependencies. Add a new type to the schema, validator, descriptions and renderer together. Component IDs must stay stable when a model proposes modifying an existing block.
+With the local server running, `http://127.0.0.1:4317/__dev/components` shows every prebuilt component with sample content from `dev/component-fixtures.js`; a unit test checks that each example is valid model output and that every type has one. Components use plain DOM/SVG and the existing Atlas style, with no new framework dependencies. Add a new type to the schema, validator, descriptions and renderer together. Component IDs must stay stable when a model proposes modifying an existing block.
 
 ## Questions and changes
 

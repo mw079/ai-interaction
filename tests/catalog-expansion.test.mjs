@@ -5,9 +5,9 @@ import {CONTROL_FAMILIES} from '../public/intent.js';
 import {applyFollowUpScope,followUpScopes} from '../public/composer-extensions.js';
 import {handleAPI} from '../api.mjs';
 
-test('the twenty slide components have a selection recipe',()=>{
+test('all twenty-six slide components have a selection recipe',()=>{
   const types=Object.values(SLIDE_RECIPES).flatMap(recipe=>recipe.blocks??[]);
-  assert.equal(COMPONENT_TYPES.length+Object.values(SLIDE_RECIPES).filter(recipe=>recipe.kind).length,20);
+  assert.equal(COMPONENT_TYPES.length+Object.values(SLIDE_RECIPES).filter(recipe=>recipe.kind).length,26);
   assert.deepEqual(new Set(types),new Set(COMPONENT_TYPES));
   assert.equal(CONTROL_FAMILIES.length,16); // Slide picker and three composer context controls are separate.
 });
@@ -46,4 +46,12 @@ test('files are unsupported for both drafts and explicit Send',async()=>{
     assert.equal(response.status,400);
     assert.match((await response.json()).error,/File attachments are unsupported/);
   }
+});
+
+test('every gallery example is valid model output for its component',async()=>{
+ const {SPECIMENS}=await import('../dev/component-fixtures.js');
+ const {validComponents,COMPONENT_TYPES}=await import('../public/component-catalog.js');
+ for(const {name,block} of SPECIMENS)assert.ok(validComponents([block]),name+' should pass validation');
+ const covered=new Set(SPECIMENS.map(s=>s.block.type));
+ assert.deepEqual(COMPONENT_TYPES.filter(type=>!covered.has(type)),[],'every component type has a gallery example');
 });

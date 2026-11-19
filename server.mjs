@@ -8,7 +8,7 @@ let worker=await import('./dist/server/index.js');
 const port=Number(process.env.PORT||4317);
 const server=http.createServer(async(req,res)=>{
  try{
-  const devFiles={'/__dev/pickers':'pickers.html','/__dev/pickers.js':'pickers.js','/__dev/components':'components.html','/__dev/components.js':'components.js'};
+  const devFiles={'/__dev/pickers':'pickers.html','/__dev/pickers.js':'pickers.js','/__dev/components':'components.html','/__dev/components.js':'components.js','/__dev/component-fixtures.js':'component-fixtures.js'};
   const devFile=devFiles[new URL(req.url,'http://127.0.0.1').pathname];
   if(devFile&&req.method==='GET'){res.writeHead(200,{'Content-Type':devFile.endsWith('.js')?'application/javascript':'text/html','Cache-Control':'no-store'});res.end(await readFile(new URL('./dev/'+devFile,import.meta.url)));return;}
   const chunks=[];let bytes=0;for await(const chunk of req){bytes+=chunk.length;if(bytes>40000){res.writeHead(413);res.end('Request too large');return;}chunks.push(chunk);}
