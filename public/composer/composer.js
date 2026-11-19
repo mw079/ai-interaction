@@ -1,8 +1,8 @@
-import {slideRecipe} from './component-catalog.js';
+import {slideRecipe} from '../components/catalog.js';
 import {positionPopover} from './popover.js';
-import {canAcceptCompletion,freshCompletion} from './model.js';
+import {canAcceptCompletion,freshCompletion} from '../shared/model.js';
 const $=id=>document.getElementById(id);
-const make=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
+import {element as make} from '../shared/dom.js';
 export function setupComposerExperience({state,changed,request,openDetail,closeDetail,setIntent}){
  let completion='',helpController=null,selectionTimer=null,selectionVersion=0,lastSelection='',summary='',question=null,completedQuestion=null,questionTimer=null;
  const input=$('intent-input'),composer=document.querySelector('.composer'),trigger=$('clarify-phrase');
@@ -14,7 +14,7 @@ export function setupComposerExperience({state,changed,request,openDetail,closeD
  const intentForm=make('form','intent-edit-form');intentForm.hidden=true;
  const intentLabel=make('label','','What do you want to achieve?');intentLabel.htmlFor='intent-edit-input';
  const intentInput=make('textarea');intentInput.id='intent-edit-input';intentInput.rows=3;intentInput.maxLength=500;intentInput.required=true;
- const intentActions=make('div','intent-edit-actions');const cancelIntent=make('button','','Cancel');cancelIntent.type='button';const saveIntent=make('button','picker-apply','Use this intent');saveIntent.type='submit';intentActions.append(cancelIntent,saveIntent);intentForm.append(intentLabel,intentInput,intentActions);
+ const intentActions=make('div','intent-edit-actions');const cancelIntent=make('button','','Cancel');cancelIntent.type='button';const saveIntent=make('button','control-apply','Use this intent');saveIntent.type='submit';intentActions.append(cancelIntent,saveIntent);intentForm.append(intentLabel,intentInput,intentActions);
  const resetIntent=make('button','intent-reset-button','Use suggested intent');resetIntent.type='button';resetIntent.hidden=true;
  summaryCard.append(headingRow,summaryText,intentForm,$('intent-refinements'),resetIntent);document.body.append(summaryCard);
  function editingIntent(on){intentForm.hidden=!on;summaryText.hidden=on;editIntent.hidden=on;resetIntent.hidden=on||!state.intentOverride;}

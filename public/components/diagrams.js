@@ -5,7 +5,7 @@
 //   stage   – the visual itself; one item is in focus, the rest stay as quiet context
 //   caption – one line of explanation for the focused item (the existing `detail` element)
 //   stepper – "2 / 5" with previous/next, plus ←/→ on the stage
-import {SVG, el, svgEl, pct, arrowMarker, nextMarkerId, frame, nodeButton, canvas} from './dg-kit.js';
+import {SVG, el, svgEl, pct, arrowMarker, nextMarkerId, frame, nodeButton, canvas} from './kit.js';
 import {INTERACTIVES} from './interactives.js';
 
 /* ── Cycle: steps on a ring, the loop is the point ─────────────────────────── */

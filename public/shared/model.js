@@ -1,5 +1,5 @@
-import {validComponents,validSlideOptions} from './component-catalog.js';
-import {validInformation} from './intent.js';
+import {validComponents,validSlideOptions} from '../components/catalog.js';
+import {validInformation} from '../composer/intent.js';
 export const FORMATS = ['Auto','Interactive page', 'Diagram', 'Outline'];
 export function isIncompleteComparison(text){
  const draft=text.trim().replace(/[\s.…]+$/u,'');

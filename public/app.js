@@ -1,20 +1,22 @@
-import {renderFollowUpScope,followUpScopes,applyFollowUpScope} from './composer-extensions.js';
-import {slideRecipe} from './component-catalog.js';
-import {setupPageAssistant} from './page-assistant.js';
-import {renderAtlas,refreshDeeper} from './atlas.js';
-import {PageTimeline,DirectEditUndo,historyLimit} from './page-timeline.js';
-import {setupWorkspace} from './workspace.js';
-import {withSingleRetry,requestError} from './retry.js';
-import {readSSE} from './stream.js';
-import {confirmedChoices,requestContext} from './request-context.js';
-import {setupComposerExperience} from './composer.js';
-import {INFORMATION_TYPES, informationFor, rebaseInformation, chooseInformation, mergeInformation} from './intent.js';
-import {renderInformationControl,formatPreview} from './controls.js';
-import {positionPopover} from './popover.js';
-import {demoPreview, trajectory, validPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isIncompleteComparison, draftWordCount, completedDraft, PREVIEW_WORD_STEP, extendsPreview, workingDraftPreview, draftAnswersQuestion} from './model.js';
+import {element} from './shared/dom.js';
+import {createApiClient} from './shared/api-client.js';
+import {renderProjectile} from './page/projectile.js';
+import {renderFollowUpScope,followUpScopes,applyFollowUpScope} from './composer/controls-extended.js';
+import {slideRecipe} from './components/catalog.js';
+import {setupPageAssistant} from './page/assistant.js';
+import {renderAtlas,refreshDeeper} from './page/atlas.js';
+import {PageTimeline,DirectEditUndo,historyLimit} from './page/timeline.js';
+import {setupWorkspace} from './page/workspace.js';
+import {confirmedChoices} from './composer/request-context.js';
+import {setupComposerExperience} from './composer/composer.js';
+import {INFORMATION_TYPES, informationFor, rebaseInformation, chooseInformation, mergeInformation} from './composer/intent.js';
+import {renderControl,formatPreview} from './composer/controls.js';
+import {positionPopover} from './composer/popover.js';
+import {demoPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isIncompleteComparison, draftWordCount, completedDraft, PREVIEW_WORD_STEP, extendsPreview, workingDraftPreview, draftAnswersQuestion} from './shared/model.js';
 const $ = id => document.getElementById(id);
 const state = {key:'', live:false, requests:0, connectionRevision:0, composing:false, revision:0, format:'Auto', audience:'', controller:null, timer:null, proposal:null, component:null, history:[], uncertainty:null, popoverTimer:null, clarification:null, openClarification:null, popoverOrigin:null, suppressed:null, customDrafts:new Map(), serverKey:false, pendingSend:false, pageController:null, pageRequest:0, taskGoal:'', pageVersion:0, information:[], previousDraft:'', activeInformation:null,confirmedChoices:[],answers:[],intentOverride:'',slideChoice:undefined};
-const node=(tag, cls, text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
+const node=element;
+const {modelPayload,callPreview}=createApiClient({state,pageContext:()=>pageContext(),status:(text,error)=>status(text,error)});
 let composerExperience,workspace;
 let followUpScope=null;
 let lastPageSelection=null;
@@ -222,7 +224,7 @@ function openIntentPopover(origin='click',sourceAnchor=null){
     composerExperience?.onMirrorRendered();
     return;
   }
-  if(u.type)renderInformationControl($('popover-options'),u,applyClarification,()=>{if(!$('intent-popover').hidden)positionIntentPopover();});else choices($('popover-options'),u.options,'',applyClarification);
+  if(u.type)renderControl($('popover-options'),u,applyClarification,()=>{if(!$('intent-popover').hidden)positionIntentPopover();});else choices($('popover-options'),u.options,'',applyClarification);
   $('popover-custom').value=state.customDrafts.get(u.question)||'';
   const hasDraft=!!$('popover-custom').value||(!u.options?.length&&(!u.type||INFORMATION_TYPES[u.type].family==='choices'));
   $('popover-custom').placeholder=hasDraft&&!u.options?.length?'Type your answer…':'In your own words…';
@@ -432,35 +434,6 @@ function addInlineQuestion(target,selection){
   const button=node('button','primary-button','Ask here');const answer=node('p','inline-answer');answer.setAttribute('role','status');
   button.onclick=async()=>{if(!field.value.trim())return;button.disabled=true;answer.textContent=state.live?'Luna is preparing an explanation…':'Connect OpenAI to ask a question about this passage.';if(state.live){try{const data=await callPreview({text:`Explain this selected passage: ${selection}\nQuestion: ${field.value}`,audience:state.audience,format:'Outline'},new AbortController().signal);answer.textContent=data.preview.body.join('\n\n');}catch(error){answer.textContent=error.message;}}button.disabled=false;};
   region.append(label,button,answer);target.append(region);field.focus();
-}
-// The trusted projectile simulator, placed in the Atlas visual column.
-function renderProjectile(p){
-  const target=node('div');
-    const sim=node('div','physics-simulation');const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 540 230');svg.setAttribute('role','img');svg.setAttribute('aria-label','Ideal projectile trajectory in metres');svg.classList.add('trajectory');sim.append(svg);
-    const readings=node('div','physics-readings');readings.setAttribute('aria-live','polite');sim.append(readings);
-    const controls=node('div','simulation-controls');
-    function draw(){const r=trajectory(p.physics.speed,p.physics.angle,p.physics.gravity);const sx=x=>36+x/(r.range*1.08)*470;const sy=y=>193-y/(r.height*1.25)*165;svg.replaceChildren();const add=(tag,attrs,text)=>{const n=document.createElementNS(svg.namespaceURI,tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,String(v)));if(text)n.textContent=text;svg.append(n);return n;};add('line',{x1:36,y1:193,x2:515,y2:193,class:'plot-axis'});add('line',{x1:36,y1:20,x2:36,y2:193,class:'plot-axis'});add('path',{d:r.points.map((pt,i)=>`${i?'L':'M'}${sx(pt.x).toFixed(2)},${sy(pt.y).toFixed(2)}`).join(' '),fill:'none',class:'plot-path'});const peak=r.points[30];add('circle',{cx:sx(peak.x),cy:sy(peak.y),r:5,class:'plot-point'});add('text',{x:36,y:215,class:'plot-label'},'0');add('text',{x:400,y:215,class:'plot-label'},`${r.range.toFixed(1)} m range`);add('text',{x:45,y:22,class:'plot-label'},`${r.height.toFixed(1)} m peak`);readings.textContent=`${r.duration.toFixed(2)} s in flight · ${r.range.toFixed(1)} m horizontal distance`;}
-    [['speed','Launch speed',5,30,'m/s'],['angle','Launch angle',10,80,'°']].forEach(([key,title,min,max,unit])=>{const label=node('label');const top=node('span','control-label');const out=node('output','',`${p.physics[key]}${unit==='°'?'':' '}${unit}`);top.append(node('span','',title),out);const range=node('input');range.type='range';range.min=min;range.max=max;range.value=p.physics[key];range.setAttribute('aria-label',title);range.oninput=()=>{p.physics[key]=Number(range.value);out.textContent=`${range.value}${unit==='°'?'':' '}${unit}`;draw();};label.append(top,range);controls.append(label);});
-    const glabel=node('label','gravity-control','Gravity');const gravity=node('select');gravity.setAttribute('aria-label','Gravity');[['9.81','Earth · 9.81 m/s²'],['1.62','Moon · 1.62 m/s²'],['3.71','Mars · 3.71 m/s²']].forEach(([v,t])=>{const o=node('option','',t);o.value=v;gravity.append(o);});gravity.value=String(p.physics.gravity);gravity.onchange=()=>{p.physics.gravity=Number(gravity.value);draw();};glabel.append(gravity);controls.append(glabel);sim.append(controls,node('p','simulation-note','Ideal model: no air resistance; launch and landing at the same height. Axes rescale to fit.'));target.append(sim);draw();
-  return target.querySelector('.physics-simulation');
-}
-function modelPayload(payload,onProgress){
-  return {...payload,stream:typeof onProgress==='function'&&['preview','page-help'].includes(payload.phase),context:requestContext({explicitIntent:state.intentOverride,draft:payload.text,page:payload.context??pageContext(),confirmed:[...state.confirmedChoices,...confirmedChoices([...state.information,...state.answers])],date:new Date().toLocaleDateString('en-CA'),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone})};
-}
-async function callPreview(payload,signal,onProgress,body=JSON.stringify(modelPayload(payload,onProgress))){
-  const revision=state.revision;
-  return withSingleRetry(()=>callPreviewAttempt(body,signal,onProgress),{signal,enabled:['preview','page','page-help'].includes(payload.phase),isCurrent:()=>state.revision===revision,onRetry:()=>{onProgress?.({reset:true});status('Connection interrupted. Retrying once…');}});
-}
-async function callPreviewAttempt(body,signal,onProgress){
-  if(state.requests>=30)throw new Error('This connection has reached its 30-preview limit. Reconnect to enable another session, or use demo mode.');
-  state.requests++;
-  let response;try{response=await fetch('/api/preview',{method:'POST',headers:{'Content-Type':'application/json',...(state.key?{'Authorization':`Bearer ${state.key}`}:{})},body,signal});}catch(error){if(signal?.aborted)throw error;throw requestError('Connection interrupted. Try again.',true);}
-  if(!response.ok){let failure={};try{failure=await response.json();}catch{}throw requestError(failure.error||'Preview unavailable. Try again.',typeof failure.retryable==='boolean'?failure.retryable:response.status>=500);}
-  let data;try{if(response.headers.get('Content-Type')?.includes('text/event-stream')){
-    for await(const event of readSSE(response.body,{signal})){if(event.type==='partial')onProgress?.(event.preview);else if(event.type==='error')throw requestError(event.error||'The preview was interrupted.',event.retryable===true);else if(event.type==='done'){data=event;break;}}
-    if(!data)throw requestError('The preview was interrupted. Try again.',true);
-  }else data=await response.json();}catch(error){if(error instanceof TypeError&&!signal?.aborted)throw requestError('Connection interrupted. Try again.',true);throw error;}
-  if(!validPreview(data.preview))throw new Error('The preview was invalid. Your page is unchanged.');return data;
 }
 function livePreviewRequest(text){
   return {text,audience:state.audience,format:state.format,phase:'preview'};

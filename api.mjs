@@ -1,10 +1,10 @@
-import {COMPONENT_SCHEMA,validPageHelp,validComponents,SLIDE_RECIPES,slideRecipe,matchesSlideRecipe} from './public/component-catalog.js';
-import {readSSE,partialLivePreview,partialPageAnswer} from './public/stream.js';
-import {FORMATS,validPreview,isIncompleteComparison,tidyPage} from './public/model.js';
+import {COMPONENT_SCHEMA,validPageHelp,validComponents,SLIDE_RECIPES,slideRecipe,matchesSlideRecipe} from './public/components/catalog.js';
+import {readSSE,partialLivePreview,partialPageAnswer} from './public/shared/stream.js';
+import {FORMATS,validPreview,isIncompleteComparison,tidyPage} from './public/shared/model.js';
 import {modelInstructions,buildModelInput} from './prompts.mjs';
 
 const string={type:'string'};
-import {INFORMATION_TYPES} from './public/intent.js';
+import {INFORMATION_TYPES} from './public/composer/intent.js';
 const informationTypes=Object.keys(INFORMATION_TYPES);
 const array=items=>({type:'array',items});
 export const PREVIEW_SCHEMA={type:'object',additionalProperties:false,properties:{kind:{type:'string',enum:['projectile','outline','planner','kepler']},title:string,interpretation:string,audience:string,questionKind:{type:'string',enum:['clarify','explore','none']},question:string,phrase:string,completion:string,options:array(string),body:array(string),nodes:array(string),information:array({type:'object',additionalProperties:false,properties:{type:{type:'string',enum:informationTypes},phrase:string,question:string,options:array(string),unit:string,samples:array(string)},required:['type','phrase','question','options','unit','samples']}),rows:array({type:'object',additionalProperties:false,properties:{criterion:string,a:string,b:string},required:['criterion','a','b']})},required:['kind','title','interpretation','audience','questionKind','question','phrase','options','body','nodes','rows','information','completion']};

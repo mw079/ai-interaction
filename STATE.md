@@ -41,12 +41,12 @@ AI Interaction is a web prototype for working with AI while a thought is still t
 
 ## Component libraries
 
-There are two libraries and one shared visual language (`public/style.css`). In both, the model supplies validated data and never HTML or code; the app owns rendering, layout and behaviour.
+There are two libraries and one shared visual language (`public/styles/`). In both, the model supplies validated data and never HTML or code; the app owns rendering, layout and behaviour.
 
 | Library | Inventory | Code | Gallery |
 | --- | --- | --- | --- |
-| Composer controls (text field) | 28 information types in 16 control families, plus the slide format picker with preview sketches | `public/intent.js`, `public/controls.js`, `public/composer-extensions.js` | `/__dev/controls` |
-| Page components (Atlas) | 24 block types plus the Kepler and projectile simulations, for 26 slide formats | `public/component-catalog.js`, `public/diagrams.js`, `public/interactives.js`, `public/dg-kit.js` | `/__dev/components` |
+| Composer controls (text field) | 28 information types in 16 control families, plus the slide format choice with preview sketches | `public/composer/`: `intent.js`, `controls.js`, `controls-extended.js`, `control-kit.js` | `/__dev/controls` |
+| Page components (Atlas) | 24 block types plus the Kepler and projectile simulations, for 26 slide formats | `public/components/`: `catalog.js`, `renderer.js`, `diagrams.js`, `interactives.js`, `kit.js` | `/__dev/components` |
 
 **Page components:**
 - **Diagrams:** cycle (a ring), process (a track with progress), comparison (cards; four or more items become a criteria list), chart (labelled bars), tree (hierarchy and decision tree), concept map and labelled diagram (the selected idea moves to the centre).

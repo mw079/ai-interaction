@@ -1,4 +1,4 @@
-import {renderComposerExtension} from './composer-extensions.js';
+import {renderComposerExtension} from './controls-extended.js';
 import {INFORMATION_TYPES} from './intent.js';
 import {make,button,entry} from './control-kit.js';
 // A tiny schematic of a response format, chosen from words in its label.
@@ -21,46 +21,46 @@ export function formatPreview(value,forced){
 // One renderer per family. Values and suggestions belong to the descriptor, never the template.
 // Choosing is committing: single choices apply and close; multi-value controls apply each change
 // live and stay open; typed answers apply on Enter. Nothing needs a separate "Use this" step.
-export function renderInformationControl(target,item,onChoose,onResize=()=>{}){
+export function renderControl(target,item,onChoose,onResize=()=>{}){
   target.replaceChildren();const {family}=INFORMATION_TYPES[item.type];target.dataset.family=family;
   const options=item.options||[];
   const choose=(value,opts)=>{
     // The highlighted row is the only indicator of the current choice.
-    target.querySelectorAll('.picker-choices:not(.picker-multi)>.picker-option,.picker-cards>.picker-option,.picker-presets>.picker-option').forEach(b=>b.setAttribute('aria-pressed',String(b.textContent===value)));
+    target.querySelectorAll('.control-choices:not(.control-multi)>.control-option,.control-cards>.control-option,.control-presets>.control-option').forEach(b=>b.setAttribute('aria-pressed',String(b.textContent===value)));
     onChoose(value,opts);
   };
   const live=value=>choose(value,{keepOpen:true});
   function option(value,{sample}={}){
     // Clicking the selected option again clears it.
-    const b=button(value,()=>choose(b.getAttribute('aria-pressed')==='true'?'':value),'picker-option');
+    const b=button(value,()=>choose(b.getAttribute('aria-pressed')==='true'?'':value),'control-option');
     b.setAttribute('aria-pressed',String(item.confirmed&&item.value===value));
     if(sample)for(const event of ['pointerenter','focus'])b.addEventListener(event,()=>sample(value));
     return b;
   }
-  const rows=list=>{const g=make('div','picker-choices');g.append(...list);target.append(g);return g;};
+  const rows=list=>{const g=make('div','control-choices');g.append(...list);target.append(g);return g;};
   const finish=()=>onResize();
   if(renderComposerExtension(target,family,item,choose,onResize)){finish();return;}
 
   if(family==='tone'||(family==='depth'&&options.length)){
     // Ordered rows (brief to detailed for depth). Tone previews its sample on hover or focus.
-    const sample=make('blockquote','picker-tone-sample');
+    const sample=make('blockquote','control-tone-sample');
     const show=value=>{const text=item.samples?.[options.indexOf(value)]||'';sample.textContent=text;sample.hidden=!text;onResize();};
     rows(options.map(o=>option(o,{sample:family==='tone'?show:null})));
     if(family==='tone'){target.append(sample);show(item.confirmed&&options.includes(item.value)?item.value:options[0]);}
   }else if(['choices','cards','goal_comparison','example','tradeoff'].includes(family)){
-    const grid=make('div',family==='cards'?'picker-cards':'picker-choices');
+    const grid=make('div',family==='cards'?'control-cards':'control-choices');
     options.forEach(value=>{const b=option(value);if(family==='cards')b.prepend(formatPreview(value));grid.append(b);});
     target.append(grid);
   }else if(family==='search'){
-    const results=make('div','picker-choices');
+    const results=make('div','control-choices');
     const find=entry('Search or enter your own',{value:item.confirmed?item.value:'',placeholder:'Type to filter…',maxLength:300,onCommit:value=>choose(value)});
     find.input.type='search';
     const draw=()=>{const q=find.input.value.toLocaleLowerCase();results.replaceChildren(...options.filter(o=>o.toLocaleLowerCase().includes(q)).map(o=>option(o)));
-      if(!results.children.length)results.append(make('p','picker-hint','Press Enter to use what you typed.'));onResize();};
+      if(!results.children.length)results.append(make('p','control-hint','Press Enter to use what you typed.'));onResize();};
     find.input.addEventListener('input',draw);
     target.append(find.element,results);draw();
   }else if(family==='number'){
-    if(options.length){const presets=make('div','picker-presets');options.forEach(v=>presets.append(option(v)));target.append(presets);}
+    if(options.length){const presets=make('div','control-presets');options.forEach(v=>presets.append(option(v)));target.append(presets);}
     const numbers=(item.confirmed?item.value:'').match(/\d+(?:\.\d+)?/g)||[];
     const unit=item.unit?' '+item.unit:'';
     if(item.type==='budget'){
@@ -77,9 +77,9 @@ export function renderInformationControl(target,item,onChoose,onResize=()=>{}){
     }
   }else if(family==='datetime'){
     // Dates apply as soon as they are picked; a range applies once both ends are set.
-    const row=make('div','picker-date-row');
+    const row=make('div','control-date-row');
     const dates=(item.confirmed?item.value:'').match(/\d{4}-\d{2}-\d{2}/g)||[];
-    const field=(label,type,value)=>{const l=make('label','picker-entry');l.append(make('span','picker-entry-label',label));const i=make('input');i.type=type;i.value=value;l.append(i);row.append(l);return i;};
+    const field=(label,type,value)=>{const l=make('label','control-entry');l.append(make('span','control-entry-label',label));const i=make('input');i.type=type;i.value=value;l.append(i);row.append(l);return i;};
     if(item.type==='time'){
       const time=field('Time','time',((item.confirmed?item.value:'').match(/\b\d{2}:\d{2}\b/)||[''])[0]);
       const zone=Intl.DateTimeFormat().resolvedOptions().timeZone||'';
@@ -93,24 +93,24 @@ export function renderInformationControl(target,item,onChoose,onResize=()=>{}){
       date.onchange=()=>{if(date.value)choose(date.value);};
     }
     target.append(row);
-    if(options.length){const presets=make('div','picker-presets');options.forEach(v=>presets.append(option(v)));target.append(presets);}
+    if(options.length){const presets=make('div','control-presets');options.forEach(v=>presets.append(option(v)));target.append(presets);}
   }else if(family==='list'){
     // Multi-select applies live: each toggle or reorder updates the draft; the picker stays open.
     const ordered=item.type==='priorities';
     let selected=item.confirmed&&item.value?item.value.split(ordered?' → ':'; ').filter(Boolean):[];
     const all=()=>[...options,...selected.filter(v=>!options.includes(v))];
-    const choices=make('div','picker-choices picker-multi');target.append(choices);
-    const hint=make('p','picker-hint','Order matters: the first is most important.');
-    const list=make('ol','picker-list');if(ordered)target.append(hint,list);
+    const choices=make('div','control-choices control-multi');target.append(choices);
+    const hint=make('p','control-hint','Order matters: the first is most important.');
+    const list=make('ol','control-list');if(ordered)target.append(hint,list);
     const apply=()=>{const value=selected.join(ordered?' → ':'; ');if(value.length>300)return;live(value);draw();};
     const own=entry('Add your own',{placeholder:'Type and press Enter',maxLength:100,goLabel:'Add',onCommit:v=>{if(!selected.includes(v)&&selected.length<8){selected.push(v);own.input.value='';own.input.dispatchEvent(new Event('input'));apply();}}});
     target.append(own.element);
     function draw(){
-      choices.replaceChildren(...all().map(value=>{const b=button(value,()=>{selected=selected.includes(value)?selected.filter(s=>s!==value):[...selected,value];apply();},'picker-option');b.setAttribute('aria-pressed',String(selected.includes(value)));return b;}));
+      choices.replaceChildren(...all().map(value=>{const b=button(value,()=>{selected=selected.includes(value)?selected.filter(s=>s!==value):[...selected,value];apply();},'control-option');b.setAttribute('aria-pressed',String(selected.includes(value)));return b;}));
       list.replaceChildren(...(ordered?selected:[]).map((value,index)=>{
-        const li=make('li');li.append(make('span','picker-rank',String(index+1)),make('span','',value));
-        const up=button('↑',()=>{[selected[index-1],selected[index]]=[selected[index],selected[index-1]];apply();},'picker-icon');up.disabled=index===0;up.setAttribute('aria-label','Move '+value+' up');
-        const down=button('↓',()=>{[selected[index+1],selected[index]]=[selected[index],selected[index+1]];apply();},'picker-icon');down.disabled=index===selected.length-1;down.setAttribute('aria-label','Move '+value+' down');
+        const li=make('li');li.append(make('span','control-rank',String(index+1)),make('span','',value));
+        const up=button('↑',()=>{[selected[index-1],selected[index]]=[selected[index],selected[index-1]];apply();},'control-icon');up.disabled=index===0;up.setAttribute('aria-label','Move '+value+' up');
+        const down=button('↓',()=>{[selected[index+1],selected[index]]=[selected[index],selected[index+1]];apply();},'control-icon');down.disabled=index===selected.length-1;down.setAttribute('aria-label','Move '+value+' down');
         li.append(up,down);return li;}));
       list.hidden=hint.hidden=!selected.length;
       onResize();

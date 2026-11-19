@@ -8,11 +8,11 @@ export function worldPath(){
 }
 
 // A clickable world map for choosing a place; returns the chosen latitude and longitude.
-export function pickerMap({label,point,onPick}){
+export function areaMap({label,point,onPick}){
   const NS='http://www.w3.org/2000/svg';
   const svg=document.createElementNS(NS,'svg');
   svg.setAttribute('viewBox','0 8 360 150');
-  svg.setAttribute('class','picker-map');
+  svg.setAttribute('class','control-map');
   svg.setAttribute('role','img');
   svg.setAttribute('aria-label',label);
   const sea=document.createElementNS(NS,'rect');
@@ -22,7 +22,7 @@ export function pickerMap({label,point,onPick}){
   svg.append(sea,ground);
   if(point){
     const dot=document.createElementNS(NS,'circle');
-    for(const [k,v] of Object.entries({cx:point.longitude+180,cy:90-point.latitude,r:4,class:'picker-map-dot'}))dot.setAttribute(k,v);
+    for(const [k,v] of Object.entries({cx:point.longitude+180,cy:90-point.latitude,r:4,class:'control-map-dot'}))dot.setAttribute(k,v);
     svg.append(dot);
   }
   svg.addEventListener('click',event=>{

@@ -1,5 +1,5 @@
-import {renderCatalogBlock} from './component-renderer.js';
-const make=(tag,cls,text)=>{const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el;};
+import {renderComponent} from '../components/renderer.js';
+import {element as make} from '../shared/dom.js';
 const mathElement=(tag,...children)=>{
  const element=document.createElementNS('http://www.w3.org/1998/Math/MathML',tag);
  element.append(...children);
@@ -57,7 +57,7 @@ export function renderAtlas(target,p,{titleField,onEdit}){
  copy.append(text(p.edits.explanation??p.body[0]??'', 'Editable explanation',value=>p.edits.explanation=value,0));
  const fitTitle=()=>{titleField.style.height='0';titleField.style.height=titleField.scrollHeight+'px';};const titleObserver=new ResizeObserver(()=>{if(titleField.clientWidth)fitTitle();});titleObserver.observe(titleField);observers.push(titleObserver);queueMicrotask(fitTitle);layout.append(copy);if(diagram)layout.append(visual);target.append(layout);
  const askBlock=(anchor,block,practice)=>document.dispatchEvent(new CustomEvent('page:ask',{detail:{anchor,block,practice}}));
- if(p.components?.length){p.components.forEach((c,i)=>renderCatalogBlock(i===0?visual:target,c,p,{onEdit,ask:askBlock}));}
+ if(p.components?.length){p.components.forEach((c,i)=>renderComponent(i===0?visual:target,c,p,{onEdit,ask:askBlock}));}
  if(p.kind==='kepler'){
   const orbit=p.edits.orbit??={eccentricity:.45,phase:.15,law:1};
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 500 350');svg.setAttribute('role','img');svg.setAttribute('aria-label','Kepler orbit: Sun at a focus, planet position and two equal-time swept areas');svg.classList.add('atlas-orbit');visual.append(svg);
@@ -145,7 +145,7 @@ export function renderAtlas(target,p,{titleField,onEdit}){
     const body=make('div','atlas-next-body');
     body.append(make('p','atlas-next-answer',section.answer));
     panel.replaceChildren(body);
-    section.components?.forEach(component=>renderCatalogBlock(panel,component,p,{onEdit,ask:askBlock}));
+    section.components?.forEach(component=>renderComponent(panel,component,p,{onEdit,ask:askBlock}));
     panel.append(promote);
     panel.animate?.([{opacity:0,transform:'translateY(4px)'},{opacity:1,transform:'none'}],{duration:220,easing:'ease-out'});
    }else{

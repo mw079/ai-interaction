@@ -1,11 +1,7 @@
 // Shared building blocks for prebuilt components (public/diagrams.js, public/interactives.js).
 export const SVG = 'http://www.w3.org/2000/svg';
-export const el = (tag, cls, text) => {
-  const n = document.createElement(tag);
-  if (cls) n.className = cls;
-  if (text !== undefined) n.textContent = text;
-  return n;
-};
+import {element} from '../shared/dom.js';
+export const el = element;
 export const svgEl = (tag, attrs = {}) => {
   const n = document.createElementNS(SVG, tag);
   for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, String(v));

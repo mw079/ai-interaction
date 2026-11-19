@@ -51,11 +51,16 @@ No provider-owned/shared API key is deployed. No file uploads, browser agent, sh
 
 ## Source layout
 
-- `public/`: page shell, styles, component renderers, fixtures and physics calculations.
+- `public/app.js`: the app controller (state, live previews, Send, page versions, proposals). `public/index.html` is the page shell.
+- `public/composer/`: the composer: live help (`composer.js`), information types (`intent.js`), composer controls (`controls.js`, `controls-extended.js`, `control-kit.js`), the popover and request context.
+- `public/page/`: the Atlas page (`atlas.js`), help inside the page (`assistant.js`, `patch.js`), page versions (`timeline.js`), layout (`workspace.js`) and the projectile simulator.
+- `public/components/`: page components: the catalog the model may choose from (`catalog.js`), the renderer, `diagrams.js`, `interactives.js`, their shared kit and maps.
+- `public/shared/`: modules used on both sides (`model.js`, `stream.js`, `retry.js`), the API client and the DOM helper.
+- `public/styles/`: topical stylesheets (base, composer, page, components, controls), concatenated in that order into `/style.css` by `styles.mjs`.
 - `api.mjs`: same-origin credential check and bounded Responses adapter.
 - `prompts.mjs`: instructions for draft previews, slide generation and live slide help.
 - `server.mjs`: local Node preview, bound to loopback.
-- `build.mjs`: packs assets and API code into the Worker entry point.
+- `build.mjs`: packs every file under `public/` and the API code into the Worker entry point; relative imports are stripped by pattern when bundling the server code.
 - `.openai/hosting.json`: registered Sites identity; reuse it for future publications.
 - `tests/`: Node unit and API-boundary checks with mocked API responses; `tests/browser/` holds Playwright fixtures.
 - `STATE.md`: current product overview and next milestone.
@@ -83,7 +88,7 @@ Live clarification now uses the model response for the entire current draft, wit
 
 ## Contextual information controls (2026-11-18)
 
-`public/intent.js` defines 28 information types and maps them to 16 app-owned control families; `public/controls.js` renders their reusable templates. The model returns bounded descriptors (type, exact phrase, question, contextual options, numerical unit) for up to four relevant refinements. It does not supply HTML, scripts, or widget implementations. There is no fixed production menu of places or example answers.
+`public/composer/intent.js` defines 28 information types and maps them to 16 app-owned control families; `public/composer/controls.js` renders their reusable templates. The model returns bounded descriptors (type, exact phrase, question, contextual options, numerical unit) for up to four relevant refinements. It does not supply HTML, scripts, or widget implementations. There is no fixed production menu of places or example answers.
 
 Types: output format, goal, audience, prior knowledge, depth, length, tone, language, date, date range, time, duration, location, geographic scope, budget, quantity, priorities, requirements, exclusions, comparison options, flexible dates, area map, assumption, goal comparison, audience and knowledge, example, include/exclude, trade-off. Families: choices, preview cards, searchable suggestions, number/unit entry, date/time pickers, editable lists, a depth slider, tone previews, flexible dates, area maps, assumptions, goal comparisons, audience and knowledge, examples, include/exclude and trade-offs. Location suggestions come from the model and are locally filterable, not a live geocoding service. Dates use native browser calendar controls; time includes an editable timezone. Budget supports bounds/currency, lists support multiple choices and custom additions, and priorities support reordering. Cards are schematic previews, not pre-generated final outputs.
 
@@ -91,7 +96,7 @@ Selecting a value inserts `phrase (choice)` and preserves the phrase as an edita
 
 The default output preference is now Auto. Previously the hidden Interactive page default could accidentally tell the model that a user had already chosen a format. Explicit format choices remain authoritative.
 
-Composer control gallery: http://127.0.0.1:4317/__dev/controls shows all 28 information types and the slide format picker inside a replica of the real popover (development fixtures, available only from the local Node server). Choosing is committing: single choices apply and close, multi-select and include/exclude apply each change live while the popover stays open, and typed answers apply on Enter or the small arrow. The highlighted option shows the current choice and clicking it again clears it; there is no separate "Use this" step. When both are open, the format question comes before the audience question; an audience chosen earlier in the session is not asked again. When the catalog had 20 types and six families, all 20 renderers were checked in the browser and each family was exercised with a chosen value. Live Kepler suggestions, selection/reselection and annotation survival after prefix editing were verified with OpenAI.
+Composer control gallery: http://127.0.0.1:4317/__dev/controls shows all 28 information types and the slide format choice inside a replica of the real popover (development fixtures, available only from the local Node server). Choosing is committing: single choices apply and close, multi-select and include/exclude apply each change live while the popover stays open, and typed answers apply on Enter or the small arrow. The highlighted option shows the current choice and clicking it again clears it; there is no separate "Use this" step. When both are open, the format question comes before the audience question; an audience chosen earlier in the session is not asked again. When the catalog had 20 types and six families, all 20 renderers were checked in the browser and each family was exercised with a chosen value. Live Kepler suggestions, selection/reselection and annotation survival after prefix editing were verified with OpenAI.
 
 
 ## Unified composer — current local experience

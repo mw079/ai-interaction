@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {validComponents,validPageHelp} from '../public/component-catalog.js';import {explicitPageQuestion,explicitPageRewrite,textDifference,patchIsCurrent} from '../public/page-patch.js';import {handleAPI} from '../api.mjs';
+import {validComponents,validPageHelp} from '../public/components/catalog.js';import {explicitPageQuestion,explicitPageRewrite,textDifference,patchIsCurrent} from '../public/page/patch.js';import {handleAPI} from '../api.mjs';
 const cycle={id:'learning-cycle',type:'cycle',title:'Learn by explaining',prompt:'',items:[{label:'Explain',detail:'Try simple words.',value:0},{label:'Find gaps',detail:'Notice what you cannot explain.',value:0}],edges:[]};
 const req=(overrides={})=>new Request('http://127.0.0.1/api/preview',{method:'POST',headers:{Authorization:'Bearer test-key-not-a-real-secret','Content-Type':'application/json'},body:JSON.stringify({text:'What does this mean? Explain it for high school.',target:{id:'intro',text:'Explain an idea simply, then find gaps.'},audience:'',format:'Auto',phase:'page-help',...overrides})});
 test('catalog rejects executable props, duplicate ids, invalid relationships and oversized data',()=>{assert.equal(validComponents([cycle]),true);for(const invalid of [[{...cycle,onClick:'run code'}],[cycle,cycle],[{...cycle,type:'html'}],[{...cycle,id:'constructor'}],[{...cycle,items:cycle.items.map(i=>({...i,value:Infinity}))}],[{...cycle,type:'graph',edges:[{from:0,to:7,label:'bad'}]}]])assert.equal(validComponents(invalid),false);});
@@ -11,13 +11,13 @@ test('diff boundaries never split emoji surrogate pairs',()=>{const d=textDiffer
 test('an invalid model component is rejected at the API boundary',async()=>{const res=await handleAPI(req(),async()=>Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({answer:'Hello',replacement:'',components:[{...cycle,type:'html',html:'<script>bad</script>'}]})}]}]}));assert.equal(res.status,502);assert.equal((await res.json()).retryable,false);assert.equal(validComponents([{...cycle,id:undefined}]),false);});
 
 test('slide suggestions are distinct catalog IDs with a maximum of three',async()=>{
- const {validSlideOptions}=await import('../public/component-catalog.js');
+ const {validSlideOptions}=await import('../public/components/catalog.js');
  assert.equal(validSlideOptions(['cycle','example','practice']),true);
  for(const invalid of [['cycle','cycle'],['fake'],['constructor'],['cycle','example','practice','timeline']])assert.equal(validSlideOptions(invalid),false);
 });
 
 test('Send follows the selected slide recipe and also works with automatic presentation',async()=>{
- const {demoPreview}=await import('../public/model.js');
+ const {demoPreview}=await import('../public/shared/model.js');
  const page={...demoPreview('Feynman technique'),kind:'outline',components:[cycle],slideOptions:[]};
  const mock=preview=>async(_,options)=>{
   const sent=JSON.parse(options.body);
@@ -33,7 +33,7 @@ test('Send follows the selected slide recipe and also works with automatic prese
 });
 
 test('new slide controls reject ambiguous inputs and map to their recipes',async()=>{
- const {slideRecipe,matchesSlideRecipe}=await import('../public/component-catalog.js');
+ const {slideRecipe,matchesSlideRecipe}=await import('../public/components/catalog.js');
  const block=(type,values,edges=[])=>({
   ...cycle,type,prompt:'What changes?',edges,
   items:cycle.items.map((item,index)=>({...item,value:values[index]}))
@@ -139,7 +139,7 @@ test('explicit rewrite after an inline question has its own instruction path',as
 });
 
 test('pages with a visual keep an introduction and at most three takeaways, cut at sentence ends',async()=>{
- const {tidyPage}=await import('../public/model.js');
+ const {tidyPage}=await import('../public/shared/model.js');
  const long='First sentence explains the idea clearly. '+'Second sentence keeps going with more detail than a takeaway needs. '.repeat(5);
  const page={kind:'outline',components:[{id:'a'}],body:[long,'One: short.','Two: short.','Three: short.','Four: dropped.']};
  const tidy=tidyPage(page);

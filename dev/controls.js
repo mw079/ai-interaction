@@ -1,5 +1,5 @@
-import {INFORMATION_TYPES} from '/intent.js';
-import {renderInformationControl, formatPreview} from '/controls.js';
+import {INFORMATION_TYPES} from '/composer/intent.js';
+import {renderControl, formatPreview} from '/composer/controls.js';
 
 // Sample model suggestions for every information type (development fixtures, not model output).
 const F = (question, options = [], extra = {}) => ({question, options, ...extra});
@@ -44,7 +44,7 @@ for (const [type, info] of Object.entries(INFORMATION_TYPES)) {
   meta.querySelector('h2').textContent = info.label;
   meta.querySelector('code').textContent = info.family;
   const sample = document.createElement('div');
-  sample.className = 'picker-sample';
+  sample.className = 'control-sample';
   const heading = document.createElement('h3');
   heading.textContent = fixture.question;
   const options = document.createElement('div');
@@ -53,7 +53,7 @@ for (const [type, info] of Object.entries(INFORMATION_TYPES)) {
   card.append(meta, sample);
   grid.append(card);
   const item = {type, phrase: info.label, question: fixture.question, options: fixture.options, samples: fixture.samples || [], unit: fixture.unit || '', value: '', confirmed: false};
-  renderInformationControl(options, item, () => {});
+  renderControl(options, item, () => {});
 }
 
 // The slide format picker, which lives in app.js, shown with its previews.
@@ -61,7 +61,7 @@ const formats = [['See the steps', 'Follow the process one step at a time', 'ste
 const card = document.createElement('section');
 card.innerHTML = '<div class="specimen-meta"><h2>Slide format</h2><code>slide picker</code></div>';
 const sample = document.createElement('div');
-sample.className = 'picker-sample popover-options';
+sample.className = 'control-sample popover-options';
 sample.id = 'popover-options';
 const heading = document.createElement('h3');
 heading.textContent = 'How would you like to explore this?';

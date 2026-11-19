@@ -1,14 +1,9 @@
-import {explicitPageQuestion,explicitPageRewrite,patchIsCurrent,textDifference} from './page-patch.js';
-import {blockContextText} from './request-context.js';
-import {validComponents} from './component-catalog.js';
-import {renderCatalogBlock} from './component-renderer.js';
+import {explicitPageQuestion,explicitPageRewrite,patchIsCurrent,textDifference} from './patch.js';
+import {blockContextText} from '../composer/request-context.js';
+import {validComponents} from '../components/catalog.js';
+import {renderComponent} from '../components/renderer.js';
 
-const node=(tag,cls,text)=>{
- const element=document.createElement(tag);
- if(cls)element.className=cls;
- if(text!==undefined)element.textContent=text;
- return element;
-};
+import {element as node} from '../shared/dom.js';
 
 function answerContent(answer){
  const fragment=document.createDocumentFragment();
@@ -96,7 +91,7 @@ export function setupPageAssistant({state,request,commit}){
    const range=window.getSelection();
    const from=range?.anchorNode?.parentElement;
    const to=range?.focusNode?.parentElement;
-   const anchor=from?.closest('.catalog-block,.atlas-law-detail,.atlas-equation');
+   const anchor=from?.closest('.component-block,.atlas-law-detail,.atlas-equation');
    const quote=range?.toString().trim().slice(0,600);
    if(quote&&anchor?.contains(to)&&anchor.closest('#active-component')&&!anchor.closest('.page-assistant')){
     part=blockTarget(anchor,blockFor(anchor),quote);
@@ -209,7 +204,7 @@ export function setupPageAssistant({state,request,commit}){
 
  function ensureOutput(part){
   if(output)return;
-  const wrapper=part.anchor.closest('.page-field,.catalog-block');
+  const wrapper=part.anchor.closest('.page-field,.component-block');
   output=node('div','page-assistant');
   const dismiss=node('button','page-assistant-close','×');
   dismiss.type='button';
@@ -247,7 +242,7 @@ export function setupPageAssistant({state,request,commit}){
 
  function render(part,answer,change){
   showAnswer(part,answer);
-  const wrapper=part.anchor.closest('.page-field,.catalog-block');
+  const wrapper=part.anchor.closest('.page-field,.component-block');
   const replacement=change?.replacement;
   const hasProposal=!!(replacement||change?.components.length);
   if(!hasProposal)return;
@@ -283,7 +278,7 @@ export function setupPageAssistant({state,request,commit}){
    if(change.components.length){
     const preview=node('div','component-proposals');
     const temp={edits:{}};
-    change.components.forEach(block=>renderCatalogBlock(preview,block,temp,{onEdit(){},ask(){}}));
+    change.components.forEach(block=>renderComponent(preview,block,temp,{onEdit(){},ask(){}}));
     output.append(preview);
    }
    const actions=node('div','page-review-actions');

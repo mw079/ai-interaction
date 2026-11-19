@@ -1,6 +1,6 @@
 // Live, opt-in quality and latency smoke test against the local app.
 import assert from 'node:assert/strict';
-import {readSSE} from '../public/stream.js';
+import {readSSE} from '../public/shared/stream.js';
 
 const app=new URL(process.env.LUNA_BASE_URL||'http://127.0.0.1:4317');
 assert.equal(app.protocol,'http:','Use the local HTTP development server.');

@@ -1,4 +1,4 @@
-import {renderCatalogBlock} from '/component-renderer.js';
+import {renderComponent} from '/components/renderer.js';
 import {SPECIMENS} from '/__dev/component-fixtures.js';
 
 const root = document.getElementById('specimens');
@@ -14,7 +14,7 @@ for (const {name, when, block} of SPECIMENS) {
   const host = document.createElement('div');
   card.append(meta, host);
   root.append(card);
-  renderCatalogBlock(host, block, {edits: {}}, {onEdit() {}, ask() {}});
+  renderComponent(host, block, {edits: {}}, {onEdit() {}, ask() {}});
 }
 
 // Interface pieces: static replicas using the app's real classes (development fixtures).

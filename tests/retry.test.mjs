@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {withSingleRetry,requestError,retryDelay} from '../public/retry.js';
+import {withSingleRetry,requestError,retryDelay} from '../public/shared/retry.js';
 import {handleAPI} from '../api.mjs';
-import {readSSE} from '../public/stream.js';
+import {readSSE} from '../public/shared/stream.js';
 const request=(stream=false)=>new Request('http://127.0.0.1/api/preview',{method:'POST',headers:{Authorization:'Bearer test-key-not-a-real-secret','Content-Type':'application/json'},body:JSON.stringify({text:'Explain Kepler laws',format:'Auto',audience:'',phase:'preview',stream})});
 test('success makes one request and schedules no retry',async()=>{let calls=0,waits=0;assert.equal(await withSingleRetry(async()=>{calls++;return 'done';},{wait:async()=>waits++}),'done');assert.equal(calls,1);assert.equal(waits,0);});
 test('temporary failure retries once; a second failure stops',async()=>{let calls=0,resets=0;const result=await withSingleRetry(async()=>{if(++calls===1)throw requestError('network',true);return 'fresh';},{wait:async()=>{},onRetry:()=>resets++});assert.equal(result,'fresh');assert.equal(calls,2);assert.equal(resets,1);calls=0;await assert.rejects(withSingleRetry(async()=>{calls++;throw requestError('timeout',true);},{wait:async()=>{}}));assert.equal(calls,2);});

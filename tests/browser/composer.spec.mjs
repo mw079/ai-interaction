@@ -234,7 +234,7 @@ test('a visible audience choice applies and closes even after the live preview r
     await page.getByRole('button',{name:'Clarifying question: '+keplerAudienceQuestion}).click();
     const picker=page.locator('#intent-popover');
     const choice=picker.getByRole('button',{name:'High school',exact:true});
-    await expect(picker.locator('.picker-option')).toHaveText(['Middle school','High school','University']);
+    await expect(picker.locator('.control-option')).toHaveText(['Middle school','High school','University']);
     await expect(picker.getByRole('searchbox')).toHaveCount(0);
     await expect(picker.getByRole('button',{name:'Use this value'})).toHaveCount(0);
     await expect(picker.getByRole('button',{name:'Type your own answer'})).toBeVisible();

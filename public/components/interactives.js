@@ -1,7 +1,7 @@
 // Prebuilt interactive components: activities and explorers. Same rules as diagrams.js:
 // the model supplies validated content; these renderers own layout, motion and state.
 // Choosing what to look at is view state (no onEdit); only learner writing is a page edit.
-import {SVG, el, svgEl, pct, frame} from './dg-kit.js';
+import {SVG, el, svgEl, pct, frame} from './kit.js';
 import {worldPath} from './maps.js';
 
 const fmt = new Intl.NumberFormat(undefined, {maximumFractionDigits: 2});

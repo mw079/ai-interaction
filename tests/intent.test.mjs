@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {INFORMATION_TYPES,CONTROL_FAMILIES,validInformation,informationFor,chooseInformation,rebaseInformation,mergeInformation} from '../public/intent.js';
+import {INFORMATION_TYPES,CONTROL_FAMILIES,validInformation,informationFor,chooseInformation,rebaseInformation,mergeInformation} from '../public/composer/intent.js';
 const item=(type,phrase,options=['One','Two'])=>({type,phrase,question:'Which would help?',options,unit:''});
 test('all information types map to the registered control families',()=>{
  assert.equal(Object.keys(INFORMATION_TYPES).length,28);

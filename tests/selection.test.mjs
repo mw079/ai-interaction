@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {canAcceptCompletion,freshCompletion} from '../public/model.js';
+import {canAcceptCompletion,freshCompletion} from '../public/shared/model.js';
 import {handleAPI} from '../api.mjs';
 const headers={'Content-Type':'application/json',Authorization:'Bearer test-key-not-a-real-secret',Origin:'https://example.test'};
 const req=body=>new Request('https://example.test/api/preview',{method:'POST',headers,body:JSON.stringify({text:'An ellipse is an oval-shaped curve.',audience:'',format:'Auto',...body})});

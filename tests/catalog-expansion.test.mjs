@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {COMPONENT_TYPES,SLIDE_RECIPES,validComponents} from '../public/component-catalog.js';
-import {CONTROL_FAMILIES} from '../public/intent.js';
-import {applyFollowUpScope,followUpScopes} from '../public/composer-extensions.js';
+import {COMPONENT_TYPES,SLIDE_RECIPES,validComponents} from '../public/components/catalog.js';
+import {CONTROL_FAMILIES} from '../public/composer/intent.js';
+import {applyFollowUpScope,followUpScopes} from '../public/composer/controls-extended.js';
 import {handleAPI} from '../api.mjs';
 
 test('all twenty-six slide components have a selection recipe',()=>{
@@ -50,7 +50,7 @@ test('files are unsupported for both drafts and explicit Send',async()=>{
 
 test('every gallery example is valid model output for its component',async()=>{
  const {SPECIMENS}=await import('../dev/component-fixtures.js');
- const {validComponents,COMPONENT_TYPES}=await import('../public/component-catalog.js');
+ const {validComponents,COMPONENT_TYPES}=await import('../public/components/catalog.js');
  for(const {name,block} of SPECIMENS)assert.ok(validComponents([block]),name+' should pass validation');
  const covered=new Set(SPECIMENS.map(s=>s.block.type));
  assert.deepEqual(COMPONENT_TYPES.filter(type=>!covered.has(type)),[],'every component type has a gallery example');

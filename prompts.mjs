@@ -1,4 +1,4 @@
-import {CATALOG_INSTRUCTIONS,SLIDE_PICKER_INSTRUCTIONS} from './public/component-catalog.js';
+import {CATALOG_INSTRUCTIONS,SLIDE_FORMAT_INSTRUCTIONS} from './public/components/catalog.js';
 
 // ── Model input ────────────────────────────────────────────────────────────────
 // Both models (Luna for live help, Terra for pages) receive the same structured input. Fields
@@ -50,7 +50,7 @@ const DRAFT = [
   'CONTROLS. Return 0–4 useful information controls. Anchor each to a distinct exact substring of request, outside parentheses, max 120 characters. Mirror the main clarification in both the top-level question and its information descriptor when there is a suitable anchor. Already specified dates, durations, counts and places can be optional refinements with the existing value included. Do not reopen decided choices. Suggest output_format only when presentation materially changes the result and nothing in decisions sets it.',
   'For each descriptor use a concise question, at most five context-specific options (prefer two or three), unit only when applicable, and samples=[] except as noted. Order depth levels from brief to detailed. For tone, give one short rendering of the same message per option. For goal_comparison, example and tradeoff, give one consequence or example per option in samples; tradeoff labels name both settings and each sample has two named outcomes separated by space-pipe-space. For assumption, options[0] is the proposed assumption. Use flexible_dates for tentative timing, area_map for a geographic area, audience_knowledge when both details matter, and include_exclude for optional topics. Numeric duration is time elapsed, quantity is a count, length is response size.',
   'OUTPUT. Give a short title (max 80 characters) and an interpretation (max 200). audience is empty unless stated. Leave nodes, rows, components and followUps empty.',
-  SLIDE_PICKER_INSTRUCTIONS
+  SLIDE_FORMAT_INSTRUCTIONS
 ].join('\n');
 
 const COMPLETION = 'Also supply completion: suggest a short, useful continuation of request when available, ideally 3-10 words and at most 80 characters. Finish an unfinished clause before adding a sentence. Never propose a direction already decided or already present in request, including a completion the user just accepted. Write words the user could add to their own request, for example “Connect each law to Newtonian gravity.” Do not speak as the assistant or make promises. No invented personal details, opinions or commitments. Use empty when request is complete or nothing genuinely new helps.';
