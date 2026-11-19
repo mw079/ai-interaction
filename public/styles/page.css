@@ -252,7 +252,16 @@ body.intent-first[data-experience=unified].page-open .intent-panel>.live-questio
 body.intent-first[data-experience=unified].page-open .intent-panel>.composer{order:9}
 body.intent-first[data-experience=unified].page-open #cancel-button{align-self:flex-end;margin-bottom:4px}
 /* Live help above the docked composer sits on solid cards so page text never shows through. */
-body.intent-first[data-experience=unified].page-open .intent-panel>.live-question{background:#fff;border:1px solid #e3e3e3;border-radius:12px;padding:6px 12px;margin-bottom:6px;box-shadow:0 2px 10px #24242408}
-body.intent-first[data-experience=unified].page-open #typing-assistance{background:#fff;border:1px solid #e3e3e3;box-shadow:0 2px 10px #24242408}
+body.intent-first[data-experience=unified].page-open .intent-panel>.live-question{background:none;border:0;border-radius:0;padding:0 20px 8px;margin:0;box-shadow:none}
+/* With a page open: the live question sits above the composer and the live answer below it, both as
+   plain text. While the composer is active the dock rises once, leaving a strip under it where the
+   answer appears; the answer is positioned in that strip, so it never moves Send. */
+body.intent-first[data-experience=unified].page-open #typing-assistance{position:absolute;top:100%;left:0;right:0;margin:6px 0 0;padding:0 20px;background:none;border:0;border-radius:0;box-shadow:none;max-height:46px;overflow:auto}
+body.intent-first[data-experience=unified].page-open.composer-active .intent-panel{bottom:calc(max(16px,env(safe-area-inset-bottom)) + 52px)}
+body.intent-first[data-experience=unified].page-open:not(.composer-active) #typing-assistance{display:none}
 body.intent-first[data-experience=unified].page-open #typing-assistance[hidden],body.intent-first[data-experience=unified].page-open .live-question[hidden]{display:none}
 body.intent-first[data-experience=unified].page-open .intent-panel::before{background:linear-gradient(to bottom,#f6f6f600,#f6f6f6 36px)}
+/* The live-help panel only frames content: with nothing inside showing (no answer yet, or none
+   for a draft like "rere"), it is not drawn at all instead of appearing as an empty bar. */
+#typing-assistance:not(:has(> :not([hidden]))){display:none!important}
+body.intent-first[data-experience=unified].page-open.composer-active main{padding-bottom:calc(var(--composer-height,64px) + 124px)}

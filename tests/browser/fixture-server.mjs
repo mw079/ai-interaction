@@ -60,6 +60,7 @@ function previewFor({phase,text}){
       components:[{id:'cycle',type:'cycle',title:'The cycle',prompt:'',edges:[],items:['Evaporation','Condensation','Precipitation'].map(label=>({label,detail:label+'.',value:0,latitude:null,longitude:null}))}]};
     return {...preview,kind:'kepler',body:['Change the orbit to explore Kepler’s laws.']};
   }
+  if(text==='rere')return {...preview,body:[]};   // a draft with nothing worth answering
   if(text===completedComparison)return {...preview,body:[comparisonAnswer]};
   if(text.startsWith(requirementsDraft.slice(0,20)))return {
     ...preview,questionKind:'clarify',question:requirementsQuestion,phrase:'vegetarian food',options:['Vegetarian meals','Step-free access'],body:['Pick a base with good vegetarian options.'],

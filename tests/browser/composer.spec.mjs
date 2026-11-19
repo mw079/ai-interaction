@@ -2,7 +2,7 @@ import {expect,test} from '@playwright/test';
 import {
   startFixtureServer,keplerDraft,keplerCompletion,keplerFollowUp,keplerAudienceDraft,keplerAudienceQuestion,unfinishedComparison,
   completedComparison,comparisonAnswer,japanCheckpoint,japanQuestion,japanAnswer,travelDraft,travelQuestion,kyotoChoice,kyotoAnswer,
-  requirementsDraft,requirementsQuestion
+  requirementsDraft,requirementsQuestion,evaporationTitle
 } from './fixture-server.mjs';
 
 let server;
@@ -307,4 +307,43 @@ test('multi-select choices apply live in one step and the picker stays open',asy
   await picker.getByRole('button',{name:'Vegetarian meals',exact:true}).click();
   await expect(editor).toHaveValue(requirementsDraft+' (Step-free access)');
   await expect(picker).toBeVisible();
+});
+
+test('the live-help panel is not drawn while it has nothing to show',async({page})=>{
+  await draft(page).fill('Create an evaporation slide.');
+  await page.getByRole('button',{name:'Explore interactively',exact:true}).click();
+  await expect(page.getByRole('textbox',{name:'Document title'})).toHaveValue(evaporationTitle);
+  const answered=page.waitForResponse(r=>r.url().endsWith('/api/preview'));
+  await draft(page).click();
+  await draft(page).pressSequentially('rere');
+  await advancePreview(page);
+  await answered;
+  await page.clock.runFor(300);
+  await expect(page.locator('#typing-assistance')).toBeHidden();   // no answer: no empty bar above the composer
+  await draft(page).pressSequentially(' and how does evaporation work?');
+  await advancePreview(page);
+  await expect(quickAnswer(page)).toBeVisible();
+  await expect(page.locator('#typing-assistance')).toBeVisible();  // an answer brings the panel back
+});
+
+test('with a page open, the live question sits above the composer and the answer below, as plain text',async({page})=>{
+  await draft(page).fill('Create an evaporation slide.');
+  await page.getByRole('button',{name:'Explore interactively',exact:true}).click();
+  await expect(page.getByRole('textbox',{name:'Document title'})).toHaveValue(evaporationTitle);
+  await draft(page).click();
+  const send=page.getByRole('button',{name:'Explore interactively',exact:true});
+  await draft(page).pressSequentially(japanCheckpoint+' ');
+  const sendBefore=await send.boundingBox();
+  await advancePreview(page);
+  await expect(page.locator('#quick-answer')).toHaveText(japanAnswer);
+  const question=page.getByRole('button',{name:'Clarifying question: '+japanQuestion});
+  await expect(question).toBeVisible();
+  const composer=await page.locator('.composer').boundingBox();
+  expect((await page.locator('#quick-answer').boundingBox()).y).toBeGreaterThanOrEqual(composer.y+composer.height);
+  expect((await question.boundingBox()).y+(await question.boundingBox()).height).toBeLessThanOrEqual(composer.y);
+  for(const panel of ['#typing-assistance','.live-question']){
+    const look=await page.locator(panel).evaluate(e=>{const s=getComputedStyle(e);return s.backgroundColor+' '+s.borderTopWidth;});
+    expect(look,panel+' has no card').toBe('rgba(0, 0, 0, 0) 0px');
+  }
+  await expectSameGeometry(send,sendBefore);   // the answer appearing never moves Send
 });

@@ -28,7 +28,8 @@ These rules describe how AI Interaction should look and behave today. The histor
 - **Nothing you didn't do moves the layout.**
   - The field grows only for your own text.
   - Live help never resizes it.
-  - With a page open, the composer is the bottom item of the dock and everything else stacks above it, so Send never moves.
+  - With a page open, the live question sits above the composer and the live answer below it, both as plain text with no card. Clicking into the composer raises the dock once, leaving a strip for the answer, so an answer arriving never moves Send.
+  - Nothing empty is drawn: the live-help area appears only when it has an answer.
   - An empty composer on an open page shrinks to a one-line bar.
 - **Stale help never comes back.** Typing clears old answers and questions, and late results cannot overwrite newer input.
 
