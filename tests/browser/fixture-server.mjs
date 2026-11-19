@@ -9,9 +9,9 @@ export const keplerFollowUp='Angular momentum stays constant, so the orbital rad
 export const unfinishedComparison='Explain the difference between evaporation and…';
 export const completedComparison='Explain the difference between evaporation and sublimation.';
 export const comparisonAnswer='Evaporation changes liquid to gas; sublimation changes solid directly to gas.';
-export const keplerAudienceDraft='Explain Kepler’s laws simply please';
+export const keplerAudienceDraft='Explain Kepler’s laws simply';
 export const keplerAudienceQuestion='Who is this explanation for?';
-export const japanCheckpoint='Plan a trip to Japan';
+export const japanCheckpoint='Plan a Japan trip';
 export const japanQuestion='Which part of Japan should the trip focus on?';
 export const japanAnswer='Start by choosing a region to anchor the trip.';
 export const travelDraft='Plan a five-day April trip for two adults. Compare Tokyo with Kyoto.';
@@ -51,10 +51,10 @@ function previewFor({phase,text}){
     options:['Middle school','High school','University'],body:['Planets move around the Sun in oval paths.'],
     information:[{type:'audience',phrase:'simply',question:keplerAudienceQuestion,options:['Middle school','High school','University'],unit:'',samples:[]}]
   };
-  if(text.startsWith(keplerAudienceDraft))return {...preview,body:['Imagine an oval orbit around the Sun.']};
   if(text.includes('simply (High school)'))return {...preview,body:['At high-school level, imagine a stretched circle with the Sun off-center.']};
+  if(text.startsWith(keplerAudienceDraft))return {...preview,body:['Imagine an oval orbit around the Sun.']};
   if(text===japanCheckpoint)return {
-    ...preview,interpretation:'Plan a trip to Japan.',questionKind:'clarify',question:japanQuestion,phrase:'Japan',
+    ...preview,interpretation:'Plan a Japan trip.',questionKind:'clarify',question:japanQuestion,phrase:'Japan',
     options:['Kyoto and Osaka','Tokyo','Hokkaido'],body:[japanAnswer],
     information:[{type:'geographic_scope',phrase:'Japan',question:japanQuestion,options:['Kyoto and Osaka','Tokyo','Hokkaido'],unit:'',samples:[]}]
   };

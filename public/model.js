@@ -7,6 +7,8 @@ export function isIncompleteComparison(text){
   /\b(?:compare|contrast)\s+[^.!?]+\s+(?:with|to|and)$/iu.test(draft)||
   /\S\s+(?:versus|vs)$/iu.test(draft);
 }
+// Continuous typing asks Luna for help after this many newly completed words.
+export const PREVIEW_WORD_STEP=4;
 export function draftWordCount(text){
  return (text.match(/[\p{L}\p{N}][\p{L}\p{M}\p{N}'’-]*/gu)||[]).length;
 }

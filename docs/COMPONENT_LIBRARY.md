@@ -33,7 +33,11 @@ Dedicated Kepler and projectile renderers remain available for their specific tr
 
 ## Where the code lives
 
-The schema, validators, recipes and model-facing descriptions live in `public/component-catalog.js`. `public/component-renderer.js` sets up each block and its local state; the per-type renderers are in `public/slide-interactions.js` and `public/slide-extensions.js`. Components use plain DOM/SVG and the existing Atlas style, with no new framework dependencies. Add a new type to the schema, validator, descriptions and renderer together. Component IDs must stay stable when a model proposes modifying an existing block.
+The schema, validators, recipes and model-facing descriptions live in `public/component-catalog.js`. `public/component-renderer.js` sets up each block and its local state.
+
+Prebuilt diagram components in `public/diagrams.js` draw cycle (a ring), timeline (a process track), comparison (cards), chart (labelled bars), hierarchy and decision_tree (a tree that highlights the path to the selection), and graph and hotspot_diagram (a focus map whose selected idea moves to the centre). They share one anatomy: a visual stage with one item in focus, a one-sentence caption for that item, and a "2 / 5" stepper that also responds to the arrow keys. The remaining types still use `public/slide-interactions.js` and `public/slide-extensions.js`.
+
+With the local server running, `http://127.0.0.1:4317/__dev/components` shows every prebuilt component with sample content. Components use plain DOM/SVG and the existing Atlas style, with no new framework dependencies. Add a new type to the schema, validator, descriptions and renderer together. Component IDs must stay stable when a model proposes modifying an existing block.
 
 ## Questions and changes
 

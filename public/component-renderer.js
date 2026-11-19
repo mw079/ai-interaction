@@ -1,9 +1,10 @@
 import {renderSlideInteraction} from './slide-interactions.js';
+import {renderDiagram} from './diagrams.js';
 const node=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
 export function renderCatalogBlock(target,block,page,{onEdit,ask}){
  page.edits.widgets??={};const saved=page.edits.widgets[block.id]??={selected:0,practice:''};const section=node('section','catalog-block catalog-'+block.type);section.dataset.componentId=block.id;section.setAttribute('aria-label',block.title);const heading=node('div','catalog-heading');heading.append(node('h3','catalog-title',block.title));section.append(heading);
  const content=node('div','catalog-content');section.append(content);const detail=node('p','catalog-detail');detail.setAttribute('aria-live','polite');
- if(renderSlideInteraction(content,block,saved,onEdit,detail)){
+ if(renderDiagram(content,block,saved,onEdit,detail)||renderSlideInteraction(content,block,saved,onEdit,detail)){
   target.append(section);
   return section;
  }

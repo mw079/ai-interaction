@@ -103,7 +103,9 @@ export function setupPageAssistant({state,request,commit}){
    }
   }
   if(!part){
-   if(active?.mode==='selection'&&(!output||controller))close();
+   // Clearing the highlight dismisses its explanation, unless the reader is selecting inside it.
+   const inside=output&&window.getSelection()?.anchorNode&&output.contains(window.getSelection().anchorNode);
+   if(active?.mode==='selection'&&!inside){close();selection=null;}
    return;
   }
   const {anchor,target}=part;
@@ -209,6 +211,13 @@ export function setupPageAssistant({state,request,commit}){
   if(output)return;
   const wrapper=part.anchor.closest('.page-field,.catalog-block');
   output=node('div','page-assistant');
+  const dismiss=node('button','page-assistant-close','×');
+  dismiss.type='button';
+  dismiss.setAttribute('aria-label','Dismiss explanation');
+  dismiss.title='Dismiss (Esc)';
+  dismiss.tabIndex=-1;
+  dismiss.onclick=()=>{const field=active?.part.field;close();selection=null;field?.focus({preventScroll:true});};
+  output.append(dismiss);
   if(wrapper)wrapper.append(output);
   else part.anchor.after(output);
  }

@@ -88,7 +88,7 @@ test('a plain prose addition can produce an inline replacement without a rewrite
 test('highlighting sends the quote in context and cannot suggest a page change by itself',async()=>{
  const result=await handleAPI(req({text:'surface molecules',target:{mode:'selection',id:'intro',quote:'surface molecules',text:'Fast surface molecules can escape.'}}),
   async(_,opts)=>{
-   assert.match(JSON.parse(opts.body).instructions,/explain the highlighted words in context/);
+   assert.match(JSON.parse(opts.body).instructions,/Never paraphrase or restate the passage/);
    return modelHelp({answer:'Molecules at the surface can escape into the air.',replacement:'Changed passage',components:[cycle]});
   });
  const {preview}=await result.json();

@@ -11,7 +11,7 @@ import {setupComposerExperience} from './composer.js';
 import {INFORMATION_TYPES, informationFor, rebaseInformation, chooseInformation, mergeInformation} from './intent.js';
 import {renderInformationControl} from './controls.js';
 import {positionPopover} from './popover.js';
-import {demoPreview, trajectory, validPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isIncompleteComparison, draftWordCount, completedDraft, extendsPreview, workingDraftPreview, draftAnswersQuestion} from './model.js';
+import {demoPreview, trajectory, validPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isIncompleteComparison, draftWordCount, completedDraft, PREVIEW_WORD_STEP, extendsPreview, workingDraftPreview, draftAnswersQuestion} from './model.js';
 const $ = id => document.getElementById(id);
 const state = {key:'', live:false, requests:0, connectionRevision:0, composing:false, revision:0, format:'Auto', audience:'', controller:null, timer:null, proposal:null, component:null, history:[], blocks:[], selection:null, uncertainty:null, popoverTimer:null, clarification:null, openClarification:null, popoverOrigin:null, suppressed:null, customDrafts:new Map(), serverKey:false, pendingSend:false, pageController:null, pageRequest:0, taskGoal:'', pageVersion:0, information:[], previousDraft:'', activeInformation:null,confirmedChoices:[],answers:[],intentOverride:'',slideChoice:undefined};
 const node=(tag, cls, text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
@@ -543,7 +543,7 @@ function changed({immediate=false,typing=false}={}){
   if(immediate){preview();return;}
   state.timer=setTimeout(()=>preview(),/[\p{L}\p{N}][.!?][”’"')]?$/u.test(text)?100:250);
   const checkpoint=typing?completedDraft(input.value):'';
-  if(checkpoint&&!activePreview&&draftWordCount(checkpoint)-draftWordCount(lastPreviewStart?.text||'')>=5&&
+  if(checkpoint&&!activePreview&&draftWordCount(checkpoint)-draftWordCount(lastPreviewStart?.text||'')>=PREVIEW_WORD_STEP&&
      Date.now()-(lastPreviewStart?.time??-Infinity)>=1200){
     if(checkpoint===text)clearTimeout(state.timer);
     preview(checkpoint);
