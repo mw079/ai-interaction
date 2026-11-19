@@ -34,16 +34,30 @@ function submit(form,read,choose,label='Use this'){
   };
 }
 
+// Segmented switch shared by composer controls: value lives on `state.value`.
+function segmented(label,choices,state,onChange){
+  const element=node('div',undefined,'picker-segmented');
+  element.setAttribute('role','radiogroup');
+  element.setAttribute('aria-label',label);
+  const buttons=choices.map(([id,text])=>{
+    const b=node('button',text,'picker-seg');
+    b.type='button';
+    b.setAttribute('role','radio');
+    b.onclick=()=>{state.value=id;onChange();};
+    element.append(b);
+    return [id,b];
+  });
+  const paint=()=>buttons.forEach(([id,b])=>b.setAttribute('aria-checked',String(state.value===id)));
+  return {element,paint};
+}
+
 export function renderComposerExtension(target,family,item,choose,onResize){
   const options=item.options||[];
   const form=node('form',undefined,'picker-form composer-extension');
   if(family==='flexible_dates'){
-    const mode=node('select');
-    mode.setAttribute('aria-label','Date preference');
-    [['flexible','Flexible window'],['exact','Exact dates'],['any','No date preference']].forEach(([id,label])=>{
-      const option=node('option',label);
-      option.value=id;mode.append(option);
-    });
+    // A segmented switch instead of a dropdown: all three choices are visible at once.
+    const mode={value:'flexible'};
+    const seg=segmented('Date preference',[['flexible','Flexible'],['exact','Exact dates'],['any','No preference']],mode,()=>update());
     const windowField=field('When could it happen?','text',item.value?.startsWith('Flexible: ')?item.value.slice(10):'');
     windowField.input.placeholder='Any weekend in June';
     const dates=item.value?.match(/\d{4}-\d{2}-\d{2}/g)||[];
@@ -56,11 +70,12 @@ export function renderComposerExtension(target,family,item,choose,onResize){
       start.input.required=exact;
       windowField.input.required=flexible;
       end.input.min=start.input.value;
+      seg.paint();
       onResize();
     };
     mode.value=dates.length?'exact':item.value==='No date preference'?'any':'flexible';
-    mode.onchange=start.input.oninput=update;
-    form.append(mode,windowField.wrapper,start.wrapper,end.wrapper);
+    start.input.oninput=update;
+    form.append(seg.element,windowField.wrapper,start.wrapper,end.wrapper);
     submit(form,()=>mode.value==='exact'?start.input.value+(end.input.value?' to '+end.input.value:''):mode.value==='flexible'?'Flexible: '+windowField.input.value.trim():'No date preference',choose);
     target.append(form);update();
     return true;
@@ -105,11 +120,10 @@ export function renderComposerExtension(target,family,item,choose,onResize){
       return (labels||'').split('; ').map(label=>[label,mode]);
     }));
     const inputs=options.map(label=>{
-      const row=node('label',label,'composer-choice-row');
-      const select=node('select');
-      ['Undecided','Include','Exclude'].forEach(value=>select.append(node('option',value)));
-      select.value=configured.get(label)||'Undecided';
-      row.append(select);form.append(row);return [label,select];
+      const row=node('div',undefined,'composer-choice-row');
+      const state={value:configured.get(label)||'Undecided'};
+      const seg=segmented(label,[['Include','Include'],['Undecided','Maybe'],['Exclude','Leave out']],state,()=>seg.paint());
+      row.append(node('span',label),seg.element);form.append(row);seg.paint();return [label,state];
     });
     submit(form,()=>['Include','Exclude'].map(mode=>{
       const labels=inputs.filter(([,select])=>select.value===mode).map(([label])=>label);
@@ -123,9 +137,11 @@ export function renderComposerExtension(target,family,item,choose,onResize){
     const correction=field('Correction','text',item.value&&item.value!==assumption?item.value:'');
     correction.input.placeholder='What should we assume instead?';
     correction.input.required=true;
-    target.append(node('p',assumption,'picker-tone-sample'),button('Confirm assumption',()=>choose(assumption)));
+    const confirm=button('Yes, that’s right',()=>choose(assumption));confirm.className='picker-apply';
+    target.append(node('p',assumption,'picker-tone-sample'),confirm);
     form.append(correction.wrapper);
     submit(form,()=>correction.input.value.trim(),choose,'Use correction');
+    form.querySelector('.picker-apply').className='picker-apply picker-secondary';
     target.append(form);
     return true;
   }

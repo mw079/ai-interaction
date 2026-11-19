@@ -9,7 +9,7 @@ import {readSSE} from './stream.js';
 import {confirmedChoices,requestContext} from './request-context.js';
 import {setupComposerExperience} from './composer.js';
 import {INFORMATION_TYPES, informationFor, rebaseInformation, chooseInformation, mergeInformation} from './intent.js';
-import {renderInformationControl} from './controls.js';
+import {renderInformationControl,formatPreview} from './controls.js';
 import {positionPopover} from './popover.js';
 import {demoPreview, trajectory, validPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isIncompleteComparison, draftWordCount, completedDraft, PREVIEW_WORD_STEP, extendsPreview, workingDraftPreview, draftAnswersQuestion} from './model.js';
 const $ = id => document.getElementById(id);
@@ -90,9 +90,13 @@ function renderQuick(data,source,{tail='',interim=false,fresh=false}={}){
   $('quick-provenance').textContent=source==='Demo'?'Example':'';
   $('quick-provenance').hidden=source!=='Demo';
   if(source!=='Demo'){state.information=mergeInformation($('intent-input').value,state.information,data.information||[]);state.uncertainty=liveClarificationFor($('intent-input').value,data,state.information);
+    const audienceTypes=['audience','prior_knowledge','audience_knowledge'];
+    const knownAudience=state.confirmedChoices.some(choice=>audienceTypes.includes(choice.type));
+    if(knownAudience&&audienceTypes.includes(state.uncertainty?.type))state.uncertainty=null;
     const needsClarification=state.uncertainty && state.uncertainty.questionKind!=='explore' && state.uncertainty.type!=='output_format' &&
       !state.answers.some(answer=>answer.question===state.uncertainty.question);
-    if(data.slideOptions?.length && !needsClarification){
+    const audienceQuestion=audienceTypes.includes(state.uncertainty?.type);
+    if(data.slideOptions?.length && !state.slideDecided && (!needsClarification||audienceQuestion)){
       state.uncertainty={question:'How would you like to explore this?',slideOptions:data.slideOptions};
     }
     renderUncertainty();}
@@ -171,13 +175,19 @@ function openIntentPopover(origin='click',sourceAnchor=null){
   if(u.slideOptions){
     const target=$('popover-options');
     target.replaceChildren();
+    const kinds={chart:'chart',numbers:'chart',parts:'chart',timeline:'steps',example:'steps',checklist:'steps',map:'map',compare:'grid',matrix:'grid',reveal:'grid',
+      practice:'list',flashcards:'list',prediction:'list',sorting:'list',evidence:'text'};
     const addChoice=(id,label,detail)=>{
       const button=node('button','slide-option');
       button.type='button';
       button.setAttribute('aria-pressed',String(state.slideChoice===id));
-      button.append(node('span','slide-option-title',label));
-      if(detail)button.append(node('span','slide-option-detail',detail));
+      if(id)button.append(formatPreview(label,kinds[id]||'visual'));
+      const text=node('span','slide-option-text');
+      text.append(node('span','slide-option-title',label));
+      if(detail)text.append(node('span','slide-option-detail',detail));
+      button.append(text);
       button.onclick=()=>{
+        state.slideDecided=true;
         state.slideChoice=id;
         closeIntentPopover({suppress:true});
         composerExperience?.onMirrorRendered();
@@ -526,7 +536,7 @@ async function preview(text=$('intent-input').value.trim()){
 function sizeComposer(){const input=$('intent-input');input.style.height='0px';input.style.height=Math.min(220,Math.max(56,input.scrollHeight))+'px';}
 window.addEventListener('resize',sizeComposer);
 function changed({immediate=false,typing=false}={}){
-  state.slideChoice=undefined;
+  if(!$('intent-input').value.trim()){state.slideChoice=undefined;state.slideDecided=false;}
   document.dispatchEvent(new Event('intent:changed'));
   const input=$('intent-input'),text=input.value.trim();
   const waiting=isIncompleteComparison(text),keep=state.live&&!!text&&!waiting;

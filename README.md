@@ -89,7 +89,7 @@ Selecting a value inserts `phrase (choice)` and preserves the phrase as an edita
 
 The default output preference is now Auto. Previously the hidden Interactive page default could accidentally tell the model that a user had already chosen a format. Explicit format choices remain authoritative.
 
-Local template QA: http://127.0.0.1:4317/__dev/pickers (development fixtures, available only from the local Node server). When the catalog had 20 types and six families, all 20 renderers were checked in the browser and each family was exercised with a chosen value. Live Kepler suggestions, selection/reselection and annotation survival after prefix editing were verified with OpenAI.
+Composer control gallery: http://127.0.0.1:4317/__dev/pickers shows all 28 information types and the slide format picker inside a replica of the real popover (development fixtures, available only from the local Node server). Single choices are radio rows, multi-select rows have checkboxes, priorities show a numbered order, and each control has one primary action. When both are open, the format question comes before the audience question; an audience chosen earlier in the session is not asked again. When the catalog had 20 types and six families, all 20 renderers were checked in the browser and each family was exercised with a chosen value. Live Kepler suggestions, selection/reselection and annotation survival after prefix editing were verified with OpenAI.
 
 
 ## Unified composer — current local experience

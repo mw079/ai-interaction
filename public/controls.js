@@ -2,6 +2,16 @@ import {renderComposerExtension} from './composer-extensions.js';
 import {INFORMATION_TYPES} from './intent.js';
 const make=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
 const button=(text,action,cls='')=>{const b=make('button',cls,text);b.type='button';b.onclick=action;return b;};
+// A tiny schematic of a response format, chosen from words in its label.
+const PREVIEW_KINDS=[['chart',/chart|graph|bar|data|number|statistic/i],['steps',/step|timeline|process|sequence|cycle|walk/i],['map',/map|place|route|location/i],
+  ['grid',/compar|table|versus|vs\b|matrix/i],['visual',/visual|diagram|orbit|simulat|interactive|explore/i],['list',/list|bullet|checklist|outline|plan/i]];
+export function formatPreview(value,forced){
+  const kind=forced||PREVIEW_KINDS.find(([,pattern])=>pattern.test(value))?.[0]||'text';
+  const preview=make('span','card-preview');preview.dataset.kind=kind;preview.setAttribute('aria-hidden','true');
+  const count={chart:4,steps:4,map:3,grid:4,visual:3,list:3,text:3}[kind];
+  for(let i=0;i<count;i++)preview.append(make('i'));
+  return preview;
+}
 // One renderer per family. Values and suggestions belong to the descriptor, never the template.
 export function renderInformationControl(target,item,onChoose,onResize=()=>{}){
   target.replaceChildren();const {family}=INFORMATION_TYPES[item.type];target.dataset.family=family;
@@ -27,11 +37,14 @@ export function renderInformationControl(target,item,onChoose,onResize=()=>{}){
     const update=()=>{
       value.textContent=options[Number(range.value)];
       range.setAttribute('aria-valuetext',value.textContent);
+      group.querySelectorAll('.picker-tick').forEach((t,i)=>t.setAttribute('aria-pressed',String(i===Number(range.value))));
     };
     range.oninput=update;
     update();
     label.append(range);
-    group.append(label,value);
+    const ticks=make('div','picker-ticks');ticks.style.setProperty('--n',options.length);
+    options.forEach((o,i)=>{const t=button(o,()=>{range.value=String(i);update();},'picker-tick');ticks.append(t);});
+    group.append(label,ticks,value);
     submit(group,()=>options[Number(range.value)]);
   }else if(family==='tone'&&options.length){
     const group=form();
@@ -51,7 +64,7 @@ export function renderInformationControl(target,item,onChoose,onResize=()=>{}){
     update();
   }else if(['choices','cards','depth','tone','goal_comparison','example','tradeoff'].includes(family)){
     const grid=make('div',family==='cards'?'picker-cards':'picker-choices');
-    options.forEach(value=>{const b=option(value);if(family==='cards'){const visual=make('span','card-preview');visual.setAttribute('aria-hidden','true');const diagram=/visual|diagram|orbit|simulat|map/i.test(value);visual.dataset.visual=String(diagram);visual.append(make('i'),make('i'),make('i'));b.prepend(visual);}grid.append(b);});target.append(grid);
+    options.forEach(value=>{const b=option(value);if(family==='cards')b.prepend(formatPreview(value));grid.append(b);});target.append(grid);
   }else if(family==='search'){
     const f=field('Find an option or enter your own','search',item.value);f.input.placeholder='Search suggestions…';target.append(f.label);const results=make('div','picker-choices');target.append(results);
     const draw=()=>{results.replaceChildren();options.filter(o=>o.toLocaleLowerCase().includes(f.input.value.toLocaleLowerCase())).forEach(o=>results.append(option(o)));if(!results.children.length)results.append(make('p','picker-hint','Use your own value below.'));onResize();};f.input.oninput=draw;draw();
@@ -72,12 +85,32 @@ export function renderInformationControl(target,item,onChoose,onResize=()=>{}){
     submit(f,()=>`${a.input.value}${b?' to '+b.input.value:''}${zone?.input.value?' '+zone.input.value.trim():''}`);
     if(options.length){const presets=make('div','picker-presets');options.forEach(v=>presets.append(option(v)));target.append(presets);}
   }else if(family==='list'){
-    let selected=item.value?item.value.split(item.type==='priorities'?' → ':'; ').filter(Boolean):[];
-    const choices=make('div','picker-choices');options.forEach(value=>{const b=option(value);b.setAttribute('aria-pressed',String(selected.includes(value)));b.onclick=()=>{selected=selected.includes(value)?selected.filter(s=>s!==value):[...selected,value];draw();};choices.append(b);});target.append(choices);
-    const list=make('ol','picker-list');target.append(list);
-    function draw(){list.replaceChildren();selected.forEach((value,index)=>{const li=make('li');li.append(make('span','',value));if(item.type==='priorities'){const up=button('↑',()=>{[selected[index-1],selected[index]]=[selected[index],selected[index-1]];draw();});up.disabled=index===0;up.setAttribute('aria-label','Move '+value+' up');li.append(up);}const remove=button('×',()=>{selected.splice(index,1);draw();});remove.setAttribute('aria-label','Remove '+value);li.append(remove);list.append(li);});[...choices.children].forEach((b,i)=>b.setAttribute('aria-pressed',String(selected.includes(options[i]))));onResize();}draw();
-    const add=form(),custom=field('Add your own');custom.input.maxLength=100;const addButton=make('button','','Add');addButton.type='submit';add.append(custom.label,addButton);add.onsubmit=e=>{e.preventDefault();const value=custom.input.value.trim();if(value&&!selected.includes(value)&&selected.length<8){selected.push(value);custom.input.value='';draw();}};
-    const commit=button('Use these',()=>{const value=selected.join(item.type==='priorities'?' → ':'; ');if(value.length>300){target.querySelector('.picker-error')?.remove();target.append(make('p','picker-error','Keep your choices under 300 characters.'));return;}if(value)onChoose(value);},'picker-apply');target.append(commit);
+    // Multi-select: options toggle with a check; chosen items form an ordered list for priorities.
+    const ordered=item.type==='priorities';
+    let selected=item.value?item.value.split(ordered?' → ':'; ').filter(Boolean):[];
+    const all=()=>[...options,...selected.filter(v=>!options.includes(v))];
+    const choices=make('div','picker-choices picker-multi');target.append(choices);
+    const list=make('ol','picker-list');const hint=make('p','picker-hint','Order matters: the first is most important.');if(ordered)target.append(hint,list);
+    const addToggle=button('+ Add your own',()=>{add.hidden=false;addToggle.hidden=true;custom.input.focus();onResize();},'picker-add-toggle');
+    const add=make('form','picker-add');add.hidden=true;const custom=field('Your own','text');custom.input.maxLength=100;custom.input.placeholder='Type and press Enter';
+    const addButton=make('button','picker-add-apply','Add');addButton.type='submit';add.append(custom.label,addButton);
+    add.onsubmit=e=>{e.preventDefault();const value=custom.input.value.trim();if(value&&!selected.includes(value)&&selected.length<8){selected.push(value);custom.input.value='';draw();}};
+    target.append(addToggle,add);
+    const commit=button('',()=>{const value=selected.join(ordered?' → ':'; ');if(value.length>300){target.querySelector('.picker-error')?.remove();target.append(make('p','picker-error','Keep your choices under 300 characters.'));return;}if(value)onChoose(value);},'picker-apply');
+    target.append(commit);
+    function draw(){
+      choices.replaceChildren(...all().map(value=>{const b=button(value,()=>{selected=selected.includes(value)?selected.filter(s=>s!==value):[...selected,value];draw();},'picker-option');b.setAttribute('aria-pressed',String(selected.includes(value)));return b;}));
+      list.replaceChildren(...(ordered?selected:[]).map((value,index)=>{
+        const li=make('li');li.append(make('span','picker-rank',String(index+1)),make('span','',value));
+        const up=button('↑',()=>{[selected[index-1],selected[index]]=[selected[index],selected[index-1]];draw();},'picker-icon');up.disabled=index===0;up.setAttribute('aria-label','Move '+value+' up');
+        const down=button('↓',()=>{[selected[index+1],selected[index]]=[selected[index],selected[index+1]];draw();},'picker-icon');down.disabled=index===selected.length-1;down.setAttribute('aria-label','Move '+value+' down');
+        li.append(up,down);return li;}));
+      list.hidden=hint.hidden=!selected.length;
+      commit.disabled=!selected.length;
+      commit.textContent=selected.length?`Use ${selected.length} selected`:'Select at least one';
+      onResize();
+    }
+    draw();
   }
   if(item.confirmed)target.append(button('Clear this choice',()=>onChoose(''),'picker-clear'));
 }
