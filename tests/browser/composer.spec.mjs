@@ -2,7 +2,7 @@ import {expect,test} from '@playwright/test';
 import {
   startFixtureServer,keplerDraft,keplerCompletion,keplerFollowUp,keplerAudienceDraft,keplerAudienceQuestion,unfinishedComparison,
   completedComparison,comparisonAnswer,japanCheckpoint,japanQuestion,japanAnswer,travelDraft,travelQuestion,kyotoChoice,kyotoAnswer,
-  requirementsDraft,requirementsQuestion,evaporationTitle
+  requirementsDraft,requirementsQuestion,evaporationTitle,billDraft
 } from './fixture-server.mjs';
 
 let server;
@@ -346,4 +346,26 @@ test('with a page open, the live question sits above the composer and the answer
     expect(look,panel+' has no card').toBe('rgba(0, 0, 0, 0) 0px');
   }
   await expectSameGeometry(send,sendBefore);   // the answer appearing never moves Send
+});
+
+test('a chosen way to explore it is listed under What I understand and can be changed',async({page})=>{
+  await draft(page).click();
+  await draft(page).pressSequentially(billDraft);
+  await advancePreview(page);
+  const question=page.getByRole('button',{name:/How would you like to explore this\?/});
+  await expect(question).toBeVisible();
+  await question.click();
+  await page.locator('#popover-options').getByRole('button',{name:/See the steps/}).click();
+  await expect(question).toBeHidden();                                   // decided: not asked again
+  await expect(page.locator('#live-question')).toBeHidden();             // and the row does not echo the answer
+  await page.getByRole('button',{name:'Review intent'}).click();
+  const details=page.getByRole('dialog',{name:'Your intent and editable details'});
+  const choice=details.getByRole('button',{name:'How would you like to explore this?: See the steps'});
+  await expect(choice).toBeVisible();                                     // the choice is visible
+  await choice.click();                                                   // ...and reopens the picker to change it
+  const picker=page.locator('#popover-options');
+  await expect(picker.getByRole('button',{name:/See the steps/})).toHaveAttribute('aria-pressed','true');
+  await picker.getByRole('button',{name:/Compare side by side/}).click();
+  await page.getByRole('button',{name:'Review intent'}).click();
+  await expect(details.getByRole('button',{name:'How would you like to explore this?: Compare side by side'})).toBeVisible();
 });

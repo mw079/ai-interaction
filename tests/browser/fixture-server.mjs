@@ -4,6 +4,7 @@ import {once} from 'node:events';
 import {handleAPI,createDailyLimiter} from '../../api.mjs';
 import worker from '../../dist/server/index.js';
 
+export const billDraft='Explain how a bill becomes a law.';
 export const keplerDraft='I want to understand Kepler’s laws as an undergraduate.\nConnect all three laws to Newtonian gravity and explain the equal-areas law.';
 export const keplerCompletion='Include a worked example linking the orbital speed to conservation of angular momentum.';
 export const keplerFollowUp='Angular momentum stays constant, so the orbital radius sweeps out equal areas in equal times.';
@@ -60,7 +61,8 @@ function previewFor({phase,text}){
       components:[{id:'cycle',type:'cycle',title:'The cycle',prompt:'',edges:[],items:['Evaporation','Condensation','Precipitation'].map(label=>({label,detail:label+'.',value:0,latitude:null,longitude:null}))}]};
     return {...preview,kind:'kepler',body:['Change the orbit to explore Kepler’s laws.']};
   }
-  if(text==='rere')return {...preview,body:[]};   // a draft with nothing worth answering
+  if(text==='rere')return {...preview,body:[]};
+  if(text.startsWith(billDraft))return {...preview,interpretation:'Explain how a bill becomes a law.',body:['A bill passes both chambers, then the president signs or vetoes it.'],slideOptions:['timeline','compare','relationships']};   // a draft with nothing worth answering
   if(text===completedComparison)return {...preview,body:[comparisonAnswer]};
   if(text.startsWith(requirementsDraft.slice(0,20)))return {
     ...preview,questionKind:'clarify',question:requirementsQuestion,phrase:'vegetarian food',options:['Vegetarian meals','Step-free access'],body:['Pick a base with good vegetarian options.'],

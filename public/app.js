@@ -99,6 +99,7 @@ function renderQuick(data,source,{tail='',interim=false,fresh=false}={}){
       !state.answers.some(answer=>answer.question===state.uncertainty.question);
     const audienceQuestion=audienceTypes.includes(state.uncertainty?.type);
     if(data.slideOptions?.length && !state.slideDecided && (!needsClarification||audienceQuestion)){
+      state.slideOptions=data.slideOptions;
       state.uncertainty={question:'How would you like to explore this?',slideOptions:data.slideOptions};
     }
     renderUncertainty();}
@@ -124,9 +125,16 @@ function renderUncertainty(){
   mirror.append(document.createTextNode(text.slice(cursor)+'\u200b'));
   const first=entries.find(e=>!e.confirmed)||entries[0];
   updateClarification(first||u);mirror.style.transform=`translateY(${-input.scrollTop}px)`;
-  const rail=$('intent-refinements');rail.replaceChildren();rail.hidden=!entries.length&&!state.answers.length;
+  const rail=$('intent-refinements');rail.replaceChildren();rail.hidden=!entries.length&&!state.answers.length&&!state.slideDecided;
   entries.forEach(entry=>{const b=node('button','phrase-access',entry.phrase+(entry.value?` (${entry.value})`:''));b.type='button';b.setAttribute('aria-label',`${INFORMATION_TYPES[entry.type].label}: ${entry.phrase}${entry.value?', '+entry.value:''}`);b.onclick=()=>{state.activeInformation=entry;updateClarification(entry);openIntentPopover('click');};rail.append(b);});
   state.answers.forEach(entry=>{const b=node('button','phrase-access',entry.value);b.type='button';b.setAttribute('aria-label',entry.question+': '+entry.value);b.onclick=()=>{updateClarification({...entry,type:undefined});openIntentPopover('click');};rail.append(b);});
+  // The chosen way to explore it is a decision like any other: listed, and reopened to change it.
+  if(state.slideDecided){
+    const label=state.slideChoice?slideRecipe(state.slideChoice).label:'Let AI choose';
+    const b=node('button','phrase-access',label);b.type='button';b.setAttribute('aria-label','How would you like to explore this?: '+label);
+    b.onclick=()=>{updateClarification({question:'How would you like to explore this?',slideOptions:state.slideOptions?.length?state.slideOptions:[state.slideChoice].filter(Boolean)});openIntentPopover('click');};
+    rail.append(b);
+  }
   composerExperience?.onMirrorRendered();
 }
 // keepOpen: multi-value controls apply each change live and leave the picker open.
@@ -206,6 +214,7 @@ function openIntentPopover(origin='click',sourceAnchor=null){
         state.slideDecided=true;
         state.slideChoice=id;
         closeIntentPopover({suppress:true});
+        renderUncertainty();
         composerExperience?.onMirrorRendered();
         $('live-question').querySelector('button').focus();
       };
@@ -508,7 +517,7 @@ async function preview(text=$('intent-input').value.trim()){
 function sizeComposer(){const input=$('intent-input');input.style.height='0px';input.style.height=Math.min(220,Math.max(56,input.scrollHeight))+'px';}
 window.addEventListener('resize',sizeComposer);
 function changed({immediate=false,typing=false,keepPopover=false}={}){
-  if(!$('intent-input').value.trim()){state.slideChoice=undefined;state.slideDecided=false;}
+  if(!$('intent-input').value.trim()){state.slideChoice=undefined;state.slideDecided=false;state.slideOptions=undefined;}
   document.dispatchEvent(new Event('intent:changed'));
   const input=$('intent-input'),text=input.value.trim();
   const waiting=isIncompleteComparison(text),keep=state.live&&!!text&&!waiting;
