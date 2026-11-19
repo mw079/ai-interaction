@@ -57,15 +57,20 @@ These rules describe how AI Interaction should look and behave today. The histor
 
 ## Visual language
 
-- **One palette.** A sage green (`#4f6b45`) is the single accent. It sits on soft green washes (`#eef2e8`, `#e4ecdc`), quiet greys for secondary text, and white cards with thin borders.
+- **Each colour has one job.** If everything is coloured, nothing stands out, so colour is kept for meaning:
+  - **Grey** for the whole interface: text, borders, cards, panels and the composer controls (pickers). Neutral greys, no tint, on a `#f8f8f8` page with white cards.
+  - **Near-black** (`#1d1d1f`) for actions and choices: the primary button, selected picker options, ticked boxes, sliders.
+  - **Blue** (`#2f5d8a`, soft `#e6eef6`) only inside visuals, meaning "this is what you are looking at": the selected step, the trajectory, the orbit point, the progress line. Keyboard focus rings use a lighter blue for the same reason. Being the only colour on the page, the visual gets attention first.
+  - **Green** (`#2e7d4f`) and **red** (`#b4443c`) only for feedback: a correct or wrong answer, an error, deleted text in an edit review.
+- **Colour is never the only signal.** A selected item is also filled, bold or outlined, so the page still reads in greyscale and for colour-blind readers. Blue was chosen over green for the visual accent because it stays distinct from grey, green and red for almost everyone.
 - **One shape language:**
   - pill buttons and chips
   - rounded cards (12–18 px)
   - radio dots for single choices, checkboxes for multiple
-- **One primary action at a time.** It's a solid green pill. Secondary actions are outlined or plain text.
+- **One primary action at a time.** It's a solid near-black pill. Secondary actions are outlined or plain text.
 - **Calm motion.** Short fades and slides (around 200–450 ms), all turned off when the system asks for reduced motion.
 - **Readable at every size.** Components adapt to their container (visual column, full width or phone).
-- **Text meets WCAG AA:** at least 4.5:1 on white and on the soft green panels. Disabled controls, decorative icons and placeholders are the only exceptions.
+- **Text meets WCAG AA:** at least 4.5:1 on white and on the grey panels; the blue accent is 6.9:1 on white. Disabled controls, decorative icons and placeholders are the only exceptions.
 - **Accessible names stay clean.** Decorative arrows are hidden from screen readers. Never add text to a control's name through CSS.
 
 ## References

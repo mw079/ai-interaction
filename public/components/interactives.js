@@ -437,7 +437,8 @@ function renderPractice(content, block, saved, onEdit, detail, ctx) {
 
 /* ── New: proportion – parts of a whole ───────────────────────────────────── */
 const share = p => (p >= 10 ? Math.round(p) : p >= 1 ? p.toFixed(1) : p >= 0.1 ? p.toFixed(1) : p.toFixed(2)) + '%';
-const RAMP = ['#4f6b45', '#7d9a6c', '#a9bf98', '#cad8bd', '#8a9a8f', '#c4cbc0'];
+// Parts of one whole in the visual accent (blue), darkest first, then two neutral greys.
+const RAMP = ['#2f5d8a', '#5b82ab', '#8fadcc', '#c3d4e6', '#8e8e93', '#c7c7cc'];
 function renderProportion(content, block, saved, onEdit, detail) {
   const {items} = block;
   const total = items.reduce((s, i) => s + i.value, 0) || 1;

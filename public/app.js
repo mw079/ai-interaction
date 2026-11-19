@@ -80,7 +80,7 @@ function showQuickAnswer(answer,updating=false,fresh=false){
   if(text.textContent===answer)return;
   text.textContent=answer;
   if(fresh&&answer&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
-    text.animate([{backgroundColor:'#e8efe2'},{backgroundColor:'transparent'}],{duration:480,easing:'ease-out'});
+    text.animate([{backgroundColor:'#ececec'},{backgroundColor:'transparent'}],{duration:480,easing:'ease-out'});
   }
 }
 function renderQuick(data,source,{tail='',interim=false,fresh=false}={}){

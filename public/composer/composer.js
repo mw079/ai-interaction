@@ -91,7 +91,7 @@ export function setupComposerExperience({state,changed,request,openDetail,closeD
    else question=completedQuestion=null;
    render();
    if(fresh&&next&&next.question!==previous&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
-    questionButton.animate([{backgroundColor:'#e8efe2'},{backgroundColor:'transparent'}],{duration:480,easing:'ease-out'});
+    questionButton.animate([{backgroundColor:'#ececec'},{backgroundColor:'transparent'}],{duration:480,easing:'ease-out'});
    }
   },
   onDraftChanged(keep){completion='';summary=state.intentOverride||'';if(!keep)completedQuestion=null;question=completedQuestion&&{...completedQuestion,streaming:true};stopHelp();closeSummary();render();},
