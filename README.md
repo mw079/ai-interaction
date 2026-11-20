@@ -42,22 +42,4 @@ flowchart LR
 | Right after | `gpt-6-luna` | Up to two more views join as tabs in the background |
 | Inside the page | `gpt-6-luna` | Explanations of highlighted text, suggested edits, Go deeper answers |
 
-The model returns data that must pass a strict schema, never HTML or code. The app draws it with its own 24 page components (maps, timelines, charts, quizzes and more) and 24 picker types for the highlighted details.
-
-## Test
-
-```sh
-npm ci                                            # installs Playwright
-npm test                                          # unit and API tests
-PLAYWRIGHT_CHANNEL=chrome npm run test:browser    # browser tests at desktop and phone width
-```
-
-Live evaluations (`npm run eval:*`, in `dev/`) need the app running with a key.
-
-## Privacy
-
-- The API key stays on the server. Requests use `store:false`.
-- The page loads nothing from outside services, including its font (DM Sans, self-hosted with its license).
-- Nothing is saved: pages and history live in the browser tab until reload. Export saves a page as JSON.
-
 The inline-clarification idea builds on [Bruce Liu’s Beyond Taking Turns](https://demos.liubruce.me/intra-turn/).
