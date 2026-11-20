@@ -288,11 +288,10 @@ body.intent-first[data-experience=unified].page-open #typing-assistance{position
 body.intent-first[data-experience=unified].page-open.composer-active #typing-assistance{display:block!important;min-height:calc(3 * 1.7 * 14px);max-height:none;overflow:visible}
 @media(max-width:600px){body.intent-first[data-experience=unified].page-open.composer-active #typing-assistance{min-height:calc(5 * 1.7 * 14px)}}
 body.intent-first[data-experience=unified].page-open.composer-active #typing-assistance #quick-answer{margin:0}
-/* One top bar with a page open: the page's own toolbar (location, versions, Undo, History, Export,
-   The idea) replaces the site header, so the page area gets that height back. */
+/* One top bar with a page open: the page's own toolbar (location, versions, Undo, History, Export) replaces the site header, so the page area gets that height back. */
 body.intent-first[data-experience=unified].page-open>.site-header{display:none}
-.page-about{display:none}
-body.intent-first[data-experience=unified].page-open .page-about{display:block}
+
+body.intent-first[data-experience=unified].page-open 
 body.intent-first[data-experience=unified].page-open .document-toolbar{padding:10px 4px}
 @media(max-width:600px){body.intent-first[data-experience=unified].page-open .document-location{display:none}body.intent-first[data-experience=unified].page-open .document-toolbar{justify-content:flex-end}}
 /* While the first page is being made, the request stays visible above "Creating…". */

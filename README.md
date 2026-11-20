@@ -83,4 +83,4 @@ docs/                  component contracts, evaluation results, design research
 - [docs/EVALUATION.md](docs/EVALUATION.md): page evaluation method and results
 - [docs/research](docs/research): earlier design research
 
-The feedforward and inline-clarification ideas build on [Bruce Liu’s Beyond Taking Turns](https://demos.liubruce.me/intra-turn/), credited in the app’s About panel. This prototype does not claim academic novelty; whether the interaction helps people understand faster still needs testing with users.
+The feedforward and inline-clarification ideas build on [Bruce Liu’s Beyond Taking Turns](https://demos.liubruce.me/intra-turn/). This prototype does not claim academic novelty; whether the interaction helps people understand faster still needs testing with users.
