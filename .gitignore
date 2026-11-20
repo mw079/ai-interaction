@@ -14,3 +14,6 @@ artifacts/
 # System files and logs
 .DS_Store
 *.log
+
+# Local editor and assistant settings
+.claude/
