@@ -267,6 +267,13 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('intent-popover'
 document.addEventListener('pointerdown',e=>{if(!$('intent-popover').hidden&&!$('intent-popover').contains(e.target)&&!$('clarify-phrase').contains(e.target)&&!$('intent-refinements').contains(e.target))closeIntentPopover({suppress:true});});
 window.addEventListener('resize',()=>{if(!$('intent-popover').hidden)positionIntentPopover();});window.addEventListener('scroll',()=>{if($('intent-popover').contains(document.activeElement))positionIntentPopover();else closeIntentPopover();},{passive:true});
 $('build-page').onclick=()=>submitPage();
+// The whole field box is a text target: a click on its padding or empty space (not on a button)
+// puts the caret in the draft, as the text cursor promises.
+document.querySelector('.composer').addEventListener('pointerdown',event=>{
+  if(event.button!==0||event.target.closest('button,a,input,select,textarea,label'))return;
+  event.preventDefault();
+  const field=$('intent-input');field.focus();field.setSelectionRange(field.value.length,field.value.length);
+});
 // Go deeper: prefetch short answers for a page's follow-up questions in one Luna request.
 const deeperRequests=new WeakSet();
 document.addEventListener('page:deeper',async event=>{

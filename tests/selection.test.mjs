@@ -52,11 +52,21 @@ test('a completion that asks the user for details is dropped; the user’s own w
 
 test('a prediction continues a half-typed word, or follows a finished one with a space',()=>{
  assert.equal(completionSuffix('Plan a trip with my par','parents for a relaxed weekend.'),'ents for a relaxed weekend.');
- assert.equal(completionSuffix('Plan a trip with my parents','for a relaxed weekend.'),' for a relaxed weekend.');
+ assert.equal(completionSuffix('Plan a trip with my parents',' for a relaxed weekend.'),' for a relaxed weekend.');
+ assert.equal(completionSuffix('Teach me guitar as a complete begin','ner.'),'ner.');                 // no space: finishes the word
+ assert.equal(completionSuffix('Should I invest in index funds','. Consider risk.'),'. Consider risk.');
+ assert.equal(completionSuffix('How do I get my toddler to eat vegetables',' Offer them with favourites.'),'. Offer them with favourites.');
+ assert.equal(completionSuffix('Plan a trip ',' with my parents.'),'with my parents.');
  assert.equal(completionSuffix('Plan a trip. ','Keep it slow.'),'Keep it slow.');
  assert.equal(completionSuffix('Plan a trip.','Keep it slow.'),' Keep it slow.');
  assert.equal(completionSuffix('Plan a trip',''),'');
  assert.equal(completionSuffix('Make a study plan for next week','Include practice questions.'),'. Include practice questions.');
  assert.equal(completionSuffix('Plan a trip to','Japan in April.'),' Japan in April.');
+ assert.equal(completionSuffix('I wake up at 3am most nights','Try these steps for two weeks.'),'. Try these steps for two weeks.');
+ assert.equal(completionSuffix('Prepare me for an interview next Tuesday','next Tuesday. Include a mock interview.'),'. Include a mock interview.');
+ assert.equal(completionSuffix('I wake up at 3am most nights','I’d like practical steps.'),'. I’d like practical steps.');
+ assert.equal(completionSuffix('Find the book that','I lent to Sam.'),' I lent to Sam.');
+ assert.equal(completionSuffix('Plan it for a','a relaxed weekend.'),' relaxed weekend.');
+ assert.equal(freshCompletion('Speed up a query that joins orders and custom','customers? Share the SQL and query plan.'),'');
  assert.equal(completionSuffix('Plan a trip on a budget','budget. Include free viewpoints.'),'. Include free viewpoints.');
 });

@@ -48,28 +48,37 @@ export function workingDraftPreview(data,snapshot,current){
 
 // A completion that asks the user for something ("Add how many days you have") is a question in
 // disguise, not words the user would write; it is dropped (the live question asks instead).
-const ASKS_USER=/^(?:add|include|specify|mention|tell|share|say|state|note|give|list|let me know)\b.*\b(?:you|your|you['’](?:re|ll|ve|d))\b/iu;
+const ASKS_USER=/^(?:add|include|specify|mention|tell|share|say|state|note|give|list|let me know)\b.*\b(?:you|your|you['’](?:re|ll|ve|d))\b|(?:^|[.?!]\s+)(?:share|provide|paste|send|upload|attach)\b/iu;
 export function freshCompletion(text,suggestion){
  if(typeof suggestion!=='string'||suggestion.length>180||ASKS_USER.test(suggestion.trim()))return '';
  const normalize=value=>(value.normalize('NFKC').toLowerCase().replace(/[’‘]/g,"'")
   .match(/[\p{L}\p{M}\p{N}]+(?:'[\p{L}\p{M}\p{N}]+)*|[+−*/%^=<>×÷-]/gu)||[]).join(' ');
  const candidate=normalize(suggestion);
  if(!candidate||(' '+normalize(text)+' ').includes(' '+candidate+' '))return '';
- return suggestion.trim();
+ return suggestion.replace(/\s+$/u,'');   // keep a leading space: it says where the words join
 }
-// Tab continues the user's own text. The model may repeat an unfinished last word ("…my par" →
-// "parents for a weekend."), so the overlap is removed; otherwise a space separates the words.
+// Tab continues the user's own text. The model writes the exact text to insert after the draft,
+// with its leading space or punctuation ("…begin" + "ner.", "…Lisbon" + " with my parents.",
+// "…funds" + ". Consider risk."). The app keeps that, removes any words the model repeated, and
+// adds a missing full stop when a new sentence follows an unpunctuated one.
 export function completionSuffix(text,completion){
- const next=String(completion||'').trim();
+ const raw=String(completion||'').replace(/\s+$/u,''),next=raw.trimStart();
  if(!next)return '';
- const partial=text.match(/[\p{L}\p{M}\p{N}'’-]+$/u)?.[0];
- if(partial&&next.length>partial.length&&next.toLocaleLowerCase().startsWith(partial.toLocaleLowerCase()))return next.slice(partial.length);
- // A new sentence after an unpunctuated phrase ("…next week" + "Include practice questions.")
- // gets its full stop; a name continuing the phrase ("…trip to" + "Japan") does not.
- const opensSentence=!!partial&&SENTENCE_START.test(next);
- return (opensSentence?'.':'')+(!text||/\s$/.test(text)?'':' ')+next;
+ const lower=text.toLocaleLowerCase(),start=next.toLocaleLowerCase();
+ for(let k=Math.min(60,next.length-1,text.length);k>=1;k--){
+  const before=text[text.length-k-1],wholeWord=!/[\p{L}\p{N}]/u.test(next[k]);
+  if((k>=2||wholeWord)&&lower.endsWith(start.slice(0,k))&&(before===undefined||!/[\p{L}\p{N}]/u.test(before)))return next.slice(k);
+ }
+ if(!text||/\s$/u.test(text))return next;
+ if(!/[\p{L}\p{N}]$/u.test(text))return /^\p{P}/u.test(next)?next:' '+next;     // after "." or ","
+ if(/^\p{P}/u.test(next))return next;                                          // ". Consider…", ", even…"
+ const spaced=raw!==next,capital=/^\p{Lu}/u.test(next);
+ if(!spaced&&!capital)return next;                                               // finishes the word: "ner."
+ const last=text.match(/([\p{L}\p{N}'’-]+)$/u)[1].toLocaleLowerCase();
+ return (!JOINING_WORDS.has(last)&&SENTENCE_START.test(next)?'.':'')+' '+next;
 }
-const SENTENCE_START=/^(?:Include|Add|Also|Then|Please|Use|Show|Make|Keep|Focus|Explain|Give|Compare|Highlight|Suggest|Mention|List|Start|End|Avoid|Cover|Plan|Write|Let|Thank|Thanks|It|This|They|We)\b/u;
+const SENTENCE_START=/^(?:Include|Add|Also|Then|Please|Use|Show|Make|Keep|Focus|Explain|Describe|Give|Compare|Consider|Highlight|Suggest|Mention|List|Start|End|Avoid|Cover|Plan|Prepare|Practice|Write|Let|Try|Offer|Serve|Ask|Check|Share|Skip|Note|Remember|Take|Thank|Thanks|It|This|They|We|I|I['’](?:m|d|ll|ve))\b/u;
+const JOINING_WORDS=new Set(['a','an','the','to','in','on','at','of','for','with','from','by','about','into','and','or','but','that','which','who','if','when','because','so','than','as','my','your','our','their','his','her','its']);
 export function canAcceptCompletion({text,start,end,completion,composing=false,modified=false}){
  return !composing&&!modified&&start===end&&end===text.length&&!!freshCompletion(text,completion)&&text.length+completion.length+1<=4000;
 }

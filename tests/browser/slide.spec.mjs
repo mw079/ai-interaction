@@ -497,3 +497,25 @@ test('a follow-up that adds a part below the first visual scrolls to it and anno
   await expect(page.locator('#page-update')).toHaveText('Check yourself added');
 });
 
+test('with a page open, a click anywhere on the field box, not only its text line, puts the caret in the field',async({page})=>{
+  await send(page,'Explain how vaccines work.',vaccineTitle);
+  const composer=page.locator('.composer'),field=page.getByRole('textbox',{name:'Your next instruction'});
+  await page.locator('#active-component').click({position:{x:5,y:5}});
+  await expect(field).not.toBeFocused();
+  const box=await composer.boundingBox();
+  await page.mouse.click(box.x+box.width/2,box.y+3);                    // the box's top padding
+  await expect(field).toBeFocused();
+  await page.keyboard.type('Add a quiz');
+  await expect(field).toHaveValue('Add a quiz');
+});
+
+test('a plan step is never cut off: its field wraps and grows with the text, and stays editable',async({page})=>{
+  await send(page,'Make a running plan.','Zero to 5K');
+  const step=page.locator('textarea[data-edit-key="planner:1"]');
+  await expect(step).toHaveValue(/Session 3: run 20 minutes/);
+  const fits=await step.evaluate(el=>el.scrollHeight<=el.clientHeight+1&&el.clientHeight>40);
+  expect(fits).toBe(true);                                                  // two or more lines, all visible
+  await step.click();await step.evaluate(el=>el.setSelectionRange(el.value.length,el.value.length));await page.keyboard.type(' Cool down.');
+  await expect(step).toHaveValue(/Cool down\.$/);
+});
+

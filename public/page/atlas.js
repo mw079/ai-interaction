@@ -86,7 +86,11 @@ export function renderAtlas(target,p,{titleField,onEdit}){
  }else if(p.components?.length){
   // Catalog blocks own this page's visual surface.
  }else if(p.kind==='planner'){
-  const fields=make('div','atlas-plan');p.rows.forEach((row,i)=>{const label=make('label','',row.criterion);const input=make('input');input.dataset.editKey='planner:'+i;input.value=row.a;input.placeholder=row.b||'Your choice';input.maxLength=300;input.oninput=()=>{row.a=input.value;onEdit();};label.append(input);fields.append(label);});visual.append(fields);
+  const fields=make('div','atlas-plan');p.rows.forEach((row,i)=>{const label=make('label','',row.criterion);const input=make('textarea');input.rows=1;input.dataset.editKey='planner:'+i;input.value=row.a;input.placeholder=row.b||'Your choice';input.maxLength=300;
+   // Wraps and grows with its text, so a long step is never cut off.
+   const fit=()=>{input.style.height='0';input.style.height=input.scrollHeight+input.offsetHeight-input.clientHeight+'px';};
+   input.oninput=()=>{row.a=input.value;onEdit();fit();};const observer=new ResizeObserver(()=>{if(input.clientWidth)fit();});observer.observe(input);observers.push(observer);
+   label.append(input);fields.append(label);});visual.append(fields);
  }else if(p.kind==='projectile'){
   // The existing tested simulator is attached by the app, retaining its controls.
   visual.classList.add('atlas-projectile');

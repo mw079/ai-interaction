@@ -59,6 +59,9 @@ function previewFor({phase,text}){
         {label:'Target shown',detail:'The vaccine shows an antigen.',value:0,latitude:null,longitude:null},
         {label:'Memory forms',detail:'Memory cells remain afterwards.',value:0,latitude:null,longitude:null}]}],
       followUps:vaccineFollowUps};
+    if(text==='Make a running plan.')return {...preview,kind:'planner',title:'Zero to 5K',body:['Build up gradually over four weeks.'],
+      rows:[{criterion:'Week 1',a:'Run 1 minute, walk 2 minutes; repeat 8 times.',b:''},
+        {criterion:'Week 4',a:'Sessions 1–2: run 8 minutes, walk 2 minutes; repeat 3 times. Session 3: run 20 minutes without stopping at an easy pace.',b:''}]};
     if(text==='Add a quiz about vaccines.')return {...preview,title:vaccineTitle,body:['Vaccines teach the immune system to recognise a germ.','Safety: They train immunity without causing the disease.'],
       components:[{id:'vaccine-steps',type:'timeline',title:'From vaccine to memory',prompt:'',edges:[],items:[
         {label:'Target shown',detail:'The vaccine shows an antigen.',value:0,latitude:null,longitude:null},
