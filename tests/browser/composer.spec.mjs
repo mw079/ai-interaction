@@ -1,8 +1,8 @@
 import {expect,test} from '@playwright/test';
 import {
-  startFixtureServer,keplerDraft,keplerCompletion,keplerFollowUp,keplerAudienceDraft,keplerAudienceQuestion,unfinishedComparison,
+  startFixtureServer,keplerDraft,keplerAudienceDraft,keplerAudienceQuestion,unfinishedComparison,
   completedComparison,comparisonAnswer,japanCheckpoint,japanQuestion,japanAnswer,travelDraft,travelQuestion,kyotoChoice,kyotoAnswer,
-  requirementsDraft,requirementsQuestion,evaporationTitle,billDraft
+  requirementsDraft,requirementsQuestion,evaporationTitle,billDraft,lisbonDraft
 } from './fixture-server.mjs';
 
 let server;
@@ -27,7 +27,23 @@ async function expectSameGeometry(locator,before){
   for(const key of ['x','y','width','height'])expect(Math.abs(after[key]-before[key]),key).toBeLessThanOrEqual(1);
 }
 
-test('wrapped autocomplete stays visible at the same geometry and Tab accepts it once',async({page})=>{
+test('Tab predicts the user’s next words inside the field: it finishes a half-typed word, follows typing and inserts once',async({page})=>{
+  const field=draft(page);
+  await field.fill(lisbonDraft);
+  await advancePreview(page);
+  const ghost=page.locator('.completion-text');
+  await expect(ghost).toHaveText('ents for a relaxed weekend.');            // the overlap with "par" is removed
+  const inside=await ghost.evaluate(el=>{const g=el.getBoundingClientRect(),f=document.getElementById('intent-input').getBoundingClientRect();return g.top>=f.top&&g.bottom<=f.bottom+1;});
+  expect(inside).toBe(true);                                                 // in the field, not below it
+  await field.pressSequentially('ents f');                                   // typing along the prediction keeps the rest
+  await expect(ghost).toHaveText('or a relaxed weekend.');
+  await field.press('Tab');
+  await expect(field).toHaveValue(lisbonDraft+'ents for a relaxed weekend.');
+  await expect(field).toBeFocused();
+  await expect(page.locator('#completion-line')).toBeHidden();
+});
+
+test('a prediction too long for the field is not shown, and nothing appears below the field',async({page})=>{
   const initialReply=Promise.withResolvers();
   await page.route('**/api/preview',async route=>{
     if(route.request().postDataJSON().text===keplerDraft)await initialReply.promise;
@@ -38,32 +54,17 @@ test('wrapped autocomplete stays visible at the same geometry and Tab accepts it
   // The typed draft can resize the field. Measure once that transition settles.
   await expect.poll(()=>composer.evaluate(el=>Math.abs(el.getBoundingClientRect().top-(innerHeight-el.offsetHeight)/2)))
     .toBeLessThanOrEqual(1);
-  const wrapped=page.locator('.completion-overflow');
-  await expect(wrapped).toBeHidden();
   const before=await composer.boundingBox();
   const fieldBefore=await draft(page).boundingBox();
   initialReply.resolve();
   await advancePreview(page);
-
-  await expect(wrapped).toBeVisible();
-  await expect(wrapped).toHaveText(keplerCompletion);
-  await expect(page.getByRole('button',{name:'Accept suggestion: '+keplerCompletion})).toBeVisible();
+  await expect(quickAnswer(page)).toBeVisible();
   await expect(page.locator('.completion-text')).toBeHidden();
+  await expect(page.locator('#completion-line')).toBeHidden();
   await expectSameGeometry(composer,before);
   await expectSameGeometry(draft(page),fieldBefore);
-  expect((await wrapped.boundingBox()).y).toBeGreaterThanOrEqual(before.y+before.height);
-
-  await draft(page).press('Tab');
-  const accepted=keplerDraft+' '+keplerCompletion;
-  await expect(draft(page)).toHaveValue(accepted);
-  await expect(draft(page)).toBeFocused();
-  await advancePreview(page);
-  await expect(quickAnswer(page)).toHaveText(keplerFollowUp);
-  await expect(wrapped).toBeHidden();
-  await expect(page.locator('#completion-line')).toBeHidden();
-  await draft(page).press('Tab');
-  await expect(draft(page)).not.toBeFocused();
-  await expect(draft(page)).toHaveValue(accepted);
+  await draft(page).press('Tab');                                            // Tab never inserts unseen text
+  await expect(draft(page)).toHaveValue(keplerDraft);
 });
 
 test('unfinished comparison waits and resumes when the second subject is typed',async({page})=>{

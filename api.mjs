@@ -119,7 +119,7 @@ if(data.status!=='completed')return json({retryable:false,error:'The preview was
     let preview;try{preview=JSON.parse(content.filter(c=>c.type==='output_text').map(c=>c.text).join(''));}catch{return json({retryable:false,error:'The model did not return a valid preview. Your page is unchanged.'},502);}
     // Optional suggestion lists are trimmed rather than rejected: a fourth option or follow-up
     // question should not cost the user the whole answer. Content (body, components) is never cut.
-    if(preview&&typeof preview==='object')for(const [key,max] of [['options',3],['followUps',3],['information',4],['slideOptions',3]])
+    if(preview&&typeof preview==='object')for(const [key,max] of [['options',3],['followUps',3],['information',6],['slideOptions',3]])
       if(Array.isArray(preview[key])&&preview[key].length>max)preview[key]=preview[key].slice(0,max);
     if(preview?.components)preview.components=normaliseComponents(preview.components);
     if(Array.isArray(preview?.sections))preview.sections=preview.sections.map(section=>section?.components?{...section,components:normaliseComponents(section.components)}:section);

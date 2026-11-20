@@ -10,7 +10,7 @@ body.intent-first[data-experience=unified] .intent-panel>.section-label{display:
 body.intent-first[data-experience=unified] .composer{order:2;background:#fff;border:1px solid #e3e3e3;border-radius:20px;box-shadow:0 3px 18px #24242408!important}
 body.intent-first[data-experience=unified] .composer textarea{max-height:80px}
 body.intent-first[data-experience=unified].composer-active .composer textarea{max-height:min(150px,20dvh)}
-body.intent-first[data-experience=unified]:not(.composer-active) .live-question,body.intent-first[data-experience=unified]:not(.composer-active) #typing-assistance,body.intent-first[data-experience=unified]:not(.composer-active) :is(.completion-line,.completion-overflow){display:none!important}
+body.intent-first[data-experience=unified]:not(.composer-active) .live-question,body.intent-first[data-experience=unified]:not(.composer-active) #typing-assistance,body.intent-first[data-experience=unified]:not(.composer-active) .completion-line{display:none!important}
 body.intent-first[data-experience=unified] #typing-assistance{order:3;max-height:max(48px,min(170px,calc(100dvh - var(--dock-top) - var(--composer-height,128px) - 28px)));overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;background:#f6f6f6f5;padding:0 12px 10px;border-radius:0 0 12px 12px}
 body.intent-first[data-experience=unified] #quick-preview{margin:10px 0 0;max-width:none}
 body.intent-first[data-experience=unified] #quick-answer{font-size:.875rem;line-height:1.7;color:#676767}

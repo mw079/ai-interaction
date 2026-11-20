@@ -1,9 +1,9 @@
 import {positionPopover} from './popover.js';
-import {canAcceptCompletion,freshCompletion} from '../shared/model.js';
+import {canAcceptCompletion,freshCompletion,completionSuffix} from '../shared/model.js';
 const $=id=>document.getElementById(id);
 import {element as make} from '../shared/dom.js';
 export function setupComposerExperience({state,changed,request,openDetail,closeDetail,setIntent}){
- let completion='',helpController=null,selectionTimer=null,selectionVersion=0,lastSelection='',summary='',question=null,completedQuestion=null,questionTimer=null;
+ let completion='',completionBase='',helpController=null,selectionTimer=null,selectionVersion=0,lastSelection='',summary='',question=null,completedQuestion=null,questionTimer=null;
  const input=$('intent-input'),composer=document.querySelector('.composer'),trigger=$('clarify-phrase');
  const questionRow=make('div','live-question');questionRow.id='live-question';questionRow.hidden=true;
  const questionButton=make('button','live-question-button');questionButton.type='button';questionButton.setAttribute('aria-haspopup','dialog');questionRow.append(questionButton);composer.before(questionRow);
@@ -37,7 +37,12 @@ export function setupComposerExperience({state,changed,request,openDetail,closeD
  window.addEventListener('resize',closeSummary);window.addEventListener('scroll',closeSummary,{passive:true});
  const ghost=make('div','completion-line');ghost.id='completion-line';ghost.hidden=true;
  const ghostText=make('span','completion-text');const accept=make('button','completion-accept','Tab ↹');accept.type='button';accept.setAttribute('aria-label','Accept suggested sentence');ghost.append(accept);document.querySelector('.composer-actions').prepend(ghost);
- const wrappedCompletion=make('p','completion-overflow');wrappedCompletion.hidden=true;wrappedCompletion.setAttribute('aria-hidden','true');$('typing-assistance').before(wrappedCompletion);
+ // The prediction for the text it was made for; typing along it keeps the rest of it on show.
+ function suggestion(){
+  if(!completion||!input.value.startsWith(completionBase))return '';
+  const typed=input.value.slice(completionBase.length),full=completionSuffix(completionBase,completion);
+  return full.toLocaleLowerCase().startsWith(typed.toLocaleLowerCase())&&full.length>typed.length?full.slice(typed.length):'';
+ }
  const help=make('section','local-assistance');help.id='local-assistance';help.hidden=true;help.setAttribute('aria-label','Help with selected text');
  const helpHead=make('div','local-help-heading');const helpLabel=make('span','','Selected text');const dismiss=make('button','','Close');dismiss.type='button';dismiss.setAttribute('aria-label','Close local help');helpHead.append(helpLabel,dismiss);
  const helpText=make('p');helpText.setAttribute('role','status');help.append(helpHead,helpText);document.body.append(help);
@@ -46,17 +51,13 @@ export function setupComposerExperience({state,changed,request,openDetail,closeD
  function render(){
   document.body.dataset.experience='unified';
   const focused=document.activeElement===input||document.activeElement===accept,atEnd=input.selectionStart===input.selectionEnd&&input.selectionEnd===input.value.length;
-  ghost.hidden=!completion||!focused||!atEnd||state.composing||!summaryCard.hidden||!$('intent-popover').hidden||!help.hidden;
-  accept.setAttribute('aria-label','Accept suggestion: '+completion);ghostText.textContent=' '+completion;ghostText.hidden=ghost.hidden;
+  const next=suggestion();
+  ghost.hidden=!next||!focused||!atEnd||state.composing||!summaryCard.hidden||!$('intent-popover').hidden||!help.hidden;
+  accept.setAttribute('aria-label','Accept suggestion: '+next.trim());ghostText.textContent=next;ghostText.hidden=ghost.hidden;
   document.querySelector('.input-mirror-layer').style.height=input.clientHeight+'px';const mirror=$('input-mirror');if(!mirror.contains(ghostText))mirror.append(ghostText);
-  const wrapsOutsideField=!ghost.hidden&&mirror.scrollHeight>input.scrollTop+input.clientHeight+1;
-  // With a page open, a completion that does not fit in the field is skipped (Tab hint included, so
-  // Tab cannot insert unseen text): a separate line for it would push the page card.
-  const skipWrapped=wrapsOutsideField&&document.body.classList.contains('page-open');
-  if(skipWrapped){ghost.hidden=true;ghostText.hidden=true;}
-  if(wrapsOutsideField)ghostText.hidden=true;
-  wrappedCompletion.hidden=!wrapsOutsideField||skipWrapped;
-  wrappedCompletion.textContent=wrapsOutsideField?completion:'';
+  // The prediction lives inside the field, after the caret. One that would not fit in the field
+  // is not shown at all (Tab hint included, so Tab never inserts unseen text): no box below it.
+  if(!ghost.hidden&&mirror.scrollHeight>input.scrollTop+input.clientHeight+1){ghost.hidden=true;ghostText.hidden=true;}
   trigger.hidden=false;trigger.style.visibility=summary?'visible':'hidden';
   // A decided format is listed under What I understand; the question row only ever holds an open question.
   if(question?.slideOptions&&state.slideDecided)question=null;
@@ -66,9 +67,9 @@ export function setupComposerExperience({state,changed,request,openDetail,closeD
  new ResizeObserver(render).observe(input);
  document.addEventListener('focusin',render);document.addEventListener('focusout',()=>setTimeout(()=>{if(!composer.contains(document.activeElement)&&!summaryCard.contains(document.activeElement)&&!$('intent-popover').contains(document.activeElement))closeSummary();render();},0));input.addEventListener('keyup',render);input.addEventListener('click',render);input.addEventListener('select',render);input.addEventListener('scroll',render);input.addEventListener('compositionstart',render);input.addEventListener('compositionend',render);
  new MutationObserver(()=>{if(!$('intent-popover').hidden)closeSummary();render();}).observe($('intent-popover'),{attributes:true,attributeFilter:['hidden']});
- function acceptSentence(){const input=$('intent-input');if(!canAcceptCompletion({text:input.value,start:input.selectionStart,end:input.selectionEnd,completion,composing:state.composing}))return;input.value=input.value.trimEnd()+' '+completion;completion='';input.focus();input.setSelectionRange(input.value.length,input.value.length);changed();}
+ function acceptSentence(){const input=$('intent-input'),next=suggestion();if(!canAcceptCompletion({text:input.value,start:input.selectionStart,end:input.selectionEnd,completion:next,composing:state.composing}))return;input.value+=next;completion='';input.focus();input.setSelectionRange(input.value.length,input.value.length);changed();}
  accept.onclick=()=>{const input=$('intent-input');input.setSelectionRange(input.value.length,input.value.length);acceptSentence();};
- $('intent-input').addEventListener('keydown',event=>{const input=event.currentTarget;if(event.key==='Escape'){completion='';render();}if(event.key==='Tab'&&!ghost.hidden&&canAcceptCompletion({text:input.value,start:input.selectionStart,end:input.selectionEnd,completion,composing:state.composing||event.isComposing,modified:event.shiftKey||event.metaKey||event.ctrlKey||event.altKey})){event.preventDefault();acceptSentence();}});
+ $('intent-input').addEventListener('keydown',event=>{const input=event.currentTarget;if(event.key==='Escape'){completion='';render();}if(event.key==='Tab'&&!ghost.hidden&&canAcceptCompletion({text:input.value,start:input.selectionStart,end:input.selectionEnd,completion:suggestion(),composing:state.composing||event.isComposing,modified:event.shiftKey||event.metaKey||event.ctrlKey||event.altKey})){event.preventDefault();acceptSentence();}});
  async function explainSelected(text){
   if(!state.live||!text||text===lastSelection)return;helpController?.abort();const controller=helpController=new AbortController(),version=++selectionVersion;lastSelection=text;help.hidden=false;document.body.classList.add('has-local-help');helpLabel.textContent='About “'+text.slice(0,65)+'”';helpText.textContent='…';
   try{const result=await request({text,audience:state.audience,format:'Auto',phase:'selection'},controller.signal);if(version!==selectionVersion||controller.signal.aborted)return;helpText.textContent=result.preview.body.join('\n\n');}catch(error){if(error.name!=='AbortError'&&version===selectionVersion)helpText.textContent=error.message;}
@@ -87,7 +88,11 @@ export function setupComposerExperience({state,changed,request,openDetail,closeD
    render();
   },
   onPreview(data,{fresh=false,keepQuestion}={}){
-   completion=freshCompletion(input.value,data.completion);
+   // A new prediction replaces the old one; an interim refresh (no prediction) keeps one the user
+   // is still typing along.
+   const predicted=freshCompletion(input.value,data.completion);
+   if(predicted){completion=predicted;completionBase=input.value;}
+   else if(!(keepQuestion&&suggestion()))completion='';
    summary=state.intentOverride||data.interpretation||'';
    const previous=question?.question;
    const next=state.answers.some(e=>e.question===state.uncertainty?.question)?null:state.uncertainty;
@@ -99,7 +104,7 @@ export function setupComposerExperience({state,changed,request,openDetail,closeD
     questionButton.animate([{backgroundColor:'#ececec'},{backgroundColor:'transparent'}],{duration:480,easing:'ease-out'});
    }
   },
-  onDraftChanged(keep){completion='';summary=state.intentOverride||'';if(!keep)completedQuestion=null;question=completedQuestion&&{...completedQuestion,streaming:true};stopHelp();closeSummary();render();},
+  onDraftChanged(keep){if(!keep||!suggestion())completion='';summary=state.intentOverride||'';if(!keep)completedQuestion=null;question=completedQuestion&&{...completedQuestion,streaming:true};stopHelp();closeSummary();render();},
   onPageRendered(){stopHelp();render();},
   stop(){stopHelp();completion='';summary='';question=completedQuestion=null;closeSummary();render();}
  };

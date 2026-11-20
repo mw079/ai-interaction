@@ -7,7 +7,7 @@ test('all information types map to the registered control families',()=>{
  assert.deepEqual([...new Set(Object.values(INFORMATION_TYPES).map(i=>i.family))].sort(),CONTROL_FAMILIES.toSorted());
  for(const type of Object.keys(INFORMATION_TYPES))assert.ok(validInformation([item(type,'topic')]));
  assert.equal(validInformation([item('arbitrary_script','topic')]),false);
- assert.equal(validInformation(Array(5).fill(item('goal','topic'))),false);
+ assert.equal(validInformation(Array(6).fill(item('goal','topic'))),true);assert.equal(validInformation(Array(7).fill(item('goal','topic'))),false);
  assert.equal(validInformation([item('goal','topic',['x'.repeat(101)])]),false);
 });
 test('confirmation keeps the phrase and replaces its owned parentheses on later choices',()=>{

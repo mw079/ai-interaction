@@ -57,6 +57,19 @@ export function freshCompletion(text,suggestion){
  if(!candidate||(' '+normalize(text)+' ').includes(' '+candidate+' '))return '';
  return suggestion.trim();
 }
+// Tab continues the user's own text. The model may repeat an unfinished last word ("…my par" →
+// "parents for a weekend."), so the overlap is removed; otherwise a space separates the words.
+export function completionSuffix(text,completion){
+ const next=String(completion||'').trim();
+ if(!next)return '';
+ const partial=text.match(/[\p{L}\p{M}\p{N}'’-]+$/u)?.[0];
+ if(partial&&next.length>partial.length&&next.toLocaleLowerCase().startsWith(partial.toLocaleLowerCase()))return next.slice(partial.length);
+ // A new sentence after an unpunctuated phrase ("…next week" + "Include practice questions.")
+ // gets its full stop; a name continuing the phrase ("…trip to" + "Japan") does not.
+ const opensSentence=!!partial&&SENTENCE_START.test(next);
+ return (opensSentence?'.':'')+(!text||/\s$/.test(text)?'':' ')+next;
+}
+const SENTENCE_START=/^(?:Include|Add|Also|Then|Please|Use|Show|Make|Keep|Focus|Explain|Give|Compare|Highlight|Suggest|Mention|List|Start|End|Avoid|Cover|Plan|Write|Let|Thank|Thanks|It|This|They|We)\b/u;
 export function canAcceptCompletion({text,start,end,completion,composing=false,modified=false}){
  return !composing&&!modified&&start===end&&end===text.length&&!!freshCompletion(text,completion)&&text.length+completion.length+1<=4000;
 }

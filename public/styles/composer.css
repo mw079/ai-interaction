@@ -60,7 +60,6 @@
 .intent-first[data-experience=unified] .composer textarea{display:block;min-height:56px}
 [data-experience=unified] .completion-line{position:absolute;right:112px;bottom:20px;display:block;padding:0;margin:0;line-height:1;z-index:3}
 [data-experience=unified] #input-mirror .completion-text{font:inherit;color:#1d1d1f;white-space:pre-wrap}
-.completion-overflow{order:3;margin:8px 12px 0;padding:6px 10px;border-left:2px solid #d0d0d0;border-radius:0 7px 7px 0;background:#f0f0f0;color:#1d1d1f;font-size:.875rem;line-height:1.5;overflow-wrap:anywhere}
 [data-experience=unified] .completion-accept{display:block;min-height:22px;margin:0;padding:2px 5px}
 @media(max-width:480px){[data-experience=unified] .completion-line{right:105px;bottom:21px}}
 [data-experience=unified] .composer-actions .completion-line{position:static;flex:0 0 auto;min-width:36px;right:auto;bottom:auto;margin:0;padding:0}

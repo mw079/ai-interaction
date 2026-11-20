@@ -33,7 +33,7 @@ test('clarifying and exploratory choices are forwarded to both live completion a
   let sent;
   const request=new Request('http://127.0.0.1/api/preview',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer test-key-not-a-real-secret'},body:JSON.stringify({text:'Explain Kepler laws',format:'Auto',audience:'',interaction:'unified',phase,context:requestContext({draft:phase==='page'?'':'Explain Kepler laws',confirmed})})});
   const result=await handleAPI(request,async(url,opts)=>{sent=JSON.parse(opts.body);return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(demoPreview('Kepler laws'))}]}]});});
-  assert.equal(result.status,200);assert.ok(sent.input.includes('Undergraduate'));assert.ok(sent.input.includes('Angular momentum and equal areas'));assert.ok(sent.input.includes('Which connection should we explore?'));assert.ok(sent.instructions.includes('Follow decisions unless request clearly changes them'));if(phase==='preview')assert.ok(sent.instructions.includes('Never propose a direction already decided'));
+  assert.equal(result.status,200);assert.ok(sent.input.includes('Undergraduate'));assert.ok(sent.input.includes('Angular momentum and equal areas'));assert.ok(sent.input.includes('Which connection should we explore?'));assert.ok(sent.instructions.includes('Follow decisions unless request clearly changes them'));if(phase==='preview')assert.ok(sent.instructions.includes('Never repeat anything already in request or decided'));
   assert.equal(sent.instructions.includes('Also supply completion:'),phase==='preview');
  }
 });

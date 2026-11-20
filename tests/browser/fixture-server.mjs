@@ -7,6 +7,9 @@ import worker from '../../dist/server/index.js';
 export const billDraft='Explain how a bill becomes a law.';
 export const keplerDraft='I want to understand Kepler’s laws as an undergraduate.\nConnect all three laws to Newtonian gravity and explain the equal-areas law.';
 export const keplerCompletion='Include a worked example linking the orbital speed to conservation of angular momentum.';
+// A draft paused mid-word: the model repeats the unfinished word and predicts the rest.
+export const lisbonDraft='Plan a weekend trip to Lisbon with my par';
+export const lisbonPrediction='parents for a relaxed weekend.';
 export const keplerFollowUp='Angular momentum stays constant, so the orbital radius sweeps out equal areas in equal times.';
 export const unfinishedComparison='Explain the difference between evaporation and…';
 export const completedComparison='Explain the difference between evaporation and sublimation.';
@@ -99,6 +102,7 @@ function previewFor({phase,text}){
     ...preview,questionKind:'clarify',question:'Would you prefer gardens or museums?',options:['Gardens','Museums'],
     body:['Leave one quiet afternoon for gardens or a small museum.']
   };
+  if(text===lisbonDraft)return {...preview,body:['Plan one hilly neighbourhood a day.'],completion:lisbonPrediction};
   return {
     ...preview,
     body:[text.includes(keplerCompletion)?keplerFollowUp:'Kepler’s second law describes how a planet sweeps equal areas in equal times.'],

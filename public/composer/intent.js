@@ -22,7 +22,7 @@ export const INFORMATION_TYPES = {
 export const CONTROL_FAMILIES=['choices','cards','search','number','datetime','list','depth','tone','flexible_dates','area_map','assumption','goal_comparison','audience_knowledge','example','include_exclude','tradeoff'];
 export function validInformation(items){
   const short=(s,n)=>typeof s==='string'&&s.length<=n;
-  return Array.isArray(items)&&items.length<=4&&items.every(i=>i&&Object.hasOwn(INFORMATION_TYPES,i.type)&&short(i.phrase,120)&&i.phrase.trim().length>0&&short(i.question,180)&&short(i.unit,30)&&Array.isArray(i.options)&&i.options.length<=5&&i.options.every(o=>short(o,100))&&(i.samples===undefined||(Array.isArray(i.samples)&&i.samples.length<=i.options.length&&i.samples.every(sample=>short(sample,180)))));
+  return Array.isArray(items)&&items.length<=6&&items.every(i=>i&&Object.hasOwn(INFORMATION_TYPES,i.type)&&short(i.phrase,120)&&i.phrase.trim().length>0&&short(i.question,180)&&short(i.unit,30)&&Array.isArray(i.options)&&i.options.length<=5&&i.options.every(o=>short(o,100))&&(i.samples===undefined||(Array.isArray(i.samples)&&i.samples.length<=i.options.length&&i.samples.every(sample=>short(sample,180)))));
 }
 export function informationFor(text,items=[]){
   if(!validInformation(items))return [];

@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {canAcceptCompletion,freshCompletion} from '../public/shared/model.js';
+import {canAcceptCompletion,freshCompletion,completionSuffix} from '../public/shared/model.js';
 import {handleAPI} from './helpers.mjs';
 const headers={'Content-Type':'application/json',Authorization:'Bearer test-key-not-a-real-secret',Origin:'https://example.test'};
 const req=body=>new Request('https://example.test/api/preview',{method:'POST',headers,body:JSON.stringify({text:'An ellipse is an oval-shaped curve.',audience:'',format:'Auto',...body})});
@@ -48,4 +48,15 @@ test('a completion that asks the user for details is dropped; the user’s own w
   assert.equal(freshCompletion(draft,asking),'',asking);
  for(const own of ['Plan it for seven days by train.','Explain it as if you were a local guide.','Include one day trip from Florence.'])
   assert.equal(freshCompletion(draft,own),own);
+});
+
+test('a prediction continues a half-typed word, or follows a finished one with a space',()=>{
+ assert.equal(completionSuffix('Plan a trip with my par','parents for a relaxed weekend.'),'ents for a relaxed weekend.');
+ assert.equal(completionSuffix('Plan a trip with my parents','for a relaxed weekend.'),' for a relaxed weekend.');
+ assert.equal(completionSuffix('Plan a trip. ','Keep it slow.'),'Keep it slow.');
+ assert.equal(completionSuffix('Plan a trip.','Keep it slow.'),' Keep it slow.');
+ assert.equal(completionSuffix('Plan a trip',''),'');
+ assert.equal(completionSuffix('Make a study plan for next week','Include practice questions.'),'. Include practice questions.');
+ assert.equal(completionSuffix('Plan a trip to','Japan in April.'),' Japan in April.');
+ assert.equal(completionSuffix('Plan a trip on a budget','budget. Include free viewpoints.'),'. Include free viewpoints.');
 });
