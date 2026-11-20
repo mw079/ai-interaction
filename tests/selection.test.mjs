@@ -41,3 +41,11 @@ test('accepted or typed suggestions are suppressed even if Luna repeats them',()
  assert.equal(freshCompletion(draft,'Show how angular momentum enters.'),'Show how angular momentum enters.');
  assert.equal(freshCompletion('Plot x+1.','Plot x-1.'),'Plot x-1.');
 });
+
+test('a completion that asks the user for details is dropped; the user’s own words are kept',()=>{
+ const draft='I want to visit Italy. Include a practical route linking Rome, Tuscany, and Umbria.';
+ for(const asking of ['Add how many days you have and whether you’ll rent a car.','Include your departure city and total budget.','Tell me what you already know.'])
+  assert.equal(freshCompletion(draft,asking),'',asking);
+ for(const own of ['Plan it for seven days by train.','Explain it as if you were a local guide.','Include one day trip from Florence.'])
+  assert.equal(freshCompletion(draft,own),own);
+});

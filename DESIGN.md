@@ -13,7 +13,7 @@ These rules describe how AI Interaction should look and behave today. The histor
   - one optional question above the field
   - one short live answer under it (one sentence, at most 160 characters). With a page open it previews what Send will do ("Will add a worked example…") instead of answering, since Send changes the page; that line is sent with the request, so Send keeps the promise.
   - controls on highlighted phrases
-  - a grey completion that is only inserted when you accept it with Tab
+  - a grey completion that is only inserted when you accept it with Tab. It is always words you could have written yourself ("Include one day trip from Florence"), never a request for information ("Add how many days you have"): a missing detail is asked as the question above the field
 - **Ask at most one question, and only when it matters.** With a page open, an instruction that leaves open a choice changing the result (which two planets, show it how, more detail on which part, how many quiz questions) gets a question with 2–3 options from the page, even when a sensible default exists; the preview still states the default. A specific instruction (translate, shorten, remove a named part) gets none.
   - A missing detail that changes the result comes first (clarify). Otherwise offer a concrete next direction (explore), or ask nothing.
   - When both are open, ask how to show it before who it is for.

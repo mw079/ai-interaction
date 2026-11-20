@@ -46,8 +46,11 @@ export function workingDraftPreview(data,snapshot,current){
   completion:'',interpretation:'',slideOptions:[]};
 }
 
+// A completion that asks the user for something ("Add how many days you have") is a question in
+// disguise, not words the user would write; it is dropped (the live question asks instead).
+const ASKS_USER=/^(?:add|include|specify|mention|tell|share|say|state|note|give|list|let me know)\b.*\b(?:you|your|you['’](?:re|ll|ve|d))\b/iu;
 export function freshCompletion(text,suggestion){
- if(typeof suggestion!=='string'||suggestion.length>180)return '';
+ if(typeof suggestion!=='string'||suggestion.length>180||ASKS_USER.test(suggestion.trim()))return '';
  const normalize=value=>(value.normalize('NFKC').toLowerCase().replace(/[’‘]/g,"'")
   .match(/[\p{L}\p{M}\p{N}]+(?:'[\p{L}\p{M}\p{N}]+)*|[+−*/%^=<>×÷-]/gu)||[]).join(' ');
  const candidate=normalize(suggestion);
