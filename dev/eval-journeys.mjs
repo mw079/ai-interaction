@@ -12,7 +12,7 @@
 import {chromium} from 'playwright';
 import {mkdir, writeFile} from 'node:fs/promises';
 
-export const JOURNEYS = [
+const JOURNEYS = [
   ['garden', 'How do I start a vegetable garden on a small balcony in a shady spot', 'Add a watering schedule'],
   ['car', 'My car makes a squeaking noise when I brake, what could it be', 'Show me which parts to check first'],
   ['stress', 'How can I manage stress before exams', 'Make it simpler'],

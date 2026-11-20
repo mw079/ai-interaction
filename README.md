@@ -61,7 +61,7 @@ Install the development dependency (Playwright) with `npm ci`.
 | `npm test` | Unit and API tests with mocked model responses |
 | `PLAYWRIGHT_CHANNEL=chrome npm run test:browser` | Browser tests at 1280 and 390 px against a fixture server, including tests that measure each component against its data |
 | `npm run eval:journeys` | Full journeys in 20 domains (typing, live help, a picker, Send, views, a follow-up, Go deeper) with 12 checks each and an `overview.html`; set `EVAL_WIDTHS=1280,390` for phones and run the app with a higher `DAILY_LIMIT` |
-| `npm run eval:pages` | Page quality on ten fixed prompts, with screenshots and design-rule scores |
+| `npm run eval:pages` | Page quality on 15 fixed prompts (including plans and trips), with screenshots and design-rule scores |
 | `npm run eval:followups` | Follow-up instructions on existing pages (13 short journeys, 26 steps), with data checked against reference values |
 | `npm run eval:pickers` | Which picker live help attaches: 2 × 28 drafts covering all 24 picker types, on a tuned and an unseen set |
 | `npm run test:luna` | Live checks of three Luna answers, with time to first text |
