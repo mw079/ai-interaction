@@ -107,7 +107,7 @@ body.intent-first[data-experience=unified] .document-panel[data-generating]:not(
 
 .audience-picker .popover-heading{padding-bottom:4px}
 .audience-picker .control-choices{gap:1px}
-.audience-picker .control-option[aria-pressed=true]{justify-content:space-between}
+
 .audience-picker .custom-answer-button{margin-top:4px;color:#606060}
 
 .page-response p,.page-response ol{margin:0}
@@ -310,3 +310,13 @@ body.intent-first[data-experience=unified].page-open .document-panel[data-genera
 body.intent-first[data-experience=unified].page-open #typing-assistance{transition:min-height 220ms cubic-bezier(.2,.7,.2,1)}
 @media(prefers-reduced-motion:reduce){body.intent-first[data-experience=unified].page-open #typing-assistance{transition:none}}
 @starting-style{body.intent-first[data-experience=unified].page-open.composer-active #typing-assistance{min-height:0}}
+/* The page card is the scrolling box: rounded on all four corners at every scroll position, it
+   keeps its natural height when the page is short and shrinks as the dock grows; the page scrolls
+   inside it. There is no line between page and dock: the card's own edge is the boundary. */
+body.intent-first[data-experience=unified].page-open .document-panel{overflow:hidden;display:flex;flex-direction:column;padding:0 14px}
+body.intent-first[data-experience=unified].page-open .document-panel>*{flex:none}
+body.intent-first[data-experience=unified].page-open .document-panel>.atlas-stage{flex:0 1 auto;min-height:0;display:flex;flex-direction:column}
+body.intent-first[data-experience=unified].page-open .paper,
+body.intent-first[data-experience=unified].page-open.composer-active .paper{flex:0 1 auto;min-height:0;max-height:none;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+body.intent-first[data-experience=unified].page-open .intent-panel,
+body.intent-first[data-experience=unified].page-open.composer-active .intent-panel{border-top:0;padding-top:12px}

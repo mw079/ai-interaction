@@ -227,3 +227,22 @@ test('comparison, criteria, matrix and key numbers: selection and caption agree 
   await cmp.getByRole('button',{name:/Buying/}).click();
   await expect(cmp.getByRole('button',{name:/Buying/})).toHaveAttribute('aria-pressed','true');
 });
+
+test('concept map: a two-way relationship draws two arrows whose labels do not overlap',async({page})=>{
+  for(const width of [600,340]){
+    const result=await page.evaluate(async width=>{
+      const {renderComponent}=await import('/components/renderer.js');
+      const host=document.createElement('div');host.style.width=width+'px';document.body.prepend(host);
+      renderComponent(host,{id:'orbit',type:'graph',title:'Speed along the orbit',prompt:'',
+        items:[{label:'Farther away',detail:'Slow.',value:0},{label:'Closer to Sun',detail:'Fast.',value:0}],
+        edges:[{from:0,to:1,label:'falls inward and speeds up'},{from:1,to:0,label:'moves away and slows'}]},{edits:{}},{onEdit(){},ask(){}});
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+      const labels=[...host.querySelectorAll('.dg-edge-label.dg-on')].map(t=>t.getBoundingClientRect());
+      const arrows=[...host.querySelectorAll('.dg-link.dg-on')].map(p=>p.getBoundingClientRect());
+      const hit=(a,b)=>a.left<b.right-1&&b.left<a.right-1&&a.top<b.bottom-1&&b.top<a.bottom-1;
+      host.remove();
+      return {labels:labels.length,arrows:arrows.length,overlap:hit(labels[0],labels[1]),onArrow:labels.some(l=>arrows.some(a=>hit(l,{left:a.left-1,right:a.right+1,top:a.top,bottom:a.bottom})))};
+    },width);
+    expect(result).toEqual({labels:2,arrows:2,overlap:false,onArrow:false});
+  }
+});

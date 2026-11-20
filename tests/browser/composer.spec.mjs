@@ -254,6 +254,9 @@ test('a visible audience choice applies and closes even after the live preview r
 
     await page.getByRole('button',{name:'Review intent',exact:true}).click();
     await page.getByRole('button',{name:'Audience: simply, High school',exact:true}).click();
+    // The chosen option reads like the others: its label right after the radio dot, not pushed right.
+    const labelGap=await picker.locator('.control-option').evaluateAll(options=>options.map(o=>{const r=o.getBoundingClientRect(),t=document.createRange();t.selectNodeContents(o);const rects=[...t.getClientRects()].filter(x=>x.width>0);return Math.round(rects.at(-1).left-r.left);}));
+    expect(Math.max(...labelGap)-Math.min(...labelGap)).toBeLessThanOrEqual(2);
     await picker.getByRole('button',{name:'Type your own answer'}).click();
     const custom=picker.locator('#popover-custom');
     await custom.fill('Adults new to astronomy');
@@ -403,4 +406,20 @@ test('Send carries the preview the user read, and only a preview of exactly that
     await expect.poll(()=>sent.length).toBe(3);
     expect(sent[2].promised).toBeUndefined();                     // an unfinished preview is not a promise
   }finally{resume();}
+});
+
+test('with a page open, the page card is a rounded box that scrolls inside and shrinks while typing',async({page})=>{
+  await draft(page).fill('Explain all three Kepler laws.');
+  await page.getByRole('button',{name:'Explore interactively',exact:true}).click();
+  await expect(page.getByRole('textbox',{name:'Document title'})).not.toHaveValue('');
+  const card=page.locator('.paper');
+  const reading=await card.boundingBox();
+  await draft(page).click();
+  await draft(page).pressSequentially('Add a worked example.');
+  await page.evaluate(()=>Promise.all(document.getAnimations().map(a=>a.finished)));
+  const typing=await card.boundingBox();
+  expect(typing.height).toBeLessThan(reading.height);                     // the card gives the dock room
+  const look=await page.evaluate(()=>{const p=document.querySelector('.paper'),s=getComputedStyle(p),c=document.querySelector('.composer').getBoundingClientRect();
+    return {radius:s.borderBottomLeftRadius,scrolls:s.overflowY==='auto'&&p.scrollHeight>p.clientHeight,aboveField:p.getBoundingClientRect().bottom<=c.top,line:getComputedStyle(document.querySelector('.intent-panel')).borderTopWidth,windowScroll:document.documentElement.scrollHeight-innerHeight};});
+  expect(look).toEqual({radius:'18px',scrolls:true,aboveField:true,line:'0px',windowScroll:0});
 });

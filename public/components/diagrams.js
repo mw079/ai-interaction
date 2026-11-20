@@ -267,10 +267,28 @@ function renderConceptMap(content, block, saved, onEdit, detail) {
       const [x0, y0] = pos.get(e.from), [x1, y1] = pos.get(e.to);
       const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy) || 1;
       const r0 = reach(dx, dy) + 6, r1 = reach(dx, dy) + 10;
-      const sx = x0 + dx / len * r0, sy = y0 + dy / len * r0, ex = x1 - dx / len * r1, ey = y1 - dy / len * r1;
+      // A two-way relationship (A→B and B→A) gets two parallel arrows, one on each side, and each
+      // label sits beside its own arrow; drawn on one line, the two labels would overlap.
+      const twoWay = valid.some(o => o.from === e.to && o.to === e.from);
+      const side = twoWay ? (e.from < e.to ? 1 : -1) : 0;
+      const [cdx, cdy] = e.from < e.to ? [dx, dy] : [-dx, -dy];
+      const nx = -cdy / len, ny = cdx / len;
+      const shift = side * 9;
+      const sx = x0 + dx / len * r0 + nx * shift, sy = y0 + dy / len * r0 + ny * shift;
+      const ex = x1 - dx / len * r1 + nx * shift, ey = y1 - dy / len * r1 + ny * shift;
       layer.append(svgEl('path', {d: `M${sx} ${sy} L${ex} ${ey}`, class: 'dg-link dg-on', 'marker-end': `url(#${id}-on)`}));
       if (e.label) {
-        const text = svgEl('text', {x: (sx + ex) / 2, y: (sy + ey) / 2 + 5, class: 'dg-edge-label dg-on'});
+        const mx = (sx + ex) / 2, my = (sy + ey) / 2;
+        const attrs = {x: mx, y: my + 5, class: 'dg-edge-label dg-on'};
+        if (side) {
+          const ox = nx * side, oy = ny * side;
+          attrs.x = mx + ox * 12;
+          attrs.y = my + oy * 12 + 5;
+          // Anchor the text away from the arrow: to the side for a mostly vertical arrow.
+          if (Math.abs(ox) > 0.5) attrs.style = 'text-anchor:' + (ox > 0 ? 'start' : 'end');
+          else attrs.y = my + oy * 18 + (oy > 0 ? 12 : -2);
+        }
+        const text = svgEl('text', attrs);
         text.textContent = e.label;
         layer.append(text);
       }
