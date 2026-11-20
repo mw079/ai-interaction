@@ -410,3 +410,35 @@ test('city route: close-together stops are spread out on a plain plan, not stack
   expect(overlap).toBe(false);
 });
 
+test('map: the selected place’s name sits on a free side, clear of the other places and inside the map',async({page})=>{
+  const c=card(page,'City route');
+  await c.scrollIntoViewIfNeeded();
+  for(let i=0;i<data('City route').items.length;i++){
+    await c.locator('.dg-pin').nth(i).click();
+    await page.waitForTimeout(120);
+    const result=await c.locator('.dg-stage').evaluate(stage=>{
+      const pin=stage.querySelector('.dg-pin[aria-pressed=true]'),label=pin.querySelector('.dg-label').getBoundingClientRect(),frame=stage.getBoundingClientRect();
+      const others=[...stage.querySelectorAll('.dg-pin')].filter(p=>p!==pin).map(p=>p.querySelector('.dg-pin-dot').getBoundingClientRect());
+      return {covers:others.filter(o=>label.left<o.right&&label.right>o.left&&label.top<o.bottom&&label.bottom>o.top).length,
+        inside:label.left>=frame.left-1&&label.right<=frame.right+1&&label.top>=frame.top-1&&label.bottom<=frame.bottom+1};
+    });
+    expect(result,`place ${i+1}`).toEqual({covers:0,inside:true});
+  }
+});
+
+test('decision tree: branch labels stay readable and apart when the tree is drawn small',async({page})=>{
+  const sizes=await page.evaluate(async()=>{
+    const {renderComponent}=await import('/components/renderer.js');
+    const host=document.createElement('div');host.style.width='300px';document.body.prepend(host);
+    renderComponent(host,{id:'ev',type:'decision_tree',title:'Electric or hybrid?',prompt:'',
+      items:['Charging at home?','Electric car','Long trips often?','Mostly local trips','Frequent long trips'].map(label=>({label,detail:'x',value:0})),
+      edges:[{from:0,to:1,label:'Yes'},{from:0,to:2,label:'No'},{from:2,to:3,label:'Mostly local'},{from:2,to:4,label:'Frequent long trips'}]},{edits:{}},{onEdit(){},ask(){}});
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+    const rects=[...host.querySelectorAll('.dg-edge-label')].map(t=>t.getBoundingClientRect());host.remove();
+    return {heights:rects.map(r=>r.height),overlaps:rects.filter((a,i)=>rects.some((b,j)=>j>i&&a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom)).length};
+  });
+  expect(sizes.heights.length).toBe(4);
+  for(const height of sizes.heights)expect(height).toBeGreaterThanOrEqual(12);
+  expect(sizes.overlaps).toBe(0);                                            // sibling labels never collide
+});
+

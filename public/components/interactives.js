@@ -383,6 +383,7 @@ function renderMap(content, block, saved, onEdit, detail) {
   f.onPaint(i => {
     pins.forEach((p, j) => p.setAttribute('aria-pressed', String(i === j)));
     if (route) done.setAttribute('d', leg(0, i).getAttribute('d'));
+    requestAnimationFrame(placeLabel);
   });
   // Stops closer than a dot apart (a few hundred metres on a phone) are nudged apart a little so
   // each stays readable and clickable; the line keeps the true positions.
@@ -402,6 +403,29 @@ function renderMap(content, block, saved, onEdit, detail) {
       if (!moved) break;
     }
     pins.forEach((p, i) => { p.style.setProperty('--nudge-x', at[i].dx.toFixed(1) + 'px'); p.style.setProperty('--nudge-y', at[i].dy.toFixed(1) + 'px'); });
+    placeLabel();
+  };
+  // The selected place's name goes on the side (below, above, right, left) that covers the fewest
+  // other places and stays inside the map.
+  const placeLabel = () => {
+    const pin = pins.find(p => p.getAttribute('aria-pressed') === 'true');
+    if (!pin) return;
+    const label = pin.querySelector('.dg-label'), box = f.stage.getBoundingClientRect();
+    if (!box.width) return;
+    const dot = pin.querySelector('.dg-pin-dot').getBoundingClientRect(), lw = label.offsetWidth, lh = label.offsetHeight, gap = 6;
+    const cx = dot.left + dot.width / 2, cy = dot.top + dot.height / 2, r = dot.width / 2;
+    const sides = {
+      below: [cx - lw / 2, cy + r + gap], above: [cx - lw / 2, cy - r - gap - lh],
+      right: [cx + r + gap, cy - lh / 2], left: [cx - r - gap - lw, cy - lh / 2]
+    };
+    const others = pins.filter(p => p !== pin).map(p => p.querySelector('.dg-pin-dot').getBoundingClientRect());
+    let best = 'below', score = Infinity;
+    for (const [side, [x, y]] of Object.entries(sides)) {
+      const hits = others.filter(o => x < o.right + 2 && x + lw > o.left - 2 && y < o.bottom + 2 && y + lh > o.top - 2).length;
+      const outside = x < box.left || x + lw > box.right || y < box.top || y + lh > box.bottom ? 10 : 0;
+      if (hits + outside < score) { score = hits + outside; best = side; }
+    }
+    pins.forEach(p => { p.dataset.label = p === pin ? best : 'below'; });
   };
   new ResizeObserver(spread).observe(f.stage);
   f.paint();

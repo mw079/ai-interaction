@@ -200,7 +200,9 @@ function renderTree(content, block, saved, onEdit, detail) {
     let text;
     const label = t.edgeLabel.get(i);
     if (label) {
-      text = svgEl('text', {x: (x0 + x1) / 2, y: my + 4, class: 'dg-edge-label'});
+      // Just above the answer it leads to: sibling answers are a node apart, so their labels
+      // never share a spot, as they could halfway along converging curves.
+      text = svgEl('text', {x: x1, y: y1 - 7, class: 'dg-edge-label'});
       text.textContent = label;
       svg.append(text);
     }
@@ -212,6 +214,12 @@ function renderTree(content, block, saved, onEdit, detail) {
     f.stage.append(b);
     return b;
   });
+  // The tree is drawn at 600 units and scaled to its column: keep branch labels at a readable
+  // 12 px however small that makes it.
+  new ResizeObserver(() => {
+    const scale = (f.stage.clientWidth || W) / W;
+    svg.querySelectorAll('.dg-edge-label').forEach(text => { text.style.fontSize = Math.max(12, 12 / scale) + 'px'; });
+  }).observe(f.stage);
   f.onPaint(i => {
     const onPath = new Set();
     for (let k = i; k > 0 && t.parent[k] >= 0 && !onPath.has(k); k = t.parent[k]) onPath.add(k);
