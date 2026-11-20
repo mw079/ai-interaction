@@ -336,6 +336,7 @@ function renderMap(content, block, saved, onEdit, detail) {
   // region): then zoom to them. The world coastline is too coarse below ~3°, so a close-up is
   // drawn as a plain plan with distances to scale.
   const close = Math.max(x1 - x0, (y1 - y0) * 16 / 9) < 1.5;
+  let locator = null;
   const minW = close ? 0.04 : 16, minH = close ? 0.0225 : 9;
   let w = Math.max((x1 - x0) * 1.8, minW), h = Math.max((y1 - y0) * 1.9, minH);
   if (w / h > 16 / 9) h = w * 9 / 16; else w = h * 16 / 9;
@@ -354,7 +355,17 @@ function renderMap(content, block, saved, onEdit, detail) {
     const scale = el('div', 'dg-scale');
     scale.append(el('span', 'dg-scale-label', length < 1 ? length * 1000 + ' m' : length + ' km'));
     scale.style.width = pct(length, km);
-    f.stage.append(scale);
+    const north = el('div', 'dg-north');
+    north.setAttribute('aria-hidden', 'true');
+    north.append(el('span', 'dg-north-arrow', '↑'), el('span', '', 'N'));
+    // A small locator of the surrounding country, from the same coastline data, shows where the
+    // plan is; it takes a corner that no stop is in (see spread).
+    const lon = items.reduce((sum, i) => sum + i.longitude, 0) / items.length + 180, lat = 90 - items.reduce((sum, i) => sum + i.latitude, 0) / items.length;
+    locator = svgEl('svg', {viewBox: `${lon - 12} ${lat - 6.75} 24 13.5`, class: 'dg-locator', 'aria-hidden': 'true', preserveAspectRatio: 'xMidYMid slice'});
+    const locatorLand = svgEl('path', {class: 'dg-land'});
+    paintLand(locatorLand);
+    locator.append(svgEl('rect', {x: 0, y: 0, width: 360, height: 180, class: 'dg-sea'}), locatorLand, svgEl('circle', {cx: lon, cy: lat, r: 0.65, class: 'dg-locator-dot'}));
+    f.stage.append(scale, north, locator);
   } else {
     const land = svgEl('path', {class: 'dg-land'});
     paintLand(land);
@@ -383,7 +394,7 @@ function renderMap(content, block, saved, onEdit, detail) {
   f.onPaint(i => {
     pins.forEach((p, j) => p.setAttribute('aria-pressed', String(i === j)));
     if (route) done.setAttribute('d', leg(0, i).getAttribute('d'));
-    requestAnimationFrame(placeLabel);
+    requestAnimationFrame(placeLabels);
   });
   // Stops closer than a dot apart (a few hundred metres on a phone) are nudged apart a little so
   // each stays readable and clickable; the line keeps the true positions.
@@ -403,29 +414,62 @@ function renderMap(content, block, saved, onEdit, detail) {
       if (!moved) break;
     }
     pins.forEach((p, i) => { p.style.setProperty('--nudge-x', at[i].dx.toFixed(1) + 'px'); p.style.setProperty('--nudge-y', at[i].dy.toFixed(1) + 'px'); });
-    placeLabel();
-  };
-  // The selected place's name goes on the side (below, above, right, left) that covers the fewest
-  // other places and stays inside the map.
-  const placeLabel = () => {
-    const pin = pins.find(p => p.getAttribute('aria-pressed') === 'true');
-    if (!pin) return;
-    const label = pin.querySelector('.dg-label'), box = f.stage.getBoundingClientRect();
-    if (!box.width) return;
-    const dot = pin.querySelector('.dg-pin-dot').getBoundingClientRect(), lw = label.offsetWidth, lh = label.offsetHeight, gap = 6;
-    const cx = dot.left + dot.width / 2, cy = dot.top + dot.height / 2, r = dot.width / 2;
-    const sides = {
-      below: [cx - lw / 2, cy + r + gap], above: [cx - lw / 2, cy - r - gap - lh],
-      right: [cx + r + gap, cy - lh / 2], left: [cx - r - gap - lw, cy - lh / 2]
-    };
-    const others = pins.filter(p => p !== pin).map(p => p.querySelector('.dg-pin-dot').getBoundingClientRect());
-    let best = 'below', score = Infinity;
-    for (const [side, [x, y]] of Object.entries(sides)) {
-      const hits = others.filter(o => x < o.right + 2 && x + lw > o.left - 2 && y < o.bottom + 2 && y + lh > o.top - 2).length;
-      const outside = x < box.left || x + lw > box.right || y < box.top || y + lh > box.bottom ? 10 : 0;
-      if (hits + outside < score) { score = hits + outside; best = side; }
+    if (locator) {
+      // The first corner with no stop in it (the scale bar keeps the bottom left); none free: hidden.
+      const lw = locator.clientWidth || 96, lh = locator.clientHeight || 54, m = 12;
+      const corners = {'top-right': [W - lw - m, m], 'bottom-right': [W - lw - m, H - lh - m], 'top-left': [m, m]};
+      const free = Object.entries(corners).find(([, [x, y]]) => at.every(p => p.x + p.dx < x - 18 || p.x + p.dx > x + lw + 18 || p.y + p.dy < y - 18 || p.y + p.dy > y + lh + 18));
+      locator.dataset.corner = free ? free[0] : 'none';
     }
-    pins.forEach(p => { p.dataset.label = p === pin ? best : 'below'; });
+    placeLabels();
+  };
+  // Names go on the side (below, above, right, left) that covers no stop, no other name and no
+  // part of the map's furniture, inside the map. A city plan names every stop, the selected one
+  // first; a wider map names the selected place only.
+  const placeLabels = () => {
+    const box = f.stage.getBoundingClientRect();
+    if (!box.width) return;
+    const selected = pins.find(p => p.getAttribute('aria-pressed') === 'true');
+    const named = close ? [selected, ...pins.filter(p => p !== selected)].filter(Boolean) : selected ? [selected] : [];
+    const blocked = pins.map(p => p.querySelector('.dg-pin-dot').getBoundingClientRect());
+    for (const extra of f.stage.querySelectorAll('.dg-scale,.dg-north,.dg-locator:not([data-corner=none])')) {
+      const r = extra.getBoundingClientRect();
+      blocked.push({left: r.left, right: r.right + (extra.classList.contains('dg-scale') ? 44 : 0), top: r.top, bottom: r.bottom});
+    }
+    pins.forEach(p => { p.dataset.label = 'below'; });
+    for (const pin of named) {
+      const label = pin.querySelector('.dg-label'), dot = pin.querySelector('.dg-pin-dot').getBoundingClientRect();
+      const lw = label.offsetWidth, lh = label.offsetHeight, gap = 5, cx = dot.left + dot.width / 2, cy = dot.top + dot.height / 2, r = dot.width / 2;
+      const d = r * 0.7 + gap;
+      const sides = {
+        below: [cx - lw / 2, cy + r + gap], above: [cx - lw / 2, cy - r - gap - lh],
+        right: [cx + r + gap, cy - lh / 2], left: [cx - r - gap - lw, cy - lh / 2],
+        'below-right': [cx + d, cy + d], 'below-left': [cx - d - lw, cy + d],
+        'above-right': [cx + d, cy - d - lh], 'above-left': [cx - d - lw, cy - d - lh]
+      };
+      let best = 'below', score = Infinity, rect = null;
+      for (const [side, [x, y]] of Object.entries(sides)) {
+        const hits = blocked.filter(o => x < o.right + 2 && x + lw > o.left - 2 && y < o.bottom + 2 && y + lh > o.top - 2).length;
+        const outside = x < box.left || x + lw > box.right || y < box.top || y + lh > box.bottom ? 10 : 0;
+        if (hits + outside < score) { score = hits + outside; best = side; rect = {left: x, right: x + lw, top: y, bottom: y + lh}; }
+      }
+      // A name that fits nowhere is left out; the selected one always shows (its caption names it too).
+      if (score > 0 && pin !== selected) { pin.dataset.label = 'hidden'; continue; }
+      pin.dataset.label = best;
+      pin.style.setProperty('--d', d.toFixed(1) + 'px');
+      blocked.push(rect);
+    }
+    // Names matter more than the locator: if one still overlaps it, the locator moves to another
+    // corner clear of stops and names, or is hidden.
+    if (locator && locator.dataset.corner !== 'none') {
+      const hit = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+      const taken = [...pins.filter(p => named.includes(p) && p.dataset.label !== 'hidden').map(p => p.querySelector('.dg-label').getBoundingClientRect()), ...pins.map(p => p.querySelector('.dg-pin-dot').getBoundingClientRect())];
+      const clear = () => { const r = locator.getBoundingClientRect(); return !taken.some(t => hit(r, t)); };
+      if (!clear()) {
+        const tried = locator.dataset.corner;
+        locator.dataset.corner = ['top-right', 'bottom-right', 'top-left'].find(corner => corner !== tried && ((locator.dataset.corner = corner), clear())) || 'none';
+      }
+    }
   };
   new ResizeObserver(spread).observe(f.stage);
   f.paint();

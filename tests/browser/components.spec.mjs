@@ -398,11 +398,14 @@ test('route map: numbered stops are joined in travel order and the way so far en
 test('city route: close-together stops are spread out on a plain plan, not stacked on a world map',async({page})=>{
   const c=card(page,'City route');
   await c.scrollIntoViewIfNeeded();
-  await expect(c.locator('.dg-land')).toHaveCount(0);
+  await expect(c.locator('.dg-stage>svg.dg-svg .dg-land')).toHaveCount(0);     // the plan itself (the locator inset has a coastline)
   // The scale bar is true to the drawing: its km per pixel matches the distance between two stops.
   const items=data('City route').items,scale=c.locator('.dg-scale');
+  // The scale, the north arrow and the locator are drawn on top of the plan, not hidden under it.
+  for(const part of ['.dg-scale','.dg-north','.dg-locator'])
+    expect(await c.locator(part).evaluate(el=>{el.style.pointerEvents='auto';const r=el.getBoundingClientRect();const top=document.elementFromPoint(r.left+r.width/2,r.top+Math.min(3,r.height/2));el.style.pointerEvents='';return el===top||el.contains(top);}),part).toBe(true);
   const label=await scale.locator('.dg-scale-label').textContent(),metres=label.endsWith(' km')?parseFloat(label)*1000:parseFloat(label);
-  const barPx=(await scale.boundingBox()).width,stage=await c.locator('.dg-stage').evaluate(el=>{const svg=el.querySelector('svg');return {px:el.clientWidth,deg:svg.viewBox.baseVal.width};});
+  const barPx=(await scale.boundingBox()).width,stage=await c.locator('.dg-stage').evaluate(el=>{const svg=el.querySelector('svg.dg-svg');return {px:el.clientWidth,deg:svg.viewBox.baseVal.width};});
   const metresPerPx=stage.deg*111200/stage.px;
   near(barPx*metresPerPx,metres,metres*0.06);
   const dots=await c.locator('.dg-pin-dot').evaluateAll(d=>d.map(e=>{const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,r:r.width/2};}));
@@ -410,19 +413,26 @@ test('city route: close-together stops are spread out on a plain plan, not stack
   expect(overlap).toBe(false);
 });
 
-test('map: the selected place’s name sits on a free side, clear of the other places and inside the map',async({page})=>{
-  const c=card(page,'City route');
+test('city plan: stops are named where a name fits (always the selected one), never covering anything',async({page},testInfo)=>{
+  const c=card(page,'City route'),pins=data('City route').items.length;
   await c.scrollIntoViewIfNeeded();
-  for(let i=0;i<data('City route').items.length;i++){
+  for(let i=0;i<pins;i++){
     await c.locator('.dg-pin').nth(i).click();
     await page.waitForTimeout(120);
     const result=await c.locator('.dg-stage').evaluate(stage=>{
-      const pin=stage.querySelector('.dg-pin[aria-pressed=true]'),label=pin.querySelector('.dg-label').getBoundingClientRect(),frame=stage.getBoundingClientRect();
-      const others=[...stage.querySelectorAll('.dg-pin')].filter(p=>p!==pin).map(p=>p.querySelector('.dg-pin-dot').getBoundingClientRect());
-      return {covers:others.filter(o=>label.left<o.right&&label.right>o.left&&label.top<o.bottom&&label.bottom>o.top).length,
-        inside:label.left>=frame.left-1&&label.right<=frame.right+1&&label.top>=frame.top-1&&label.bottom<=frame.bottom+1};
+      const frame=stage.getBoundingClientRect(),hit=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
+      const pins=[...stage.querySelectorAll('.dg-pin')],labels=pins.map(p=>p.querySelector('.dg-label').getBoundingClientRect());
+      const dots=pins.map(p=>p.querySelector('.dg-pin-dot').getBoundingClientRect());
+      const furniture=[...stage.querySelectorAll('.dg-scale-label,.dg-north,.dg-locator')].filter(e=>getComputedStyle(e).display!=='none').map(e=>e.getBoundingClientRect());
+      const shown=labels.filter((l,i)=>pins[i].dataset.label!=='hidden');
+      return {named:shown.length,selectedNamed:pins.find(p=>p.getAttribute('aria-pressed')==='true').dataset.label!=='hidden',
+        covers:labels.reduce((n,l,i)=>pins[i].dataset.label==='hidden'?n:n+dots.filter((d,j)=>j!==i&&hit(l,d)).length+labels.filter((o,j)=>j!==i&&pins[j].dataset.label!=='hidden'&&hit(l,o)).length+furniture.filter(f=>hit(l,f)).length,0),
+        inside:shown.every(l=>l.left>=frame.left-1&&l.right<=frame.right+1&&l.top>=frame.top-1&&l.bottom<=frame.bottom+1),
+        scale:furniture.length>=2};
     });
-    expect(result,`place ${i+1}`).toEqual({covers:0,inside:true});
+    expect({...result,named:undefined},`selected place ${i+1}`).toEqual({named:undefined,selectedNamed:true,covers:0,inside:true,scale:true});
+    if(testInfo.project.name==='desktop')expect(result.named,'on a wide map every stop is named').toBe(pins);
+    else expect(result.named,'on a phone most stops are named').toBeGreaterThanOrEqual(pins-1);
   }
 });
 
