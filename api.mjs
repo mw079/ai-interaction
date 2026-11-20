@@ -15,8 +15,9 @@ PREVIEW_SCHEMA.required.push('slideOptions');
 PREVIEW_SCHEMA.properties.followUps=array(string);PREVIEW_SCHEMA.required.push('followUps');
 // The projectile simulator's starting launch, so a page about the Moon also simulates the Moon.
 PREVIEW_SCHEMA.properties.launch={type:'object',additionalProperties:false,properties:{speed:{type:'number'},angle:{type:'number'},world:{type:'string',enum:Object.keys(WORLDS)}},required:['speed','angle','world']};PREVIEW_SCHEMA.required.push('launch');
-// Put visible draft fields first so streaming delivers useful content before metadata.
-PREVIEW_SCHEMA.properties={body:PREVIEW_SCHEMA.properties.body,question:PREVIEW_SCHEMA.properties.question,phrase:PREVIEW_SCHEMA.properties.phrase,options:PREVIEW_SCHEMA.properties.options,...PREVIEW_SCHEMA.properties};
+// The model writes fields in this order, so put what the composer shows first: the answer, the
+// question, the Tab prediction (short) and the highlights stream before page-only metadata.
+{const p=PREVIEW_SCHEMA.properties;PREVIEW_SCHEMA.properties={body:p.body,question:p.question,phrase:p.phrase,options:p.options,questionKind:p.questionKind,completion:p.completion,information:p.information,...p};}
 const DEEPER_SCHEMA={type:'object',additionalProperties:false,properties:{sections:{type:'array',items:{type:'object',additionalProperties:false,properties:{answer:string,components:{type:'array',items:COMPONENT_SCHEMA}},required:['answer','components']}}},required:['sections']};
 const SELECTION_SCHEMA={type:'object',additionalProperties:false,properties:{answer:string,replacement:string},required:['answer','replacement']};
 const json=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}});

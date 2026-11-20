@@ -83,6 +83,9 @@ export function setupComposerExperience({state,changed,request,openDetail,closeD
  return {
   onMirrorRendered:render,
   onStream(partial){
+   // The Tab prediction is shown as soon as it is complete, before the rest of the answer.
+   const predicted=!partial.reset&&freshCompletion(input.value,partial.completion);
+   if(predicted&&predicted!==completion){completion=predicted;completionBase=input.value;}
    if(partial.reset)question=completedQuestion&&{...completedQuestion,streaming:true};
    else if(!completedQuestion&&partial.question)question={question:partial.question,options:[],phrase:null,streaming:true};
    render();

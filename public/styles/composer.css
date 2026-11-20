@@ -27,7 +27,7 @@
 
 [data-experience=unified] .composer-bottom{min-height:36px;gap:12px}
 [data-experience=unified] .composer-actions{margin-left:auto}
-[data-experience=unified] .completion-text{color:#1d1d1f;font-size:1rem}
+[data-experience=unified] .completion-text{color:#7a98bb;font-size:1rem}
 [data-experience=unified] .completion-accept{color:#1d1d1f;border-color:#e3e3e3;background:#f5f5f5}
 [data-experience=unified] .completion-line{padding:2px 0 12px}
 .live-question{max-width:100%}
@@ -59,7 +59,7 @@
 /* Assistance never changes the composer's geometry. Only the user's own text grows it. */
 .intent-first[data-experience=unified] .composer textarea{display:block;min-height:56px}
 [data-experience=unified] .completion-line{position:absolute;right:112px;bottom:20px;display:block;padding:0;margin:0;line-height:1;z-index:3}
-[data-experience=unified] #input-mirror .completion-text{font:inherit;color:#1d1d1f;white-space:pre-wrap}
+[data-experience=unified] #input-mirror .completion-text{font:inherit;color:#7a98bb;white-space:pre-wrap}
 [data-experience=unified] .completion-accept{display:block;min-height:22px;margin:0;padding:2px 5px}
 @media(max-width:480px){[data-experience=unified] .completion-line{right:105px;bottom:21px}}
 [data-experience=unified] .composer-actions .completion-line{position:static;flex:0 0 auto;min-width:36px;right:auto;bottom:auto;margin:0;padding:0}

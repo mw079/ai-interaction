@@ -1,3 +1,4 @@
+import {validInformation} from '../composer/intent.js';
 // Shared SSE framing. Handles arbitrary UTF-8/network chunk boundaries and cancellation.
 export async function* readSSE(body,{signal}={}){
  if(!body)throw new Error('The stream was empty.');
@@ -23,11 +24,24 @@ function streamValueEnd(text,start){
  let depth=0;for(let i=start;i<text.length;i++){const c=text[i];if(c==='"'){const s=streamString(text,i);if(!s?.complete)return -1;i=s.end-1;continue;}if(c==='['||c==='{')depth++;else if(c===']'||c==='}'){depth--;if(depth===0)return i+1;if(depth<0)return i;}else if(c===','&&depth===0)return i;}
  return -1;
 }
+// The finished elements of an array that is still streaming: '[{…},{…},{"ty' → the first two.
+function completeItems(text,start){
+ const items=[];let i=start+1;
+ while(i<text.length){
+  while(i<text.length&&/[\s,]/.test(text[i]))i++;
+  if(text[i]!=='{'&&text[i]!=='"')break;
+  const end=streamValueEnd(text,i);
+  if(end<0||text[end-1]!=='}'&&text[end-1]!=='"')break;
+  try{items.push(JSON.parse(text.slice(i,end)));}catch{break;}
+  i=end;
+ }
+ return items;
+}
 function partialFields(text){
  const fields=Object.create(null),complete=new Set();let i=0;while(/\s/.test(text[i]||'')&&i<text.length)i++;if(text[i++]!=='{')return {fields,complete};
  const skip=()=>{while(i<text.length&&/\s|,/.test(text[i]))i++;};
  while(i<text.length){skip();if(text[i]!== '"')break;const key=streamString(text,i);if(!key?.complete)break;i=key.end;skip();if(text[i++]!==':')break;skip();const start=i,end=streamValueEnd(text,start);
-  if(end<0){if(text[start]==='"'){const value=streamString(text,start);if(value)fields[key.value]=value.value;}else if(key.value==='body'&&text[start]==='['){i=start+1;skip();if(text[i]==='"'){const value=streamString(text,i);if(value)fields.body=[value.value];}}break;}
+  if(end<0){if(text[start]==='"'){const value=streamString(text,start);if(value)fields[key.value]=value.value;}else if(key.value==='body'&&text[start]==='['){i=start+1;skip();if(text[i]==='"'){const value=streamString(text,i);if(value)fields.body=[value.value];}}else if(text[start]==='[')fields[key.value]=completeItems(text,start);break;}
   try{fields[key.value]=JSON.parse(text.slice(start,end));complete.add(key.value);}catch{break;}i=end;
  }
  return {fields,complete};
@@ -41,7 +55,11 @@ export function partialPageAnswer(text){
 
 export function partialLivePreview(text){
  const {fields,complete}=partialFields(text);
- const result={};if(Array.isArray(fields.body)&&typeof fields.body[0]==='string')result.answer=fields.body[0].slice(0,160);
+ const result={};
+ // Each highlight and the Tab prediction are sent as soon as they are complete, one at a time,
+ // and only once each passes the same validation as the final answer.
+ if(Array.isArray(fields.information)){const ready=fields.information.filter(item=>validInformation([item])).slice(0,6);if(ready.length)result.information=ready;}
+ if(complete.has('completion')&&typeof fields.completion==='string'&&fields.completion.length<=180)result.completion=fields.completion;if(Array.isArray(fields.body)&&typeof fields.body[0]==='string')result.answer=fields.body[0].slice(0,160);
  if(typeof fields.question==='string'){result.question=fields.question.slice(0,200);result.questionReady=complete.has('question')&&complete.has('options')&&complete.has('phrase');}
  if(complete.has('phrase')&&typeof fields.phrase==='string')result.phrase=fields.phrase.slice(0,120);
  if(complete.has('options')&&Array.isArray(fields.options)&&fields.options.length<=5&&fields.options.every(v=>typeof v==='string'&&v.length<=100))result.options=fields.options;

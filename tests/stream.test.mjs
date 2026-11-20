@@ -88,3 +88,12 @@ test('page help streams answer text and releases the replacement only with a val
  assert.equal(events.at(-1).type,'done');
  assert.equal(events.at(-1).preview.replacement,proposal.replacement);
 });
+
+test('each highlight and the Tab prediction stream as soon as they are complete and valid',()=>{
+ const item=JSON.stringify({type:'duration',phrase:'weekend',question:'How long?',options:['2 days','3 days'],unit:'days',samples:[]});
+ const bad=JSON.stringify({type:'not_a_type',phrase:'x',question:'?',options:[],unit:'',samples:[]});
+ const a=partialLivePreview('{"body":["Hi."],"completion":"parents for a weekend.","information":['+item+','+bad+','+item.slice(0,30));
+ assert.equal(a.completion,'parents for a weekend.');
+ assert.deepEqual(a.information.map(i=>i.phrase),['weekend']);              // the invalid one and the half-written one wait
+ assert.equal(partialLivePreview('{"body":["Hi."],"completion":"par').completion,undefined);
+});

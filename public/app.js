@@ -496,7 +496,15 @@ async function preview(text=$('intent-input').value.trim()){
       showQuickAnswer(partial.answer,false,!active.answer);
       active.answer=partial.answer;
     }
-    if(currentDraft()===text)composerExperience?.onStream(partial);
+    if(currentDraft()!==text)return;
+    // Highlights appear one by one as each finishes, not all at once at the end.
+    const marks=partial.information&&JSON.stringify(partial.information.map(item=>item.phrase));
+    if(marks&&marks!==active.marks){
+      active.marks=marks;
+      state.information=mergeInformation($('intent-input').value,state.information,partial.information);
+      renderUncertainty();
+    }
+    composerExperience?.onStream(partial);
   };
   try{
     const data=await callPreview(payload,controller.signal,progress);

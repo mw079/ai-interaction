@@ -64,7 +64,8 @@ These rules describe how AI Interaction should look and behave today. The histor
 - **Each colour has one job.** If everything is coloured, nothing stands out, so colour is kept for meaning:
   - **Grey** for the whole interface: text, borders, cards, panels and the composer controls (pickers). Neutral greys, no tint, on a `#f8f8f8` page with white cards.
   - **Near-black** (`#1d1d1f`) for actions and choices: the primary button, selected picker options, ticked boxes, sliders.
-  - **Blue** (`#2f5d8a`, soft `#e6eef6`) only inside visuals, meaning "this is what you are looking at": the selected step, the trajectory, the orbit point, the progress line. Keyboard focus rings use a lighter blue for the same reason. Being the only colour on the page, the visual gets attention first.
+  - **Soft blue** (`#7a98bb`) for the Tab prediction in the field: text that is not yours yet, clearly apart from your near-black text.
+  - **Blue** (`#2f5d8a`, soft `#e6eef6`) otherwise only inside visuals, meaning "this is what you are looking at": the selected step, the trajectory, the orbit point, the progress line. Keyboard focus rings use a lighter blue for the same reason. Being the only colour on the page, the visual gets attention first.
   - **Green** (`#2e7d4f`) and **red** (`#b4443c`) only for feedback: a correct or wrong answer, an error, deleted text in an edit review.
 - **Colour is never the only signal.** A selected item is also filled, bold or outlined, so the page still reads in greyscale and for colour-blind readers. Blue was chosen over green for the visual accent because it stays distinct from grey, green and red for almost everyone.
 - **One shape language:**
