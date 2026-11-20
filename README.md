@@ -84,7 +84,7 @@ prompts.mjs            model input and the instructions for each phase
 server.mjs             local server; build.mjs and styles.mjs produce the bundle
 dev/                   galleries, sample data and the live evaluations
 tests/                 unit and API tests; tests/browser/ for Playwright and its fixture server
-docs/                  component contracts, evaluation results, design research
+docs/                  component contracts and evaluation results
 ```
 
 ## Privacy and limits
