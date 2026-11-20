@@ -89,6 +89,7 @@ tests/                 unit and API tests; tests/browser/ for Playwright and its
 ## Privacy and limits
 
 - **The key stays on the server.** It never reaches browser assets, the build or Git.
+- **No outside services in the browser.** The page loads only from the app's own server, including its font (DM Sans, in `public/fonts/` with its license). Only the server talks to OpenAI.
 - **Requests are not stored by OpenAI** (`store:false`). Live mode still sends your draft, choices and page content through the server to OpenAI.
 - **Known gaps:** a failed Send does not put the draft back in the field; there is no import for exported pages; nobody outside development has used the app yet.
 - **Not implemented:** file uploads, web search, accounts, analytics, shared editing and local models.
