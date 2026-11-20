@@ -513,8 +513,8 @@ test('a plan step is never cut off: its field wraps and grows with the text, and
   await send(page,'Make a running plan.','Zero to 5K');
   const step=page.locator('textarea[data-edit-key="planner:1"]');
   await expect(step).toHaveValue(/Session 3: run 20 minutes/);
-  const fits=await step.evaluate(el=>el.scrollHeight<=el.clientHeight+1&&el.clientHeight>40);
-  expect(fits).toBe(true);                                                  // two or more lines, all visible
+  // The field refits once the web font has loaded, so wait for the final height.
+  await expect.poll(()=>step.evaluate(el=>el.scrollHeight<=el.clientHeight+1&&el.clientHeight>40)).toBe(true);                                                  // two or more lines, all visible
   await step.click();await step.evaluate(el=>el.setSelectionRange(el.value.length,el.value.length));await page.keyboard.type(' Cool down.');
   await expect(step).toHaveValue(/Cool down\.$/);
 });

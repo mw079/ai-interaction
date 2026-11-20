@@ -131,9 +131,10 @@ export function liveClarificationFor(text, data, entries=[]) {
 }
 export function compactLiveAnswer(data){
   const text=(data.body?.join(' ')||'').replace(/\s+/g,' ').trim();
+  // The whole answer when it fits; a second sentence often carries the point.
+  if(text.length<=160)return text;
   const first=text.match(/^.*?[.!?](?:\s|$)/)?.[0]?.trim();
   if(first&&first.length<=160)return first;
-  if(text.length<=160)return text;
   // Too long: end at the last clause break (; : or a dash) so the answer still reads as a whole
   // sentence; cut at a word with an ellipsis only when no break keeps most of it.
   const clause=text.slice(0,160).match(/^(.{80,}?)\s*(?:;|:|\s[—–-])\s(?!.*(?:;|:|\s[—–-])\s)/)?.[1];

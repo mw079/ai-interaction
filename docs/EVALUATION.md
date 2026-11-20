@@ -147,3 +147,17 @@ Most remaining picker misses were between types that overlap, so four were merge
 | Unseen set | — | 24/28 | 26/28 |
 
 Remaining misses: "an overview" read as depth, "across Europe" and "in Italian" not highlighted, "near the old town" read as a place, "a family of five" read as a duration. Live-help timing: first answer 0.81 s, complete 2.67 s (medians of 12).
+
+## End-to-end review across 20 domains, 2026-11-20
+
+Twenty requests from separate domains (balcony garden, squeaky brakes, exam stress, a German tenant deposit, a startup pitch, seasons, piano scales, exposure in photography, a Tuscan wedding, protein for lifting, kitchen or bathroom first, a Python bug, impressionism, the greenhouse effect, a career switch, fractions for a 9-year-old, wine pairing, a marathon plan, Copenhagen with kids, an emergency fund), each as a full journey in the real app: typed character by character, live question, answer, highlights and Tab, one picker opened, Send, the background views, one follow-up, and Go deeper. Screenshots of every stage at 1280 px (all 20) and 390 px (6), inspected by eye. No script errors; every page gained views; first page 4.9–16 s.
+
+Found and fixed:
+- Follow-ups changed more than asked: adding a timeline to the wedding page silently dropped its map and rewrote the takeaways; on the photo and Python pages a follow-up replaced the whole page with one view. Follow-ups now keep the title, introduction, takeaways and other views; with three views already, the preview names the one replaced. Re-run: every follow-up kept the page and added or updated the asked part.
+- A view changed in place (new checklist items) gave no sign; it now opens its tab, is highlighted and announced ("Get growing updated").
+- Highlights on the main question itself ("What makes impressionism different from realism") or on question words ("How do I"), and audience for non-people ("Italian dishes"): the prompt now forbids these, and a highlight made only of question words is dropped in the app.
+- The live answer was cut to its first sentence even when both fitted (the greenhouse answer lost its point); now the whole answer shows when it fits in 160 characters.
+- Thin background views (a two-node diagram): a view needs at least three items.
+- Found by the follow-up eval afterwards: the 6-item rule made the model merge planets ("Earth and Mars = 1.52"); a chart, spectrum, map or timeline may have 7–8 when the data needs them, and two things never share an item.
+
+Left as is: a question shown while typing can be replaced once right after typing stops, when the answer for the full text arrives (showing questions only for the full text would remove help during typing). Evals afterwards: pickers 25/28 tuned and 25/28 unseen, pages 99 %, follow-ups 47/48 and then 11/11 on the affected scenarios after the item fix.

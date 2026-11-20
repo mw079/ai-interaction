@@ -360,8 +360,10 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
     const p={...structuredClone(draft),revision:state.revision,baseVersion:version,source:data.model,physics:scope?draft.physics:projectileLaunch(draft.launch),edits:scope?draft.edits:{},selected:scope?draft.selected:0};
     if(!state.component||version===state.pageVersion){
       // A follow-up that adds a part below the first visual (a quiz, a second chart) scrolls to it.
-      const earlier=state.component&&new Set((state.component.components||[]).map(c=>c.id));
+      const earlier=state.component&&new Map((state.component.components||[]).map(c=>[c.id,JSON.stringify(c)]));
       const added=!scope&&earlier?(p.components||[]).slice(1).find(c=>!earlier.has(c.id)):null;
+      // A follow-up that changes a view in place (new checklist items) shows that view too.
+      const changed=!scope&&earlier&&!added?(p.components||[]).find(c=>earlier.has(c.id)&&earlier.get(c.id)!==JSON.stringify(c)):null;
       if(state.component){timeline.save(capturePage());snapshot(scope?'Before focused change':'Before new page');}
       state.component=p;$('document-title').value=p.title;
       if(!scope)directEdits=new DirectEditUndo();
@@ -370,6 +372,7 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
       state.proposal=null;state.pageVersion++;
       renderActive();renderProposal();appendPage();renderPageNavigation();workspace?.reading();
       if(added)showUpdatedPart('block:'+added.id,added.title,false,'added');
+      else if(changed)showUpdatedPart('block:'+changed.id,changed.title,false,'updated');
       else showUpdatedPart(scope?.id,scope?.label);
       if(!scope)requestViews(p);
     }

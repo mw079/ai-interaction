@@ -75,3 +75,9 @@ test('the picker eval only expects picker types that exist, and covers every one
   assert.deepEqual(new Set(cases.map(([type])=>type)),new Set(Object.keys(INFORMATION_TYPES)),name+' covers every type');
  }
 });
+
+test('a highlight made only of question words is dropped',()=>{
+ const text='How do I pair wine with Italian dishes';
+ const item=(phrase,type)=>({type,phrase,question:'?',options:['A','B','C'],unit:'',samples:[]});
+ assert.deepEqual(informationFor(text,[item('How do I','audience'),item('Italian dishes','requirements')]).map(e=>e.phrase),['Italian dishes']);
+});

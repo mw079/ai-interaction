@@ -22,6 +22,7 @@ export function validInformation(items){
   const short=(s,n)=>typeof s==='string'&&s.length<=n;
   return Array.isArray(items)&&items.length<=6&&items.every(i=>i&&Object.hasOwn(INFORMATION_TYPES,i.type)&&short(i.phrase,120)&&i.phrase.trim().length>0&&short(i.question,180)&&short(i.unit,30)&&Array.isArray(i.options)&&i.options.length<=5&&i.options.every(o=>short(o,100))&&(i.samples===undefined||(Array.isArray(i.samples)&&i.samples.length<=i.options.length&&i.samples.every(sample=>short(sample,180)))));
 }
+const FILLER_WORDS=new Set('how do does did i me my we you can could should would will what why when where which who is are am be to a an the it this that of in on for with and or'.split(' '));
 export function informationFor(text,items=[]){
   if(!validInformation(items))return [];
   const result=[];
@@ -44,6 +45,8 @@ export function informationFor(text,items=[]){
     return fragments.length?{...item,phrase:fragments[0]}:item;
   });
   for(const item of anchored){
+    // A highlight needs a word that names a detail: "How do I" or "Why does" alone says nothing.
+    if(!(item.phrase.toLowerCase().match(/[\p{L}\p{N}]+/gu)||[]).some(word=>!FILLER_WORDS.has(word)))continue;
     const start=text.indexOf(item.phrase);if(start<0)continue;
     let depth=0;for(const char of text.slice(0,start)){if(char==='(')depth++;else if(char===')')depth=Math.max(0,depth-1);}if(depth)continue;
     const end=start+item.phrase.length;
