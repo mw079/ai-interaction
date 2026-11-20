@@ -180,7 +180,7 @@ async function run() {
       try {
         let timing;
         if (step.promote) {
-          const tab = page.getByRole('tab').first();
+          const tab = page.getByRole('tablist', {name: 'Go deeper'}).getByRole('tab').first();   // not a view tab
           await tab.click();
           await page.waitForFunction(() => document.querySelector('.atlas-next-answer')?.textContent.trim().length > 20, null, {timeout: 30000});
           const question = await tab.textContent(), answer = await page.locator('.atlas-next-answer').textContent();

@@ -1,6 +1,6 @@
 # Atlas component library
 
-The model selects up to two visual blocks per page. A block has a stable `id`, a supported `type`, a title, a `prompt`, 2–6 items (up to 8 for chart, spectrum, map and timeline, where data often grows by one) (`label`, `detail`, numeric `value`, and `latitude`/`longitude`, which are null except for maps), and up to eight indexed connections (`from`, `to`, `label`). The server validates this contract; the browser maps it to trusted renderers. No generated HTML, event handlers or model-supplied code is executed.
+The model selects up to three visual blocks per page; with more than one, each answers a different question and they show as tabs, one at a time. A block has a stable `id`, a supported `type`, a title, a `prompt`, 2–6 items (up to 8 for chart, spectrum, map and timeline, where data often grows by one) (`label`, `detail`, numeric `value`, and `latitude`/`longitude`, which are null except for maps), and up to eight indexed connections (`from`, `to`, `label`). The server validates this contract; the browser maps it to trusted renderers. No generated HTML, event handlers or model-supplied code is executed.
 
 There are 24 block types:
 
@@ -22,7 +22,7 @@ There are 24 block types:
 | sorting | Category headings (value 1) and examples (value 0), each example linked to its correct group |
 | function_plot | One of linear, square, cube, absolute or sine, over a numeric domain within −100 to 100 |
 | evidence | Claims linked to provided sources; never invented evidence |
-| map | Places with accurate latitude and longitude |
+| map | Places with accurate latitude and longitude. With prompt `route`, stops in travel order: numbered, joined, the way so far highlighted. Close-together places (one city or region) are drawn as a plain plan with true distances |
 | linked_scenarios | One shared parameter with two named outcomes per input value |
 | proportion | Parts of one whole as a stacked bar with a legend |
 | matrix | Four quadrants on two dimensions; prompt is "x-axis | y-axis" |

@@ -39,6 +39,38 @@ function keplerEquations(){
  return [shape,areas,period];
 }
 
+// Two or three components are views of one topic (where, when, how much): tabs above the visual
+// show one at a time, so the first screen never becomes a long stack. Which view is open is
+// remembered with the page but is viewing, not editing.
+function renderViews(visual,p,options){
+ visual.classList.add('has-views');
+ const tabs=make('div','atlas-views');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Views');
+ const panels=p.components.map(block=>{
+  const panel=renderComponent(visual,block,p,options);
+  panel.id='view-'+block.id;panel.setAttribute('role','tabpanel');
+  return panel;
+ });
+ const buttons=p.components.map((block,i)=>{
+  const button=make('button','atlas-view',block.title);
+  button.type='button';button.id='view-tab-'+block.id;button.setAttribute('role','tab');button.setAttribute('aria-controls','view-'+block.id);
+  panels[i].setAttribute('aria-labelledby',button.id);
+  button.onclick=()=>show(i);
+  button.onkeydown=event=>{
+   const step=event.key==='ArrowRight'?1:event.key==='ArrowLeft'?-1:0;
+   if(!step)return;
+   event.preventDefault();const next=(i+step+buttons.length)%buttons.length;show(next);buttons[next].focus();
+  };
+  return button;
+ });
+ function show(i){
+  p.edits.view=i;
+  buttons.forEach((button,j)=>{button.setAttribute('aria-selected',String(i===j));button.tabIndex=i===j?0:-1;});
+  panels.forEach((panel,j)=>{panel.hidden=i!==j;});
+ }
+ tabs.append(...buttons);visual.prepend(tabs);
+ show(Math.min(Math.max(0,p.edits.view|0),buttons.length-1));
+}
+
 export function renderAtlas(target,p,{titleField,onEdit}){
  target.atlasDispose?.();const observers=[];target.atlasDispose=()=>observers.forEach(o=>o.disconnect());p.edits??={};const layout=make('div','atlas-layout'),copy=make('div','atlas-copy'),visual=make('div','atlas-visual');
  const diagram=!!p.components?.length||['kepler','planner','projectile'].includes(p.kind);
@@ -57,7 +89,8 @@ export function renderAtlas(target,p,{titleField,onEdit}){
  copy.append(text(p.edits.explanation??p.body[0]??'', 'Editable explanation',value=>p.edits.explanation=value,0));
  const fitTitle=()=>{titleField.style.height='0';titleField.style.height=titleField.scrollHeight+'px';};const titleObserver=new ResizeObserver(()=>{if(titleField.clientWidth)fitTitle();});titleObserver.observe(titleField);observers.push(titleObserver);queueMicrotask(fitTitle);layout.append(copy);if(diagram)layout.append(visual);target.append(layout);
  const askBlock=(anchor,block,practice)=>document.dispatchEvent(new CustomEvent('page:ask',{detail:{anchor,block,practice}}));
- if(p.components?.length){p.components.forEach((c,i)=>renderComponent(i===0?visual:target,c,p,{onEdit,ask:askBlock}));}
+ if(p.components?.length===1)renderComponent(visual,p.components[0],p,{onEdit,ask:askBlock});
+ else if(p.components?.length)renderViews(visual,p,{onEdit,ask:askBlock});
  if(p.kind==='kepler'){
   const orbit=p.edits.orbit??={eccentricity:.45,phase:.15,law:1};
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 500 350');svg.setAttribute('role','img');svg.setAttribute('aria-label','Kepler orbit: Sun at a focus, planet position and two equal-time swept areas');svg.classList.add('atlas-orbit');visual.append(svg);
@@ -124,7 +157,7 @@ export function renderAtlas(target,p,{titleField,onEdit}){
   const next=make('section','atlas-next');
   next.setAttribute('aria-label','Go deeper');
   const tabs=make('div','atlas-next-tabs');
-  tabs.setAttribute('role','tablist');
+  tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Go deeper');
   tabs.append(make('span','atlas-next-label','Go deeper'));
   const panel=make('div','atlas-next-panel');
   panel.setAttribute('role','tabpanel');

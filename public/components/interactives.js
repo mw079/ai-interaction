@@ -321,10 +321,23 @@ function renderEvidence(content, block, saved) {
 /* ── Map: real coastlines, framed around the places that matter ───────────── */
 function renderMap(content, block, saved, onEdit, detail) {
   const {items} = block;
-  const xs = items.map(i => i.longitude + 180), ys = items.map(i => 90 - i.latitude);
+  let xs = items.map(i => i.longitude + 180);
+  const ys = items.map(i => 90 - i.latitude);
   let x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  // Close up, a degree of longitude is shorter than a degree of latitude: correct for it so the
+  // plan keeps true distances (the world view keeps the coastline's projection).
+  if (Math.max(x1 - x0, (y1 - y0) * 16 / 9) < 1.5) {
+    const k = Math.cos((90 - (y0 + y1) / 2) * Math.PI / 180), mid = (x0 + x1) / 2;
+    xs = xs.map(x => mid + (x - mid) * k);
+    x0 = Math.min(...xs); x1 = Math.max(...xs);
+  }
   // Pad, enforce a minimum span, then match a 16:9 frame so places never sit on the edge.
-  let w = Math.max((x1 - x0) * 1.8, 16), h = Math.max((y1 - y0) * 1.9, 9);
+  // A country-scale view at least 16° wide, unless the places are close together (one city or
+  // region): then zoom to them. The world coastline is too coarse below ~3°, so a close-up is
+  // drawn as a plain plan with distances to scale.
+  const close = Math.max(x1 - x0, (y1 - y0) * 16 / 9) < 1.5;
+  const minW = close ? 0.04 : 16, minH = close ? 0.0225 : 9;
+  let w = Math.max((x1 - x0) * 1.8, minW), h = Math.max((y1 - y0) * 1.9, minH);
   if (w / h > 16 / 9) h = w * 9 / 16; else w = h * 16 / 9;
   w = Math.min(w, 360); h = Math.min(h, 180);
   const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
@@ -333,19 +346,64 @@ function renderMap(content, block, saved, onEdit, detail) {
   f.stage.classList.add('dg-map', 'dg-canvas');
   f.stage.style.aspectRatio = `${w} / ${h}`;
   const svg = svgEl('svg', {viewBox: `${vx} ${vy} ${w} ${h}`, 'aria-hidden': 'true', class: 'dg-svg', preserveAspectRatio: 'xMidYMid slice'});
-  const land = svgEl('path', {class: 'dg-land'});
-  paintLand(land);
-  svg.append(svgEl('rect', {x: 0, y: 0, width: 360, height: 180, class: 'dg-sea'}), land);
+  if (close) {
+    f.stage.classList.add('dg-map-local');
+    svg.append(svgEl('rect', {x: 0, y: 0, width: 360, height: 180, class: 'dg-plan'}));
+    // A scale bar makes the plain plan read as a map: about a fifth of its width, in round km.
+    const km = w * 111.2, length = [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50].find(n => n >= km / 5) ?? 50;
+    const scale = el('div', 'dg-scale');
+    scale.append(el('span', 'dg-scale-label', length < 1 ? length * 1000 + ' m' : length + ' km'));
+    scale.style.width = pct(length, km);
+    f.stage.append(scale);
+  } else {
+    const land = svgEl('path', {class: 'dg-land'});
+    paintLand(land);
+    svg.append(svgEl('rect', {x: 0, y: 0, width: 360, height: 180, class: 'dg-sea'}), land);
+  }
   f.stage.append(svg);
+  // A route (prompt "route"): numbered stops joined in order; the way travelled so far, up to the
+  // selected stop, is drawn in the accent, like the progress line of a timeline.
+  const route = /^route$/i.test(block.prompt.trim());
+  const leg = (from, to) => svgEl('path', {d: xs.slice(from, to + 1).map((x, k) => (k ? 'L' : 'M') + x + ' ' + ys[from + k]).join(' '), 'vector-effect': 'non-scaling-stroke'});
+  const ahead = route ? leg(0, items.length - 1) : null, done = route ? leg(0, 0) : null;
+  if (route) {
+    ahead.setAttribute('class', 'dg-route');
+    done.setAttribute('class', 'dg-route dg-route-done');
+    svg.append(ahead, done);
+    f.stage.classList.add('dg-map-route');
+  }
   const pins = items.map((item, i) => {
     const b = button('dg-node dg-pin', '', () => f.select(i));
-    b.append(el('span', 'dg-pin-dot'), el('span', 'dg-label', item.label));
+    b.append(el('span', 'dg-pin-dot', route ? String(i + 1) : undefined), el('span', 'dg-label', item.label));
     b.style.left = pct(xs[i] - vx, w);
     b.style.top = pct(ys[i] - vy, h);
     f.stage.append(b);
     return b;
   });
-  f.onPaint(i => pins.forEach((p, j) => p.setAttribute('aria-pressed', String(i === j))));
+  f.onPaint(i => {
+    pins.forEach((p, j) => p.setAttribute('aria-pressed', String(i === j)));
+    if (route) done.setAttribute('d', leg(0, i).getAttribute('d'));
+  });
+  // Stops closer than a dot apart (a few hundred metres on a phone) are nudged apart a little so
+  // each stays readable and clickable; the line keeps the true positions.
+  const spread = () => {
+    const W = f.stage.clientWidth, H = f.stage.clientHeight;
+    if (!W || !H) return;
+    const at = pins.map((_, i) => ({x: (xs[i] - vx) / w * W, y: (ys[i] - vy) / h * H, dx: 0, dy: 0}));
+    const gap = route ? 29 : 20;   // dot size, with room for the selected dot drawn 35% larger
+    for (let round = 0; round < 24; round++) {
+      let moved = false;
+      for (let a = 0; a < at.length; a++) for (let b = a + 1; b < at.length; b++) {
+        const A = at[a], B = at[b], ux = B.x + B.dx - A.x - A.dx, uy = B.y + B.dy - A.y - A.dy, d = Math.hypot(ux, uy);
+        if (d >= gap) continue;
+        const [nx, ny] = d ? [ux / d, uy / d] : [Math.cos(a + b), Math.sin(a + b)], push = (gap - d) / 2;
+        A.dx -= nx * push; A.dy -= ny * push; B.dx += nx * push; B.dy += ny * push; moved = true;
+      }
+      if (!moved) break;
+    }
+    pins.forEach((p, i) => { p.style.setProperty('--nudge-x', at[i].dx.toFixed(1) + 'px'); p.style.setProperty('--nudge-y', at[i].dy.toFixed(1) + 'px'); });
+  };
+  new ResizeObserver(spread).observe(f.stage);
   f.paint();
 }
 

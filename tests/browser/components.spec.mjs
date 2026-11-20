@@ -145,8 +145,14 @@ test('map: every pin sits at its latitude and longitude',async({page})=>{
   const c=card(page,'Map'),items=data('Map').items;
   const pins=await c.evaluate(card=>{
     const [vx,vy,w,h]=card.querySelector('.dg-svg').getAttribute('viewBox').split(' ').map(Number);
-    return [...card.querySelectorAll('.dg-pin')].map(p=>({lon:vx+parseFloat(p.style.left)/100*w-180,lat:90-(vy+parseFloat(p.style.top)/100*h)}));
+    return [...card.querySelectorAll('.dg-pin')].map(p=>({x:vx+parseFloat(p.style.left)/100*w,lat:90-(vy+parseFloat(p.style.top)/100*h)}));
   });
+  // Places close together are drawn as a plan with longitude scaled by cos(latitude), so distances
+  // are true; undo that to recover each longitude.
+  const xs=items.map(i=>i.longitude+180),ys=items.map(i=>90-i.latitude);
+  const close=Math.max(Math.max(...xs)-Math.min(...xs),(Math.max(...ys)-Math.min(...ys))*16/9)<1.5;
+  const k=close?Math.cos((90-(Math.min(...ys)+Math.max(...ys))/2)*Math.PI/180):1,mid=(Math.min(...xs)+Math.max(...xs))/2;
+  pins.forEach(p=>{p.lon=mid+(p.x-mid)/k-180;});
   items.forEach((item,i)=>{near(pins[i].lon,item.longitude,0.01);near(pins[i].lat,item.latitude,0.01);});
 });
 
@@ -373,3 +379,34 @@ test('concept map: ideas on the ring never overlap each other',async({page})=>{
     expect(overlaps,`${width}px`).toBe(0);
   }
 });
+
+test('route map: numbered stops are joined in travel order and the way so far ends at the selected stop',async({page})=>{
+  const c=card(page,'Route map'),count=data('Route map').items.length;
+  await c.scrollIntoViewIfNeeded();
+  await expect(c.locator('.dg-pin-dot')).toHaveText(Array.from({length:count},(_,i)=>String(i+1)));
+  const centres=async()=>c.locator('.dg-pin-dot').evaluateAll(d=>d.map(e=>{const r=e.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2];}));
+  const points=async selector=>c.locator(selector).evaluate(path=>{const m=path.getScreenCTM(),list=path.getAttribute('d').match(/-?[\d.]+ -?[\d.]+/g);
+    return list.map(pair=>{const [x,y]=pair.split(' ').map(Number);const q=new DOMPoint(x,y).matrixTransform(m);return [q.x,q.y];});});
+  const pins=await centres(),route=await points('.dg-route:not(.dg-route-done)');
+  expect(route).toHaveLength(count);
+  route.forEach(([x,y],i)=>{near(x,pins[i][0],3);near(y,pins[i][1],3);});          // the line runs through every stop, in order
+  await c.locator('.dg-pin').nth(1).click();
+  const done=await points('.dg-route-done');
+  expect(done).toHaveLength(2);near(done[1][0],pins[1][0],3);near(done[1][1],pins[1][1],3);
+});
+
+test('city route: close-together stops are spread out on a plain plan, not stacked on a world map',async({page})=>{
+  const c=card(page,'City route');
+  await c.scrollIntoViewIfNeeded();
+  await expect(c.locator('.dg-land')).toHaveCount(0);
+  // The scale bar is true to the drawing: its km per pixel matches the distance between two stops.
+  const items=data('City route').items,scale=c.locator('.dg-scale');
+  const label=await scale.locator('.dg-scale-label').textContent(),metres=label.endsWith(' km')?parseFloat(label)*1000:parseFloat(label);
+  const barPx=(await scale.boundingBox()).width,stage=await c.locator('.dg-stage').evaluate(el=>{const svg=el.querySelector('svg');return {px:el.clientWidth,deg:svg.viewBox.baseVal.width};});
+  const metresPerPx=stage.deg*111200/stage.px;
+  near(barPx*metresPerPx,metres,metres*0.06);
+  const dots=await c.locator('.dg-pin-dot').evaluateAll(d=>d.map(e=>{const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,r:r.width/2};}));
+  const overlap=dots.some((a,i)=>dots.some((b,j)=>j>i&&Math.hypot(a.x-b.x,a.y-b.y)<a.r+b.r));   // round dots never touch
+  expect(overlap).toBe(false);
+});
+

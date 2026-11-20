@@ -21,7 +21,13 @@ export const PROMPTS = [
   {id: 'python-js', text: 'Should I learn Python or JavaScript first as a beginner programmer?'},
   {id: 'air', text: 'What is dry air made of?'},
   {id: 'priorities', text: 'Help me prioritise my tasks this week using urgency and importance'},
-  {id: 'email', text: 'Write a short thank-you email to my team for finishing the launch', textFirst: true}
+  {id: 'email', text: 'Write a short thank-you email to my team for finishing the launch', textFirst: true},
+  // Plans and trips show the plan itself (a route map, the days or weeks), never a form of fields.
+  {id: 'rome-venice', text: 'Plan three days in Rome and Venice', expect: {uses: ['map'], route: true, noForm: true}},
+  {id: 'lisbon', text: 'Plan a weekend trip to Lisbon with my parents', expect: {uses: ['map'], noForm: true}},
+  {id: 'run-5k', text: 'Make a 4-week running plan to go from zero to 5k', expect: {noForm: true}},
+  {id: 'dinner', text: 'I want to cook a vegetarian dinner for six friends tonight', expect: {noForm: true}},
+  {id: 'europe-cities', text: 'What are the biggest cities in Europe by population?', expect: {uses: ['chart']}}
 ];
 
 const STOP = new Set('a an the and or of to in on for with is are be it its this that as by at from can into than then their they you your we our when how what why which who more most less not no do does'.split(' '));
@@ -35,7 +41,7 @@ function overlap(a, b) {
 }
 
 // Scores one generated page. Pure, so it can be unit-tested without a browser.
-export function scorePage(page, {fitsFirstScreen = null, textFirst = false} = {}) {
+export function scorePage(page, {fitsFirstScreen = null, textFirst = false, expect = null} = {}) {
   const body = Array.isArray(page.body) ? page.body : [];
   const components = Array.isArray(page.components) ? page.components : [];
   const intro = body[0] || '';
@@ -58,8 +64,12 @@ export function scorePage(page, {fitsFirstScreen = null, textFirst = false} = {}
     'takeaways are Label: sentence': rest.length === takeaways.length,
     '≤ 3 takeaways, each ≤ 140 chars': takeaways.length <= 3 && takeaways.every(m => m[2].length <= 140),
     'no repeated content': repeats.length === 0 && duplicateLabels.length === 0,
-    '2–3 Go deeper questions': (page.followUps?.length || 0) >= 2 && page.followUps.length <= 3
+    '2–3 Go deeper questions': (page.followUps?.length || 0) >= 2 && page.followUps.length <= 3,
+    '≤ 3 views': components.length <= 3
   };
+  if (expect?.noForm) checks['shows the plan, not a form'] = page.kind !== 'planner';
+  for (const type of expect?.uses || []) checks[`uses ${type}`] = components.some(c => c.type === type);
+  if (expect?.route) checks['map is a route'] = components.some(c => c.type === 'map' && /^route$/i.test(c.prompt.trim()));
   const passed = Object.values(checks).filter(Boolean).length;
   return {
     checks, passed, total: Object.keys(checks).length,
@@ -109,7 +119,7 @@ async function run() {
       return hero.getBoundingClientRect().bottom <= (composer?.getBoundingClientRect().top ?? innerHeight);
     });
     await page.screenshot({path: new URL(`${prompt.id}.png`, dir).pathname});
-    const score = generated ? scorePage(generated, {fitsFirstScreen, textFirst: prompt.textFirst}) : null;
+    const score = generated ? scorePage(generated, {fitsFirstScreen, textFirst: prompt.textFirst, expect: prompt.expect}) : null;
     results.push({...prompt, ms, title: generated?.title, score, page: generated});
     console.log(`${prompt.id.padEnd(15)} ${score ? `${score.passed}/${score.total}` : 'no data'}  ${(ms / 1000).toFixed(1)} s  ${score?.types.join(', ') || ''}`);
     await context.close();
@@ -123,7 +133,11 @@ async function run() {
     failures: Object.fromEntries(scored.map(r => [r.id, Object.entries(r.score.checks).filter(([, ok]) => !ok).map(([name]) => name)]))
   };
   await writeFile(new URL('results.json', dir), JSON.stringify({summary, results}, null, 2));
+  // Variety: pages should not all look alike.
+  summary.componentTypes = [...new Set(scored.flatMap(r => r.score.types))].sort();
+  summary.multiView = scored.filter(r => (r.page?.components?.length || 0) > 1).length;
   console.log(`\nPass rate ${(summary.passRate * 100).toFixed(0)} %, median ${summary.medianSeconds?.toFixed(1)} s`);
+  console.log(`${summary.componentTypes.length} different components (${summary.componentTypes.join(', ')}); ${summary.multiView} pages with 2–3 views`);
   console.log('Failed checks:', JSON.stringify(summary.failures, null, 1));
   console.log('Report and screenshots:', dir.pathname);
 }

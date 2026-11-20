@@ -93,7 +93,7 @@ export async function handleAPI(request,upstream=fetch,env={},{limiter=limiterFo
   try{
     const response=await upstream('https://api.openai.com/v1/responses',{
       method:'POST',headers:{Authorization:authorization,'Content-Type':'application/json'},redirect:'error',signal,
-      ...({body:JSON.stringify({model,store:false,...(streaming?{stream:true}:{}),reasoning:{effort:page?'low':'none'},max_output_tokens:page?3400:pageHelp?2200:deeper?2600:1300,
+      ...({body:JSON.stringify({model,store:false,...(streaming?{stream:true}:{}),reasoning:{effort:page?'low':'none'},max_output_tokens:page?5000:pageHelp?2200:deeper?2600:1300,
         instructions:modelInstructions(payload,slideInstructions,contextInstructions),
         input:JSON.stringify(buildModelInput(payload,{slideLabel:recipe?.label})),text:{format:{type:'json_schema',name:deeper?'go_deeper':pageHelp||selection?'local_assistance':'interactive_preview',strict:true,schema:deeper?DEEPER_SCHEMA:pageHelp?PAGE_HELP_SCHEMA:selection?SELECTION_SCHEMA:PREVIEW_SCHEMA}}
       })})

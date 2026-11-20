@@ -300,7 +300,7 @@ export function setupPageAssistant({state,request,commit}){
     const merged=new Map((state.component.components||[]).map(block=>[block.id,block]));
     change.components.forEach(block=>merged.set(block.id,block));
     const components=[...merged.values()];
-    if(!validComponents(components)){close();showAnswer(part,'This suggestion exceeds the slide’s two-component limit.');return;}
+    if(!validComponents(components)){close();showAnswer(part,'This suggestion would give the page more than three views.');return;}
     committing=true;
     try{
      commit(()=>{

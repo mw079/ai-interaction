@@ -176,3 +176,9 @@ test('data that grows by one item fits: up to 8 for chart, spectrum, map and tim
   assert.equal(validComponents([{id:'ph',type:'spectrum',title:'pH',prompt:'Acidic | Alkaline',items:items(9),edges:[]}]),false);
   assert.equal(validComponents([{...cycle,items:items(7)}]),false);
 });
+
+test('a page has up to three components (views), never four',()=>{
+ const block=id=>({...cycle,id});
+ assert.equal(validComponents([block('a'),block('b'),block('c')]),true);
+ assert.equal(validComponents([block('a'),block('b'),block('c'),block('d')]),false);
+});

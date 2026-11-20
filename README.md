@@ -42,7 +42,7 @@ With the dev server running, two galleries show every building block with sample
 | Moment | What you see | Model | Limits |
 | --- | --- | --- | --- |
 | While typing | One short answer, at most one question, controls on phrases, an optional completion | `gpt-6-luna`, no reasoning | 1,300 output tokens, 25 s |
-| On Send | An Atlas page built from the component catalog | `gpt-6.1-terra`, low reasoning | 3,400 tokens, 45 s |
+| On Send | An Atlas page built from the component catalog | `gpt-6.1-terra`, low reasoning | 5,000 tokens, 45 s |
 | Inside the page | Explanations of highlighted text, answers and suggested edits, Go deeper answers | `gpt-6-luna` | 2,200 tokens (2,600 for Go deeper), 25 s |
 
 - **When live help runs:** after four newly completed words (at least 1.2 s apart), after a 100 ms pause at the end of a sentence, or after a 250 ms ordinary pause. At most one preview is in flight, recent drafts are cached, and newer typing cancels older work.

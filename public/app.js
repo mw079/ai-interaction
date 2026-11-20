@@ -426,6 +426,9 @@ function showUpdatedPart(id,label,restoreFocus=false,change='updated'){
    element.focus({preventScroll:true});
    if(!blockId)element.setSelectionRange(element.value.length,element.value.length);
   }
+  // A part on another view (tab) is brought into view first.
+  const panel=element.closest('[role=tabpanel]');
+  if(panel?.hidden)document.getElementById(panel.getAttribute('aria-labelledby'))?.click();
   const section=element.closest('.page-field')||element;
   const top=section.getBoundingClientRect(),frame=paper.getBoundingClientRect();
   if(passageIndex==='0'||id==='intro'||id==='title')paper.scrollTop=0;

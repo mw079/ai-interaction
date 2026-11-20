@@ -519,3 +519,21 @@ test('a plan step is never cut off: its field wraps and grows with the text, and
   await expect(step).toHaveValue(/Cool down\.$/);
 });
 
+test('up to three views show one at a time as tabs; switching is viewing, not editing',async({page})=>{
+  await send(page,'Plan three days in Rome.','Three days in Rome');
+  const tabs=page.getByRole('tab',{name:/^(Your route|Day by day|Costs)$/});
+  await expect(tabs).toHaveText(['Your route','Day by day','Costs']);
+  await expect(page.getByRole('tabpanel')).toHaveCount(1);                   // hidden panels are not exposed
+  await expect(page.getByRole('tabpanel',{name:'Your route'})).toBeVisible();
+  await page.getByRole('tabpanel',{name:'Your route'}).locator('.dg-pin').nth(2).click();
+  await page.getByRole('tab',{name:'Day by day'}).click();
+  await expect(page.getByRole('tabpanel',{name:'Day by day'})).toBeVisible();
+  await expect(page.locator('[data-component-id="rome-route"]')).toBeHidden();
+  await page.getByRole('tab',{name:'Day by day'}).press('ArrowRight');       // arrow keys move between views
+  await expect(page.getByRole('tab',{name:'Costs'})).toHaveAttribute('aria-selected','true');
+  await expect(page.getByRole('tab',{name:'Costs'})).toBeFocused();
+  await page.getByRole('tab',{name:'Your route'}).click();
+  await expect(page.locator('[data-component-id="rome-route"] .dg-pin').nth(2)).toHaveAttribute('aria-pressed','true'); // its state is kept
+  await expect(page.getByRole('button',{name:'Undo'})).toBeDisabled();       // nothing was edited
+});
+

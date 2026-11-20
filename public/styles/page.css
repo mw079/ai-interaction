@@ -319,3 +319,10 @@ body.intent-first[data-experience=unified].page-open.composer-active .intent-pan
 /* With a page open, typing already cancels a running preview, so "Pause preview" would only add a
    control that appears and disappears in the dock and moves the card. It stays on the start screen. */
 body.intent-first[data-experience=unified].page-open #cancel-button{display:none!important}
+/* Views: two or three components of one page, one at a time. */
+.atlas-views{display:flex;gap:6px;margin:0 0 18px;overflow-x:auto;scrollbar-width:none}
+.atlas-view{flex:none;border:1px solid var(--atlas-line);border-radius:999px;padding:6px 14px;font-size:13px;line-height:1.3;background:#fff;color:#3a3a3a;cursor:pointer}
+.atlas-view:hover{border-color:#c9c9c9}
+.atlas-view[aria-selected=true]{background:#1d1d1f;border-color:#1d1d1f;color:#fff}
+.atlas-visual.has-views>.component-block>.component-heading{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+

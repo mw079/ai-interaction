@@ -168,6 +168,23 @@ SPECIMENS.push(
     ]}
   },
   {
+    name: 'Route map', when: 'Stops in travel order (prompt "route"): numbered, joined, the way so far highlighted.',
+    block: {id: 'italy-route', type: 'map', title: 'Rome to Venice', prompt: 'route', edges: [], items: [
+      place('Rome', 'Two days: the Colosseum, the Forum and the Vatican.', 41.9028, 12.4964),
+      place('Florence', 'One day: the Duomo, the Uffizi and the Ponte Vecchio.', 43.7696, 11.2558),
+      place('Venice', 'One day: St Mark’s Square, the Rialto and the canals.', 45.4408, 12.3155)
+    ]}
+  },
+  {
+    name: 'City route', when: 'Close-together stops become a plain plan, distances to scale.',
+    block: {id: 'lisbon-walk', type: 'map', title: 'A day in Lisbon', prompt: 'route', edges: [], items: [
+      place('Praça do Comércio', 'Start at the riverside square.', 38.7075, -9.1364),
+      place('Chiado', 'Cafés and bookshops uphill.', 38.7107, -9.1424),
+      place('Alfama', 'Narrow lanes and viewpoints.', 38.7118, -9.1300),
+      place('Belém', 'Monastery and pastries by the river.', 38.6979, -9.2065)
+    ]}
+  },
+  {
     name: 'Linked scenarios', when: 'One shared input, two outcomes side by side.',
     block: {id: 'savings-rate', type: 'linked_scenarios', title: 'Saving for ten years', prompt: 'Monthly savings', edges: [], items: [
       item('100 €', 'Cash account: about 12,600 € | Index fund: about 16,400 €', 100),

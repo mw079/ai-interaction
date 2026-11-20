@@ -94,3 +94,18 @@ New prompts typed by hand in the browser at 820 px and on a phone (375 px): a he
 Every fix has a browser test that measures the result, and the new tests fail on the previous code (the Go deeper scroll check passes either way at the test window size). Live: page quality 10 prompts, follow-ups 26 steps and `test:luna` were re-run on the final code (results below).
 
 Final re-run on the fixed code: follow-ups **48/48 checks across 26 steps** (pH "Add seawater" now passes; before the fixes 45/48 and 43/46), pages 98 % (69/70; the air page repeated one fact between intro and visual, model variance seen before), and `test:luna` answered all three prompts in under 2.1 s. Stating "up to 8" in the catalog made the model fill new components to 7–8 items, so it now says new components start at 6 or fewer: four pH and three WWI pages then all came back with 6 items.
+
+## Richer pages: components by intent, up to three views, route maps, 2026-11-20
+
+Twelve typical requests showed why pages looked alike: every plan or trip became the planner form of empty fields (the prompt said "Practical plans: use kind=planner"), the map was never used (not even for two trips or "biggest cities in Europe"), and no page had a second component (the prompt said "Use one primary visual"). The catalog listed all 24 components, but as one paragraph in the order they were built, explaining how to fill each rather than when to use it.
+
+Changes: the component guide is ordered by what the user wants to see or do (places → map, schedules → timeline, choices → comparison, decision tree or matrix, numbers → chart, …) with one-line examples rather than example pages (full example pages were rejected on 2026-11-19 because the model copied their shape); plans show the plan itself (route map, days, checklist) and the form is kept only for a requested form; a page may have up to three components, shown as tabs, when each answers a different question; a map with prompt `route` numbers its stops, joins them and highlights the way so far; close-together stops become a plain plan with true distances and a scale bar.
+
+| | Before | After |
+| --- | --- | --- |
+| Plans and trips as a form | 4 of 12 | 0 of 12 |
+| Map used | 0 | 3 (both trips as routes, Europe's cities) |
+| Pages with 2–3 views | 0 | 5 |
+| Component types across the set | 7 | 9 |
+
+`eval:pages` gained five plan and trip prompts with checks (no form, uses a map, the map is a route) and reports component variety: 99 % (97/98), 10 different components, 5 pages with views; the one miss was a repeated phrase on the dinner page. Pages with two views take longer (12–17 s instead of 5–11 s). `eval:followups`: 45/46 at first; the miss was the eval clicking the first tab on the page, now a view tab, so Go deeper's tab list is named and the eval targets it; the re-run passed 10/10.

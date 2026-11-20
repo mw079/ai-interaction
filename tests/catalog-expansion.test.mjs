@@ -62,7 +62,9 @@ test('page scoring flags repetition, long text and missing follow-ups',async()=>
  const good={kind:'outline',body:['Vaccines teach the immune system to recognise a germ.','Safety: They train immunity without causing the disease.'],
   components:[{id:'v',type:'timeline',title:'Steps',prompt:'',edges:[],items:[step('Target shown','The vaccine shows a harmless antigen to immune cells.'),step('Memory forms','Long-lived memory cells remain after the response.')]}],
   followUps:['Why do boosters fade?','Are side effects common?']};
- assert.equal(scorePage(good,{fitsFirstScreen:true}).passed,7);
+ assert.equal(scorePage(good,{fitsFirstScreen:true}).passed,8);
+ const trip={...good,kind:"planner",components:[]};const tripScore=scorePage(trip,{fitsFirstScreen:true,expect:{uses:["map"],route:true,noForm:true}});
+ assert.equal(tripScore.checks["shows the plan, not a form"],false);assert.equal(tripScore.checks["uses map"],false);assert.equal(tripScore.checks["map is a route"],false);
  const repeated={...good,body:[good.body[0],'Memory: Long-lived memory cells remain after the immune response.'],followUps:[]};
  const failed=Object.entries(scorePage(repeated,{fitsFirstScreen:false}).checks).filter(([,ok])=>!ok).map(([name])=>name);
  assert.deepEqual(failed,['fits first screen','no repeated content','2–3 Go deeper questions']);

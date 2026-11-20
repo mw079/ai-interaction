@@ -59,6 +59,20 @@ function previewFor({phase,text}){
         {label:'Target shown',detail:'The vaccine shows an antigen.',value:0,latitude:null,longitude:null},
         {label:'Memory forms',detail:'Memory cells remain afterwards.',value:0,latitude:null,longitude:null}]}],
       followUps:vaccineFollowUps};
+    if(text==='Plan three days in Rome.')return {...preview,title:'Three days in Rome',body:['See ancient, papal and everyday Rome in three days.'],
+      components:[
+        {id:'rome-route',type:'map',title:'Your route',prompt:'route',edges:[],items:[
+          {label:'Colosseum',detail:'Day 1: the arena and the Forum.',value:0,latitude:41.8902,longitude:12.4922},
+          {label:'Pantheon',detail:'Day 2: the dome, then Piazza Navona.',value:0,latitude:41.8986,longitude:12.4769},
+          {label:'Vatican',detail:'Day 3: the museums and St Peter’s.',value:0,latitude:41.9029,longitude:12.4534}]},
+        {id:'rome-days',type:'timeline',title:'Day by day',prompt:'',edges:[],items:[
+          {label:'Day 1',detail:'Ancient Rome.',value:0,latitude:null,longitude:null},
+          {label:'Day 2',detail:'The centre.',value:0,latitude:null,longitude:null},
+          {label:'Day 3',detail:'The Vatican.',value:0,latitude:null,longitude:null}]},
+        {id:'rome-costs',type:'key_numbers',title:'Costs',prompt:'€',edges:[],items:[
+          {label:'Colosseum ticket',detail:'Book ahead.',value:18,latitude:null,longitude:null},
+          {label:'Vatican Museums',detail:'Timed entry.',value:20,latitude:null,longitude:null}]}],
+      followUps:['Where should I eat?']};
     if(text==='Make a running plan.')return {...preview,kind:'planner',title:'Zero to 5K',body:['Build up gradually over four weeks.'],
       rows:[{criterion:'Week 1',a:'Run 1 minute, walk 2 minutes; repeat 8 times.',b:''},
         {criterion:'Week 4',a:'Sessions 1–2: run 8 minutes, walk 2 minutes; repeat 3 times. Session 3: run 20 minutes without stopping at an easy pace.',b:''}]};
