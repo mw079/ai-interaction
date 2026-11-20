@@ -1,6 +1,6 @@
 import {expect,test} from '@playwright/test';
 import {
-  startFixtureServer,keplerDraft,keplerAudienceDraft,keplerAudienceQuestion,unfinishedComparison,
+  startFixtureServer,keplerDraft,keplerAudienceDraft,keplerAudienceQuestion,unfinishedComparison,unfinishedAnswer,unfinishedQuestion,
   completedComparison,comparisonAnswer,japanCheckpoint,japanQuestion,japanAnswer,travelDraft,travelQuestion,kyotoChoice,kyotoAnswer,
   requirementsDraft,requirementsQuestion,evaporationTitle,billDraft,lisbonDraft
 } from './fixture-server.mjs';
@@ -67,28 +67,21 @@ test('a prediction too long for the field is not shown, and nothing appears belo
   await expect(draft(page)).toHaveValue(keplerDraft);
 });
 
-test('unfinished comparison waits and resumes when the second subject is typed',async({page})=>{
+test('an unfinished comparison still gets live help: an answer, a question about the second item and a Tab prediction',async({page})=>{
   const requests=[];
   page.on('request',request=>{
     if(request.url().endsWith('/api/preview'))requests.push(request.postDataJSON());
   });
   await draft(page).fill(unfinishedComparison);
   await advancePreview(page);
-  await expect(page.locator('#input-state')).toHaveText('Waiting for the second item to compare');
-  await expect(quickAnswer(page)).toBeHidden();
-  await expect(page.locator('#live-question')).toBeHidden();
-  await expect(page.locator('#completion-line')).toBeHidden();
-  expect(requests).toHaveLength(0);
+  await expect(quickAnswer(page)).toHaveText(unfinishedAnswer);
+  await expect(page.getByRole('button',{name:'Clarifying question: '+unfinishedQuestion})).toBeVisible();
+  expect(requests.map(request=>request.text)).toEqual([unfinishedComparison]);
 
   await draft(page).fill(completedComparison);
   await advancePreview(page);
   await expect(quickAnswer(page)).toHaveText(comparisonAnswer);
-  expect(requests.map(request=>request.text)).toEqual([completedComparison]);
-
-  await draft(page).fill('Explain the difference between evaporation and');
-  await advancePreview(page);
-  await expect(quickAnswer(page)).toBeHidden();
-  expect(requests).toHaveLength(1);
+  expect(requests.map(request=>request.text)).toEqual([unfinishedComparison,completedComparison]);
 });
 
 test('choosing an option with a slide open preserves draft focus and the refreshed answer',async({page},info)=>{

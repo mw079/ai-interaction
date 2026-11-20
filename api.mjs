@@ -1,6 +1,6 @@
 import {COMPONENT_SCHEMA,validPageHelp,validComponents,SLIDE_RECIPES,slideRecipe,matchesSlideRecipe,normaliseComponents} from './public/components/catalog.js';
 import {readSSE,partialLivePreview,partialPageAnswer,partialPage} from './public/shared/stream.js';
-import {FORMATS,WORLDS,validPreview,isIncompleteComparison,tidyPage} from './public/shared/model.js';
+import {FORMATS,WORLDS,validPreview,tidyPage} from './public/shared/model.js';
 import {modelInstructions,buildModelInput} from './prompts.mjs';
 
 const string={type:'string'};
@@ -73,11 +73,6 @@ export async function handleAPI(request,upstream=fetch,env={},{limiter=limiterFo
   const requestedSlide=payload?.slideChoice;
   const recipe=slideRecipe(requestedSlide);
   if(requestedSlide!==undefined && (payload.phase!=='page'||!recipe))return json({error:'Choose an available slide format.'},400);
-  if(payload?.phase==='preview'&&isIncompleteComparison(payload.text)){
-    const preview={kind:'outline',title:'',interpretation:'',audience:'',questionKind:'none',question:'',phrase:'',options:[],body:[],nodes:[],rows:[],information:[],completion:'',components:[],slideOptions:[]};
-    const result={preview,waiting:true};
-    return payload.stream?eventStream('data: '+JSON.stringify({type:'done',...result})+'\n\n'):json(result);
-  }
   const slideInstructions=recipe
     ? ' The user selected '+requestedSlide+'. Make it the primary presentation. '+(recipe.kind?'Use kind='+recipe.kind+'.':'Use kind=outline and include '+recipe.blocks.join(', ')+' in components.')+' This selection takes priority over default formats. Return slideOptions empty.'
     : ' Return slideOptions empty for a generated page.';

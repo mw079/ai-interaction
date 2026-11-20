@@ -23,6 +23,8 @@ export const keplerFollowUp='Angular momentum stays constant, so the orbital rad
 export const unfinishedComparison='Explain the difference between evaporation and…';
 export const completedComparison='Explain the difference between evaporation and sublimation.';
 export const comparisonAnswer='Evaporation changes liquid to gas; sublimation changes solid directly to gas.';
+export const unfinishedAnswer='Evaporation turns a liquid into gas at its surface.';
+export const unfinishedQuestion='Compared with what?';
 export const keplerAudienceDraft='Explain Kepler’s laws simply';
 export const keplerAudienceQuestion='Who is this explanation for?';
 export const projectileTitle='Projectile motion';
@@ -97,6 +99,7 @@ function previewFor({phase,text}){
   if(text==='rere')return {...preview,body:[]};
   if(text.startsWith(billDraft))return {...preview,interpretation:'Explain how a bill becomes a law.',body:['A bill passes both chambers, then the president signs or vetoes it.'],slideOptions:['timeline','compare','relationships']};   // a draft with nothing worth answering
   if(text===completedComparison)return {...preview,body:[comparisonAnswer]};
+  if(text===unfinishedComparison||text==='Explain the difference between evaporation and')return {...preview,body:[unfinishedAnswer],questionKind:'clarify',question:unfinishedQuestion,options:['Sublimation','Condensation','Boiling'],completion:' sublimation.'};
   if(text.startsWith(requirementsDraft.slice(0,20)))return {
     ...preview,questionKind:'clarify',question:requirementsQuestion,phrase:'vegetarian food',options:['Vegetarian meals','Step-free access'],body:['Pick a base with good vegetarian options.'],
     information:[{type:'requirements',phrase:'vegetarian food',question:requirementsQuestion,options:['Vegetarian meals','Step-free access'],unit:'',samples:[]}]

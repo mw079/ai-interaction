@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {trajectory,demoPreview,validPreview,clarificationFor,quickAnswer,liveClarificationFor,isIncompleteComparison} from '../public/shared/model.js';
+import {trajectory,demoPreview,validPreview,clarificationFor,quickAnswer,liveClarificationFor} from '../public/shared/model.js';
 import {handleAPI} from './helpers.mjs';
 import {readSSE} from '../public/shared/stream.js';
 const headers={Authorization:'Bearer test-key-not-a-real-secret','Content-Type':'application/json',Origin:'https://example.test'};
@@ -73,33 +73,14 @@ test('Kepler diagrams are a bounded trusted component, not executable model cont
  const response=await handleAPI(request,async(url,opts)=>{const sent=JSON.parse(opts.body);assert.ok(sent.text.format.schema.properties.kind.enum.includes('kepler'));assert.ok(sent.instructions.includes('use kind=kepler'));return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({...demoPreview('Kepler'),kind:'kepler'})}]}]});});assert.equal(response.status,200);assert.equal((await response.json()).preview.kind,'kepler');
 });
 
-test('only comparisons awaiting the other subject pause the draft preview',()=>{
- for(const text of ['Explain the difference between evaporation and','Explain the difference between evaporation and…','Compare Tokyo with...','Contrast solids to ','Evaporation vs.']){
-  assert.equal(isIncompleteComparison(text),true,text);
- }
- for(const text of ['Explain the difference between evaporation and sublimation.','Compare Tokyo with Kyoto','Tell me about evaporation…','I know evaporation and condensation','Explain Kepler’s second law.']){
-  assert.equal(isIncompleteComparison(text),false,text);
- }
-});
-
-test('an unfinished comparison has no answer, question or autocomplete and never calls Luna',async()=>{
- for(const stream of [false,true]){
-  const result=await handleAPI(req({...payload,phase:'preview',stream,text:'Explain the difference between evaporation and…'}),()=>assert.fail('Unfinished comparison reached Luna'));
-  assert.equal(result.status,200);
-  let data;
-  if(stream){
-   const events=[];
-   for await(const event of readSSE(result.body))events.push(event);
-   assert.equal(events.length,1);
-   assert.equal(events[0].type,'done');
-   data=events[0];
-  }else data=await result.json();
-  assert.equal(data.waiting,true);
-  assert.deepEqual(data.preview.body,[]);
-  assert.equal(data.preview.question,'');
-  assert.equal(data.preview.completion,'');
-  assert.equal(validPreview(data.preview),true);
- }
+test('an unfinished comparison still reaches Luna, which is told to help instead of waiting',async()=>{
+ let sent;
+ const result=await handleAPI(req({...payload,phase:'preview',text:'Explain the difference between evaporation and…'}),async(url,opts)=>{sent=JSON.parse(opts.body);return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({kind:'outline',title:'',interpretation:'',audience:'',questionKind:'clarify',question:'Compared with what?',phrase:'',options:['Sublimation','Condensation','Boiling'],body:['Evaporation turns liquid into gas at the surface.'],nodes:[],rows:[],information:[],completion:' sublimation.',components:[],slideOptions:[],followUps:[],launch:{speed:20,angle:45,world:'earth'}})}]}]});});
+ assert.equal(result.status,200);
+ assert.ok(sent.instructions.includes('Never go silent'));
+ const data=await result.json();
+ assert.equal(data.preview.completion,' sublimation.');
+ assert.equal(data.preview.question,'Compared with what?');
 });
 
 test('adding the other subject resumes the Luna request',async()=>{

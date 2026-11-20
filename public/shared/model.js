@@ -1,12 +1,6 @@
 import {validComponents,validSlideOptions} from '../components/catalog.js';
 import {validInformation} from '../composer/intent.js';
 export const FORMATS = ['Auto','Interactive page', 'Diagram', 'Outline'];
-export function isIncompleteComparison(text){
- const draft=text.trim().replace(/[\s.…]+$/u,'');
- return /\bbetween\s+[^.!?]+\s+and$/iu.test(draft)||
-  /\b(?:compare|contrast)\s+[^.!?]+\s+(?:with|to|and)$/iu.test(draft)||
-  /\S\s+(?:versus|vs)$/iu.test(draft);
-}
 // Continuous typing asks Luna for help after this many newly completed words.
 export const PREVIEW_WORD_STEP=4;
 export function draftWordCount(text){

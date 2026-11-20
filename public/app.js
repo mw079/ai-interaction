@@ -12,7 +12,7 @@ import {setupComposerExperience} from './composer/composer.js';
 import {INFORMATION_TYPES, rebaseInformation, chooseInformation, mergeInformation} from './composer/intent.js';
 import {renderControl,formatPreview} from './composer/controls.js';
 import {positionPopover} from './composer/popover.js';
-import {workingLine, demoPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isIncompleteComparison, draftWordCount, completedDraft, PREVIEW_WORD_STEP, extendsPreview, workingDraftPreview, draftAnswersQuestion, projectileLaunch} from './shared/model.js';
+import {workingLine, demoPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, draftWordCount, completedDraft, PREVIEW_WORD_STEP, extendsPreview, workingDraftPreview, draftAnswersQuestion, projectileLaunch} from './shared/model.js';
 const $ = id => document.getElementById(id);
 const state = {live:false, limited:false, composing:false, revision:0, format:'Auto', audience:'', controller:null, timer:null, proposal:null, component:null, history:[], uncertainty:null, popoverTimer:null, clarification:null, openClarification:null, popoverOrigin:null, suppressed:null, customDrafts:new Map(), pageController:null, pageRequest:0, taskGoal:'', pageVersion:0, information:[], previousDraft:'',confirmedChoices:[],answers:[],intentOverride:'',slideChoice:undefined};
 const node=element;
@@ -112,7 +112,7 @@ function updateClarification(clarification){
 function renderUncertainty(){
   const input=$('intent-input'),mirror=$('input-mirror'),text=input.value;
   const entries=state.information;
-  const u=state.live||isIncompleteComparison(text)?state.uncertainty:(state.uncertainty=clarificationFor(text));
+  const u=state.live?state.uncertainty:(state.uncertainty=clarificationFor(text));
   mirror.replaceChildren();let cursor=0;
   const ranges=entries.length?entries:(u?.phrase&&Number.isInteger(u.start)?[{...u,key:'legacy'}]:[]);
   for(const entry of ranges){
@@ -517,7 +517,7 @@ function applyCachedPreview(key,text){
 }
 async function preview(text=$('intent-input').value.trim()){
   const currentDraft=()=>$('intent-input').value.trim();
-  if(!text||state.composing||isIncompleteComparison(text)||isIncompleteComparison(currentDraft()))return;
+  if(!text||state.composing)return;
   if(state.limited)return;
   if(!state.live){renderQuick(demoPreview(text,state.audience,state.format),'Demo');status('Demo uses built-in examples, not semantic AI. No draft text is sent.');return;}
   if(activePreview){
@@ -534,7 +534,7 @@ async function preview(text=$('intent-input').value.trim()){
   previewQueued=false;
   $('cancel-button').hidden=false;$('input-state').textContent='Preview updating · keep typing';
   const isCurrent=()=>activePreview===active&&!controller.signal.aborted&&version===state.pageVersion&&
-    extendsPreview(text,currentDraft())&&!isIncompleteComparison(currentDraft());
+    extendsPreview(text,currentDraft());
   const progress=partial=>{
     if(!isCurrent())return;
     if(partial.reset){active.answer='';showQuickAnswer(completedAnswer||$('quick-answer').textContent,true);}
@@ -577,7 +577,7 @@ function changed({immediate=false,typing=false,keepPopover=false}={}){
   if(!$('intent-input').value.trim()){state.slideChoice=undefined;state.slideDecided=false;state.slideOptions=undefined;}
   document.dispatchEvent(new Event('intent:changed'));
   const input=$('intent-input'),text=input.value.trim();
-  const waiting=isIncompleteComparison(text),keep=state.live&&!!text&&!waiting;
+  const keep=state.live&&!!text;
   const compatible=snapshot=>keep&&!immediate&&snapshot?.version===state.pageVersion&&extendsPreview(snapshot.text,text);
   clearTimeout(state.timer);
   previewQueued=false;
@@ -596,7 +596,6 @@ function changed({immediate=false,typing=false,keepPopover=false}={}){
   if(shownPreview)renderSnapshot(shownPreview.data,shownPreview.source,shownPreview.text,false);
   else renderUncertainty();
   if(!hasText){$('quick-preview').hidden=true;updateClarification(null);return;}
-  if(waiting){$('input-state').textContent='Waiting for the second item to compare';status('');return;}
   if(!state.live){preview();return;}
   if(activePreview?.answer&&draftWordCount(text.slice(activePreview.text.length))<=12)showQuickAnswer(activePreview.answer);
   if(!activePreview&&previewCache.size&&applyCachedPreview(previewKey(text),text))return;
