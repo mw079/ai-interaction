@@ -344,6 +344,8 @@
    map chose (data-label), so it never shifts the dot. */
 .dg-canvas>.dg-node.dg-pin,.dg-canvas>.dg-node.dg-pin[aria-pressed=true],.dg-map-route>.dg-node.dg-pin,.dg-map-route>.dg-node.dg-pin[aria-pressed=true]{display:block;transform:translate(calc(-50% + var(--nudge-x,0px)),calc(-50% + var(--nudge-y,0px)))}
 .dg-pin .dg-pin-dot{display:block}
+/* A map stop is as tall as its dot, also on touch screens (where buttons are otherwise at least 44 px): its name is placed from the dot's edge, and a taller box would push names away from their dots and out of the map. */
+@media(pointer:coarse){.dg-map .dg-node.dg-pin{min-height:0}}
 .dg-map-route .dg-pin .dg-pin-dot{display:grid}
 .dg-pin[aria-pressed=true] .dg-label{position:absolute;left:50%;top:calc(100% + 6px);transform:translateX(-50%);white-space:nowrap;z-index:1}
 /* City plan: every stop is named (the selected one in the accent), and a small locator shows the
