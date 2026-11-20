@@ -312,14 +312,14 @@ body.intent-first[data-experience=unified].page-open.composer-active .intent-pan
 body.intent-first[data-experience=unified].page-open #cancel-button{display:none!important}
 /* Views: two or three components of one page, one at a time. The tab row takes exactly the
    place and height of the component title it replaces, so views arriving later move nothing. */
-.atlas-views{display:flex;flex-wrap:wrap;column-gap:20px;row-gap:2px;margin:0;padding-bottom:10px}  /* wide screens: long names wrap; phones: one line that scrolls (below) */
+.atlas-views{display:flex;flex-wrap:nowrap;column-gap:20px;margin:0;padding-bottom:10px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none}.atlas-views::-webkit-scrollbar{display:none}  /* one line at every width; it scrolls sideways when the names do not fit */
 .atlas-view{white-space:nowrap}  /* the title's 10px gap is padding here, so the underline is not clipped */
 .atlas-view{flex:none;border:0;background:none;padding:0;font:inherit;font-size:18px;line-height:1.4;font-weight:500;color:#9a9a9a;cursor:pointer;text-decoration:underline 2px transparent;text-underline-offset:7px;transition:color .2s,text-decoration-color .2s}
 .atlas-view:hover{color:#5e5e5e;background:none}
 .atlas-view[aria-selected=true]{color:#3a3a3a;text-decoration-color:#1d1d1f}
 .atlas-visual.has-views>.component-block>.component-heading{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-@media(max-width:600px){.atlas-views{flex-wrap:nowrap;column-gap:16px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none}.atlas-views::-webkit-scrollbar{display:none}.atlas-view{font-size:16px;line-height:25.2px;white-space:nowrap}}  /* the title's 18px × 1.4 line, so nothing moves */
-/* On a phone the tabs stay on one line and scroll sideways; a soft fade marks the side with more tabs. */
+@media(max-width:600px){.atlas-views{column-gap:16px}.atlas-view{font-size:16px;line-height:25.2px}}  /* the title's 18px × 1.4 line, so nothing moves */
+/* A soft fade marks the side with more tabs. */
 .atlas-views.more-after{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 36px),transparent)}
 .atlas-views.more-before{-webkit-mask-image:linear-gradient(90deg,transparent,#000 36px);mask-image:linear-gradient(90deg,transparent,#000 36px)}
 .atlas-views.more-before.more-after{-webkit-mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent);mask-image:linear-gradient(90deg,transparent,#000 36px,#000 calc(100% - 36px),transparent)}

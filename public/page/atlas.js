@@ -53,7 +53,7 @@ function mountViews(visual,p,options){
   panels.forEach((panel,j)=>{panel.hidden=i!==j;});
   if(tabs&&buttons[i])reveal(buttons[i]);
  }
- // On a phone the tabs scroll sideways: keep the chosen one in view (without scrolling the page) and fade the side with more.
+ // When the names do not fit, the tabs scroll sideways: keep the chosen one in view (without scrolling the page) and fade the side with more.
  function reveal(button){
   const left=button.offsetLeft-tabs.offsetLeft,right=left+button.offsetWidth,edge=36;
   if(left<tabs.scrollLeft+edge)tabs.scrollLeft=Math.max(0,left-edge);

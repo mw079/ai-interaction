@@ -538,11 +538,11 @@ test('more views arrive in the background as tabs, without moving the page; swit
     return style.textDecorationLine.includes('underline')&&style.textDecorationColor!=='rgba(0, 0, 0, 0)'&&row.scrollHeight<=row.clientHeight;});
   expect(underline).toBe(true);
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
-  // The selected tab is fully in view; on a phone all tabs stay on one line (the row scrolls sideways when they do not fit).
+  // The selected tab is fully in view, and all tabs stay on one line at every width (the row scrolls sideways when they do not fit).
   const layout=await page.getByRole('tablist',{name:'Views'}).evaluate(row=>{const r=row.getBoundingClientRect(),tabs=[...row.children],chosen=tabs.find(t=>t.getAttribute('aria-selected')==='true').getBoundingClientRect();
     return {inView:chosen.left>=r.left-1&&chosen.right<=r.right+1,lines:new Set(tabs.map(t=>Math.round(t.getBoundingClientRect().top))).size};});
   expect(layout.inView).toBe(true);
-  if((page.viewportSize()?.width??1280)<=600)expect(layout.lines).toBe(1);
+  expect(layout.lines).toBe(1);
   await page.getByRole('tab',{name:'Day by day'}).click();
   await expect(page.getByRole('tabpanel',{name:'Day by day'})).toBeVisible();
   await expect(map).toBeHidden();
