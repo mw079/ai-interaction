@@ -81,3 +81,15 @@ test('a decorated function name is reduced to the supported one, an ambiguous on
   assert.equal(validComponents([both]),false);
   assert.equal(validComponents([code]),false);
 });
+
+test('every component and every picker type has guidance and an example in its prompt',async()=>{
+ const {CATALOG_INSTRUCTIONS:c,COMPONENT_TYPES}=await import('../public/components/catalog.js');
+ const {modelInstructions}=await import('../prompts.mjs');
+ const {INFORMATION_TYPES}=await import('../public/composer/intent.js');
+ const named=(t,text)=>new RegExp('\\b'+t+'\\b').test(text);
+ const guide=c.slice(c.indexOf('CHOOSE BY'),c.indexOf('EXAMPLES')),examples=c.slice(c.indexOf('EXAMPLES'),c.indexOf('BLOCK FORMAT'));
+ for(const type of COMPONENT_TYPES){assert.ok(named(type,guide),type+' has no when-to-use line');assert.ok(named(type,examples),type+' has no example');}
+ const live=modelInstructions({phase:'preview'},'','');
+ const types=live.slice(live.indexOf('Pick the type that fits'));
+ for(const type of Object.keys(INFORMATION_TYPES))assert.match(types,new RegExp('\\b'+type+'\\b[^;]*“'),type+' has no example phrase');
+});

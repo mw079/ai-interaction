@@ -121,3 +121,16 @@ Live, ten requests: every page got 1–2 fitting extra views 2.2–4.3 s after i
 22 new requests in the real app (investing, the heart, a California road trip, adopting a cat, chess openings, EU vaccine approval, electric vs hybrid cars, a wedding toast, the French Revolution, balcony tomatoes, supply and demand, athlete meal prep, the stock market, Alps packing, neural networks, Greek islands), at 1280 and 390 px, with screenshots of every view. Every page loaded with no script errors; all except the wedding toast (correctly a text page) gained 1–2 fitting views 2.5–5 s after the page appeared, using 14 different components (map, timeline, checklist, comparison, matrix, decision tree, hierarchy, graph, worked example, key numbers, practice, prediction, cycle, chart).
 
 Found on the phone and fixed: tabs scrolled out of view ("c vs hybrid") and now wrap; decision-tree branch labels were 8 px and are now at least 12 px, placed above their answers so siblings never collide; the selected place's name on a map covered neighbouring stops and now goes on the freest side inside the map; a tapped tab showed the generic grey button hover. A row of three long tab names wraps to more lines than the title it replaces, so on a phone the page then moves down when views arrive.
+
+## Examples for every component and picker, 2026-11-20
+
+Audit: all 24 components had a when-to-use line but only 9 had an example; 22 of 28 picker types were named in the live-help prompt (language, date_range, geographic_scope, exclusions, comparison_options were not) and few had a when-to-use line. Four component examples were almost the same requests as `eval:pages` prompts (Rome and Venice, a 5K plan, dinner for six, Europe's biggest cities), which flattered that eval; all examples now use other topics, and picker examples use phrases that differ from the test drafts.
+
+Now every component has a one-line request → component example, and every picker type a "type, when (“example phrase”)" line, plus cues for overlapping types ("no / without" is exclusions; "X but Y" is a trade-off). A unit test fails if a component or picker type is added without its line.
+
+| Picker test (28 drafts, one per type, live) | Before | After |
+| --- | --- | --- |
+| Original drafts | 18/28 | 24/28 |
+| New drafts, never seen by the prompt | — | 24/28 |
+
+Remaining misses are mostly overlapping types (audience vs audience and knowledge; depth or length vs output format) plus "in Italian" not highlighted as a language. All 28 pickers write a correct value when used in a browser. `eval:pages` with the new component examples: 99 %, 13 components, 13 of 15 pages with views (same as before, without the eval-matching examples); `eval:followups` 48/48. Cost: the longer live-help prompt moved the first answer from 0.87 s to 1.01 s and the complete answer from 2.32 s to 2.58 s (medians of 11–12).
