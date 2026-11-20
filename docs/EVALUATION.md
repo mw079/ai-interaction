@@ -161,3 +161,7 @@ Found and fixed:
 - Found by the follow-up eval afterwards: the 6-item rule made the model merge planets ("Earth and Mars = 1.52"); a chart, spectrum, map or timeline may have 7–8 when the data needs them, and two things never share an item.
 
 Left as is: a question shown while typing can be replaced once right after typing stops, when the answer for the full text arrives (showing questions only for the full text would remove help during typing). Evals afterwards: pickers 25/28 tuned and 25/28 unseen, pages 99 %, follow-ups 47/48 and then 11/11 on the affected scenarios after the item fix.
+
+## Pages that appear while they are written, 2026-11-20
+
+After Send, a new page used to show only "Creating…" for 6–16 s. Pages now stream: the model writes the title first, then the introduction, and the app shows both in their final places with a "Building the visual…" placeholder; the finished page replaces only the placeholder. Measured in the app: title on screen after 1.4–3.5 s, full page after 6–11 s, title moved 0.0 px when the page arrived (desktop and phone). Writing the title first did not slow the page (Athens 13.0 s before, 7–11 s after). Also fixed: sending with ⌘+Enter left the field in its typing state, so the dock jumped down when the page arrived.

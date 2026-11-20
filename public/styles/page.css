@@ -325,3 +325,9 @@ body.intent-first[data-experience=unified].page-open #cancel-button{display:none
 .atlas-view[aria-selected=true]{color:#3a3a3a;text-decoration-color:#1d1d1f}
 .atlas-visual.has-views>.component-block>.component-heading{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 @media(max-width:600px){.atlas-views{flex-wrap:wrap;column-gap:16px;row-gap:2px;white-space:normal}.atlas-view{font-size:16px;line-height:25.2px;white-space:nowrap}}  /* the title's 18px × 1.4 line, so nothing moves */
+/* A page being written: title and introduction in place, a quiet placeholder for the visual. */
+.document-panel.is-drafting .page-progress,.document-panel.is-drafting #submitted-request{display:none!important}
+.atlas-visual-pending{min-height:clamp(200px,32vh,320px);border-radius:16px;background:#f5f5f5;display:flex;align-items:center;justify-content:center;gap:10px;color:#6d6d6d;font-size:13px;animation:atlas-pending 1.6s ease-in-out infinite alternate}
+@keyframes atlas-pending{from{background:#f6f6f6}to{background:#efefef}}
+@media(prefers-reduced-motion:reduce){.atlas-visual-pending{animation:none}}
+

@@ -349,27 +349,25 @@ test('editing a pending notes rewrite shows only the latest proposal',async({pag
   }
 });
 
-test('generation shows a quiet loading state, then reveals the page and typeset equations',async({page})=>{
+test('a new page shows its title while the visual is built, then the page appears in place with typeset equations',async({page})=>{
   const prompt='Show an adjustable orbit.';
   const composer=page.getByRole('textbox',{name:'Your next instruction'});
   const notes=page.getByText('Your notes',{exact:true});
   const progress=page.getByText('Creating…',{exact:true});
-  const resume=server.holdPreview(prompt);
+  const resume=server.holdPreview(prompt);           // the model has written the start of the page only
+  let before;
   try{
     await composer.fill(prompt);
     await button(page,'Explore interactively').click();
-    await expect(progress).toBeVisible();
-    await expect(page.locator('#page-progress .page-spinner')).toBeVisible();
-    await expect(page.locator('.paper')).toHaveCSS('background-color','rgba(0, 0, 0, 0)');
+    await expect(title(page)).toHaveValue('Kepler’s laws');                       // title first, while…
+    await expect(page.getByText('Building the visual…',{exact:true})).toBeVisible(); // …the visual is still being built
+    await expect(progress).toBeHidden();
     await expect(notes).toBeHidden();
-    await expect(title(page)).toBeHidden();
-    await expect(button(page,'Previous page')).toBeHidden();
-    await expect(page.locator('#page-progress .page-elapsed')).toBeHidden();
-    await page.clock.runFor(3100);
-    await expect(page.locator('#page-progress .page-elapsed')).toHaveText(/^3 s$/);
-    await expect(page.locator('#page-progress .page-elapsed')).toBeVisible();
+    before=await title(page).boundingBox();
   }finally{resume();}
-  await expect(title(page)).toHaveValue('Kepler’s laws');
+  await expect(page.getByText('Building the visual…',{exact:true})).toBeHidden();
+  const after=await title(page).boundingBox();
+  for(const key of ['x','y','width'])expect(Math.abs(after[key]-before[key]),key).toBeLessThanOrEqual(1);  // the title stays put
   await expect(progress).toBeHidden();
   await expect(notes).toBeVisible();
   await expect(page.locator('.atlas-equation:visible mfrac')).toBeVisible();
@@ -561,5 +559,17 @@ test('views that arrive after the page was edited are dropped',async({page})=>{
   await page.waitForTimeout(500);
   await expect(page.getByRole('tablist',{name:'Views'})).toHaveCount(0);
   await expect(page.locator('[data-component-id="rome-days"]')).toHaveCount(0);
+});
+
+test('sending with Cmd+Enter steps the field back like the Send button, so the dock does not jump when the page arrives',async({page})=>{
+  const resume=server.holdPreview('Explain how vaccines work.');
+  try{
+    const field=page.getByRole('textbox',{name:'Your next instruction'});
+    await field.fill('Explain how vaccines work.');
+    await field.press(process.platform==='darwin'?'Meta+Enter':'Control+Enter');
+    await expect(page.getByText('Building the visual…',{exact:true})).toBeVisible();
+    await expect(page.locator('body')).not.toHaveClass(/composer-active/);
+  }finally{resume();}
+  await expect(title(page)).toHaveValue(vaccineTitle);
 });
 

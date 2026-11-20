@@ -4,7 +4,7 @@ import {renderProjectile} from './page/projectile.js';
 import {renderFollowUpScope,followUpScopes,applyFollowUpScope} from './composer/controls-extended.js';
 import {slideRecipe,validComponents} from './components/catalog.js';
 import {setupPageAssistant} from './page/assistant.js';
-import {renderAtlas,refreshDeeper,addViews} from './page/atlas.js';
+import {renderAtlas,refreshDeeper,addViews,renderDraft} from './page/atlas.js';
 import {PageTimeline,DirectEditUndo,historyLimit} from './page/timeline.js';
 import {setupWorkspace} from './page/workspace.js';
 import {confirmedChoices} from './composer/request-context.js';
@@ -351,8 +351,16 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
   status('');
   const progressTimer=showPageProgress();
   $('submitted-request').textContent=text;
+  // A first page shows its title and introduction as soon as they are written (about 1-2 s),
+  // with a placeholder for the visual; a follow-up keeps the current page until the new one is ready.
+  let draft=null;
+  const progress=state.component?undefined:partial=>{
+    if(id!==state.pageRequest||!partial.title)return;
+    if(!draft){documentPanel.classList.add('has-slide','is-drafting');draft=renderDraft($('active-component'),$('document-title'));}
+    draft.update(partial);
+  };
   try{
-    const data=await callPreview({text,context,audience:state.audience,format:state.format,phase:'page',slideChoice:scope?undefined:slideChoice,pageScope:scope?{id:scope.id,text:scope.text}:undefined,promised},controller.signal);
+    const data=await callPreview({text,context,audience:state.audience,format:state.format,phase:'page',slideChoice:scope?undefined:slideChoice,pageScope:scope?{id:scope.id,text:scope.text}:undefined,promised},controller.signal,progress);
     if(id!==state.pageRequest)return;
     if(scope&&version!==state.pageVersion)throw new Error('The selected part changed while the response was being prepared.');
     const draft=scope?applyFollowUpScope(base,data.preview,scope):data.preview;
@@ -379,6 +387,7 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
     else{p.baseVersion=state.pageVersion;state.proposal=p;renderProposal();}
     status(state.proposal?'Updated page ready to review. Your existing page is preserved.':'Your page is ready. Edit it directly or ask for a change below.');
   }catch(error){
+    if(id===state.pageRequest&&!state.component){documentPanel.classList.remove('has-slide');$('active-component').replaceChildren();$('document-title').value='';}
     if(id===state.pageRequest&&error.name!=='AbortError'){
       documentPanel.removeAttribute('data-generating');
       const retry=node('button','','Retry this request');
@@ -389,6 +398,7 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
     clearInterval(progressTimer);
     if(id===state.pageRequest){
       state.pageController=null;
+      documentPanel.classList.remove('is-drafting');
       if(documentPanel.hasAttribute('data-generating'))hidePageProgress();
     }
   }

@@ -79,6 +79,23 @@ function mountViews(visual,p,options){
 // Adds views to the page as it is shown, without re-rendering what is already there.
 export function addViews(page,blocks){viewHosts.get(page)?.add(blocks);}
 
+// While a new page is being written: its title and introduction in their final places, and a
+// calm placeholder where the visual will appear. renderAtlas then replaces it all in place.
+export function renderDraft(target,titleField){
+ const layout=make('div','atlas-layout atlas-draft'),copy=make('div','atlas-copy'),visual=make('div','atlas-visual');
+ const titleWrapper=make('div','page-field');titleWrapper.append(titleField);
+ const introWrapper=make('div','page-field'),intro=make('textarea','atlas-text');intro.rows=1;intro.readOnly=true;intro.tabIndex=-1;intro.setAttribute('aria-label','Introduction, being written');introWrapper.append(intro);
+ const pending=make('div','atlas-visual-pending');pending.setAttribute('role','status');
+ pending.append(make('span','page-spinner'),make('span','','Building the visual…'));
+ copy.append(titleWrapper,introWrapper);visual.append(pending);layout.append(copy,visual);
+ target.replaceChildren(layout);
+ const fit=field=>{field.style.height='0';field.style.height=field.scrollHeight+'px';};
+ return {update({title,intro:text}){
+  if(title&&titleField.value!==title){titleField.value=title;fit(titleField);}
+  if(text&&intro.value!==text){intro.value=text;fit(intro);}
+ }};
+}
+
 export function renderAtlas(target,p,{titleField,onEdit}){
  target.atlasDispose?.();const observers=[];target.atlasDispose=()=>observers.forEach(o=>o.disconnect());p.edits??={};const layout=make('div','atlas-layout'),copy=make('div','atlas-copy'),visual=make('div','atlas-visual');
  const diagram=!!p.components?.length||['kepler','planner','projectile'].includes(p.kind);

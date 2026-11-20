@@ -163,7 +163,7 @@ async function fixtureUpstream(options,gates){
   const response={status:'completed',output:[{type:'message',content:[{type:'output_text',text}]}]};
   const gate=gates.get(request.phase==='views'?'views:'+request.text:request.text);
   if(!stream){await gate;return Response.json(response);}
-  const delta=JSON.stringify(request.phase==='page-help'?{answer:preview.answer}:{body:preview.body}).slice(0,-1);
+  const delta=JSON.stringify(request.phase==='page-help'?{answer:preview.answer}:request.phase==='page'?{title:preview.title,body:preview.body}:{body:preview.body}).slice(0,-1);
   const push=(controller,event)=>controller.enqueue(new TextEncoder().encode('data: '+JSON.stringify(event)+'\n\n'));
   const body=new ReadableStream({
     async start(controller){

@@ -7,7 +7,7 @@ export function setupWorkspace(){
  // composer only toggles composer-active; nothing is measured or scaled here.
  function focus(on){clearTimeout(hoverTimer);document.body.classList.toggle('composer-active',on);}
  const isComposerControl=element=>panel.contains(element)||element?.closest('.intent-details,#intent-popover');
- panel.addEventListener('focusin',()=>focus(true));panel.addEventListener('pointerdown',()=>focus(true));panel.addEventListener('input',()=>focus(true));panel.addEventListener('keydown',()=>focus(true));
+ panel.addEventListener('focusin',()=>focus(true));panel.addEventListener('pointerdown',()=>focus(true));panel.addEventListener('input',()=>focus(true));panel.addEventListener('keydown',event=>{if((event.metaKey||event.ctrlKey)&&event.key==='Enter')return;focus(true);});   // ⌘/Ctrl+Enter sends: reading, not writing
  document.addEventListener('focusin',event=>{if(event.target.closest('.intent-details,#intent-popover'))focus(true);});
  paper.addEventListener('pointerenter',event=>{
   if(event.pointerType!=='mouse')return;

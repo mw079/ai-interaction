@@ -48,6 +48,15 @@ function partialFields(text){
 }
 
 // Only expose bounded display text before the complete structured result is validated.
+// A new page shows its title and introduction while the rest (the visual) is still being written.
+export function partialPage(text){
+ const {fields,complete}=partialFields(text);
+ const result={};
+ if(Array.isArray(fields.body)&&typeof fields.body[0]==='string')result.intro=fields.body[0].slice(0,240);
+ if(typeof fields.title==='string'&&fields.title.trim())result.title=fields.title.slice(0,160);
+ if(complete.has('title'))result.titleReady=true;
+ return result;
+}
 export function partialPageAnswer(text){
  const {fields}=partialFields(text);
  return typeof fields.answer==='string'?{answer:fields.answer.slice(0,600)}:{};

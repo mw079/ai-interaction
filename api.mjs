@@ -1,5 +1,5 @@
 import {COMPONENT_SCHEMA,validPageHelp,validComponents,SLIDE_RECIPES,slideRecipe,matchesSlideRecipe,normaliseComponents} from './public/components/catalog.js';
-import {readSSE,partialLivePreview,partialPageAnswer} from './public/shared/stream.js';
+import {readSSE,partialLivePreview,partialPageAnswer,partialPage} from './public/shared/stream.js';
 import {FORMATS,WORLDS,validPreview,isIncompleteComparison,tidyPage} from './public/shared/model.js';
 import {modelInstructions,buildModelInput} from './prompts.mjs';
 
@@ -19,6 +19,9 @@ PREVIEW_SCHEMA.properties.launch={type:'object',additionalProperties:false,prope
 // question, the Tab prediction (short) and the highlights stream before page-only metadata.
 {const p=PREVIEW_SCHEMA.properties;PREVIEW_SCHEMA.properties={body:p.body,question:p.question,phrase:p.phrase,options:p.options,questionKind:p.questionKind,completion:p.completion,information:p.information,...p};}
 const DEEPER_SCHEMA={type:'object',additionalProperties:false,properties:{sections:{type:'array',items:{type:'object',additionalProperties:false,properties:{answer:string,components:{type:'array',items:COMPONENT_SCHEMA}},required:['answer','components']}}},required:['sections']};
+// A page is written title first, then the introduction, so both can be shown while the visual
+// is still being written. Same fields as the live preview, in a different order.
+const PAGE_SCHEMA={...PREVIEW_SCHEMA,properties:{title:PREVIEW_SCHEMA.properties.title,body:PREVIEW_SCHEMA.properties.body,...PREVIEW_SCHEMA.properties}};
 // Extra views, fetched in the background after a page with one view is shown: 0-2 more components.
 const VIEWS_SCHEMA={type:'object',additionalProperties:false,properties:{components:{type:'array',items:COMPONENT_SCHEMA}},required:['components']};
 const SELECTION_SCHEMA={type:'object',additionalProperties:false,properties:{answer:string,replacement:string},required:['answer','replacement']};
@@ -88,7 +91,7 @@ export async function handleAPI(request,upstream=fetch,env={},{limiter=limiterFo
   const selection=payload?.phase==='selection';
   if(selection&&payload.text.length>1000)return json({error:'Choose a shorter passage for local help.'},400);
   const page=payload?.phase==='page';const model=page?'gpt-6.1-terra':'gpt-6-luna';
-  const streamAbort=new AbortController();const streaming=payload?.stream===true&&(payload.phase==='preview'||pageHelp);
+  const streamAbort=new AbortController();const streaming=payload?.stream===true&&(payload.phase==='preview'||pageHelp||payload.phase==='page');
   const start=Date.now();const timeout=AbortSignal.timeout(page?45000:25000);const signal=AbortSignal.any([request.signal,timeout,streamAbort.signal]);
   // Count only requests that will reach OpenAI: invalid ones above cost nothing and are not counted.
   const allowance=limiter.take(visitor);
@@ -98,11 +101,11 @@ export async function handleAPI(request,upstream=fetch,env={},{limiter=limiterFo
       method:'POST',headers:{Authorization:authorization,'Content-Type':'application/json'},redirect:'error',signal,
       ...({body:JSON.stringify({model,store:false,...(streaming?{stream:true}:{}),reasoning:{effort:page?'low':'none'},max_output_tokens:page?5000:pageHelp?2200:deeper?2600:views?2600:1300,
         instructions:modelInstructions(payload,slideInstructions,contextInstructions),
-        input:JSON.stringify(buildModelInput(payload,{slideLabel:recipe?.label})),text:{format:{type:'json_schema',name:deeper?'go_deeper':views?'more_views':pageHelp||selection?'local_assistance':'interactive_preview',strict:true,schema:deeper?DEEPER_SCHEMA:views?VIEWS_SCHEMA:pageHelp?PAGE_HELP_SCHEMA:selection?SELECTION_SCHEMA:PREVIEW_SCHEMA}}
+        input:JSON.stringify(buildModelInput(payload,{slideLabel:recipe?.label})),text:{format:{type:'json_schema',name:deeper?'go_deeper':views?'more_views':pageHelp||selection?'local_assistance':'interactive_preview',strict:true,schema:deeper?DEEPER_SCHEMA:views?VIEWS_SCHEMA:pageHelp?PAGE_HELP_SCHEMA:selection?SELECTION_SCHEMA:page?PAGE_SCHEMA:PREVIEW_SCHEMA}}
       })})
     });
     if(!response.ok){const messages={401:'Live answers are not available right now.',403:'Live answers are not available right now.',404:'Live answers are not available right now.',429:'The service is busy. Try again in a moment.'};return json({retryable:response.status>=500,error:messages[response.status]||'OpenAI could not complete the request. Your page is unchanged.'},[401,403,404].includes(response.status)?503:response.status===429?503:502);}
-    const resultOptions={model,start,selection,pageHelp,recipe,activity:payload?.target?.mode,tidy:payload?.phase==='page'&&!payload.pageScope,deeper:deeper?payload.followUps.length:0,views};
+    const resultOptions={model,start,page,selection,pageHelp,recipe,activity:payload?.target?.mode,tidy:payload?.phase==='page'&&!payload.pageScope,deeper:deeper?payload.followUps.length:0,views};
     if(streaming)return liveStreamResponse(response,resultOptions,signal,()=>streamAbort.abort());
     return finishModelResponse(await response.json(),resultOptions);
   }catch(error){return json({retryable:!request.signal.aborted,error:error.name==='TimeoutError'||timeout.aborted?`${model} took too long. Try again.`:'Connection interrupted. Your page is unchanged; try again.'},504);}
@@ -152,7 +155,7 @@ if(data.status!=='completed')return json({retryable:false,error:'The preview was
 }
 
 function liveStreamResponse(upstream,resultOptions,signal,abort){
- const partialResponse=resultOptions.pageHelp?partialPageAnswer:partialLivePreview;
+ const partialResponse=resultOptions.pageHelp?partialPageAnswer:resultOptions.page?partialPage:partialLivePreview;
  const encoder=new TextEncoder();let cancelled=false;
  const body=new ReadableStream({async start(controller){
   const send=value=>{if(!cancelled)controller.enqueue(encoder.encode('data: '+JSON.stringify(value)+'\n\n'));};
