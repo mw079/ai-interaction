@@ -169,3 +169,11 @@ After Send, a new page used to show only "Creating…" for 6–16 s. Pages now s
 ## Follow-up status, 2026-11-20
 
 A follow-up takes 6–15 s, during which the page used to show only a small "Creating…" pill at the top of the card. Now a status line above the field says what is changing, made from the preview the user read: "Will add a short quiz about Earth's tilt…" becomes "Adding a short quiz about Earth's tilt…" (desktop, live). When the shown preview was for slightly different text, the request is quoted instead ("Working on “Add a short quiz”"), so the line never promises something Send was not asked to do. The same check showed a third tab name cut off on desktop; tab names are now asked to be at most 24 characters, and tabs wrap instead of hiding.
+
+## Repeatable journey check, 2026-11-20
+
+`npm run eval:journeys` (`dev/eval-journeys.mjs`) runs the 20-domain review as a command: each journey types the request, records the live help, opens a picker, sends, waits for the title, page and views, makes a follow-up and opens Go deeper, with 12 automatic checks and an `overview.html` of every stage's screenshot. First run: 17 of 20 journeys passed every check (215/218). It found two error-handling bugs, both now covered by browser tests that fail on the earlier code:
+- A first page that failed after its title appeared left an empty card: clearing the half-written page removed the title field, so showing the error crashed (and the next page would have failed too). The title field is now put back first; the error and Retry show.
+- After a live answer failed or was paused, the question above the field stayed disabled for good; it is usable again.
+
+Re-run: kitchen and wine pass; phone, 6 journeys, 71/72. Titles appear after a median of about 2.5 s (1.0–4.6 s); the one remaining miss is the 16-week marathon plan (title after 8–9 s, a wedding once 7.4 s), where the page model plans longer before writing anything.

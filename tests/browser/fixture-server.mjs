@@ -75,6 +75,8 @@ function previewFor({phase,text}){
           {label:'Pantheon',detail:'Day 2: the dome, then Piazza Navona.',value:0,latitude:41.8986,longitude:12.4769},
           {label:'Vatican',detail:'Day 3: the museums and St Peter’s.',value:0,latitude:41.9029,longitude:12.4534}]}],
       followUps:['Where should I eat?']};
+    // Starts like a good page (title, introduction), then fails validation: an unknown component.
+    if(text==='Make a broken page.')return {...preview,title:'Half a page',body:['This page starts well.'],components:[{id:'bad',type:'not-a-component',title:'Bad',prompt:'',edges:[],items:[]}]};
     if(text==='Make a running plan.')return {...preview,kind:'planner',title:'Zero to 5K',body:['Build up gradually over four weeks.'],
       rows:[{criterion:'Week 1',a:'Run 1 minute, walk 2 minutes; repeat 8 times.',b:''},
         {criterion:'Week 4',a:'Sessions 1–2: run 8 minutes, walk 2 minutes; repeat 3 times. Session 3: run 20 minutes without stopping at an easy pace.',b:''}]};
@@ -91,6 +93,7 @@ function previewFor({phase,text}){
       components:[{id:'cycle',type:'cycle',title:'The cycle',prompt:'',edges:[],items:['Evaporation','Condensation','Precipitation'].map(label=>({label,detail:label+'.',value:0,latitude:null,longitude:null}))}]};
     return {...preview,kind:'kepler',body:['Change the orbit to explore Kepler’s laws.']};
   }
+  if(text.endsWith(' break it'))return {...preview,kind:'not-a-kind'};   // fails validation: a live answer that errors
   if(text==='rere')return {...preview,body:[]};
   if(text.startsWith(billDraft))return {...preview,interpretation:'Explain how a bill becomes a law.',body:['A bill passes both chambers, then the president signs or vetoes it.'],slideOptions:['timeline','compare','relationships']};   // a draft with nothing worth answering
   if(text===completedComparison)return {...preview,body:[comparisonAnswer]};

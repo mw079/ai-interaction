@@ -392,7 +392,12 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
     else{p.baseVersion=state.pageVersion;state.proposal=p;renderProposal();}
     status(state.proposal?'Updated page ready to review. Your existing page is preserved.':'Your page is ready. Edit it directly or ask for a change below.');
   }catch(error){
-    if(id===state.pageRequest&&!state.component){documentPanel.classList.remove('has-slide');$('active-component').replaceChildren();$('document-title').value='';}
+    // A first page that fails after its title appeared: put the title field back in its place
+    // (the draft holds it), then clear the draft, so the error and Retry show in the empty paper.
+    if(id===state.pageRequest&&!state.component){
+      const titleField=$('document-title');$('active-component').before(titleField);titleField.value='';titleField.style.height='';
+      documentPanel.classList.remove('has-slide','is-drafting');$('active-component').replaceChildren();
+    }
     if(id===state.pageRequest&&error.name!=='AbortError'){
       documentPanel.removeAttribute('data-generating');
       const retry=node('button','','Retry this request');
@@ -559,7 +564,7 @@ async function preview(text=$('intent-input').value.trim()){
     renderSnapshot(data.preview,data.model||'gpt-6-luna',text);status('');
   }catch(error){
     if(error.name!=='AbortError'&&isCurrent()&&currentDraft()===text){
-      showQuickAnswer(completedAnswer);composerExperience?.onStream({reset:true});status(error.message,true);
+      showQuickAnswer(completedAnswer);composerExperience?.onPreviewFailed();status(error.message,true);
     }
   }finally{
     if(activePreview===active){
@@ -632,7 +637,7 @@ function renderHistory(){
  }
 }
 $('intent-input').oninput=event=>{if(!state.composing)changed({typing:event.inputType==='insertText'&&event.data?.length===1});};$('intent-input').addEventListener('compositionstart',()=>{state.composing=true;stop();});$('intent-input').addEventListener('compositionend',()=>{state.composing=false;changed();});
-$('cancel-button').onclick=()=>{stop();showQuickAnswer(completedAnswer);composerExperience?.onStream({reset:true});status('Preview paused. Keep editing to resume.');$('input-state').textContent='Preview paused';};
+$('cancel-button').onclick=()=>{stop();showQuickAnswer(completedAnswer);composerExperience?.onPreviewFailed();status('Preview paused. Keep editing to resume.');$('input-state').textContent='Preview paused';};
 $('accept-button').onclick=()=>{const p=state.proposal;if(!p||(p.baseVersion!==undefined?p.baseVersion!==state.pageVersion:p.revision!==state.revision))return;timeline.save(capturePage());snapshot(state.component?'Before replacing the page':'Before keeping the page');state.component=structuredClone(p);$('document-title').value=p.title;directEdits=new DirectEditUndo();state.proposal=null;state.pageVersion++;renderActive();renderProposal();appendPage();renderPageNavigation();status('Page kept. Edit it directly, or restore the previous version in History.');};
 $('dismiss-button').onclick=()=>{state.proposal=null;renderProposal();};
 // History opens directly under the toolbar that holds its button, so it is always in view.

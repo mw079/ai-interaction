@@ -107,6 +107,9 @@ export function setupComposerExperience({state,changed,request,openDetail,closeD
     questionButton.animate([{backgroundColor:'#ececec'},{backgroundColor:'transparent'}],{duration:480,easing:'ease-out'});
    }
   },
+  // A live answer failed or was paused: the question that was showing becomes usable again
+  // (while an answer streams it is shown but disabled; it must not stay that way).
+  onPreviewFailed(){question=completedQuestion;render();},
   onDraftChanged(keep){if(!keep||!suggestion())completion='';summary=state.intentOverride||'';if(!keep)completedQuestion=null;question=completedQuestion&&{...completedQuestion,streaming:true};stopHelp();closeSummary();render();},
   onPageRendered(){stopHelp();render();},
   stop(){stopHelp();completion='';summary='';question=completedQuestion=null;closeSummary();render();}

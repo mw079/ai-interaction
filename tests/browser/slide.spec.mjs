@@ -592,3 +592,17 @@ test('while a follow-up is being made, a status line above the field says what i
   await expect(page.locator('#change-status')).toBeHidden();
 });
 
+test('a new page that fails after its title appeared shows the error and Retry, not an empty card',async({page})=>{
+  await page.getByRole('textbox',{name:'Your next instruction'}).fill('Make a broken page.');
+  await button(page,'Explore interactively').click();
+  const retry=page.getByRole('button',{name:'Retry this request'});
+  await expect(retry).toBeVisible();
+  await expect(page.locator('#page-progress')).toContainText(/./);
+  await expect(page.getByText('Building the visual…',{exact:true})).toBeHidden();
+  await expect(title(page)).toBeHidden();
+  // And the next request still works: the title field was kept.
+  await page.getByRole('textbox',{name:'Your next instruction'}).fill('Explain how vaccines work.');
+  await button(page,'Explore interactively').click();
+  await expect(title(page)).toHaveValue(vaccineTitle);
+});
+

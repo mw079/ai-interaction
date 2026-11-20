@@ -449,3 +449,18 @@ test('with a page open, a live question appearing or going away does not move th
   await expect(page.getByRole('button',{name:/^Clarifying question/})).toHaveCount(0);   // the empty row is not announced
   await expectSameGeometry(card,before);
 });
+
+test('when a live answer fails, the question that was showing stays usable',async({page})=>{
+  const editor=draft(page);
+  await editor.fill(requirementsDraft);
+  await advancePreview(page);
+  const question=page.getByRole('button',{name:'Clarifying question: '+requirementsQuestion});
+  await expect(question).toBeEnabled();
+  await editor.pressSequentially(' break it');
+  await advancePreview(page);
+  await expect(page.locator('#status')).toBeVisible();                       // the error is shown…
+  await expect(question).toBeEnabled();                                      // …and the question still works
+  await question.click();
+  await expect(page.locator('#intent-popover')).toBeVisible();
+});
+

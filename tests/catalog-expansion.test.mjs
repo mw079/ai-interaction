@@ -93,3 +93,15 @@ test('every component and every picker type has guidance and an example in its p
  const types=live.slice(live.indexOf('Pick the type that fits'));
  for(const type of Object.keys(INFORMATION_TYPES))assert.match(types,new RegExp('\\b'+type+'\\b[^;]*“'),type+' has no example phrase');
 });
+
+test('the journey check scores each stage and flags what went wrong',async()=>{
+ const {scoreJourney,JOURNEYS}=await import('../dev/eval-journeys.mjs');
+ assert.equal(JOURNEYS.length,20);assert.equal(new Set(JOURNEYS.map(([id])=>id)).size,20);
+ const good={errors:[],typing:{answer:'Short answer.',highlights:[{type:'Place or area',phrase:'Lisbon'}],tab:' with my parents.'},picker:{options:['A','B','C'],ownEntry:true},
+  titleSeconds:2,pageSeconds:9,views:['map: Route','timeline: Days'],followTyping:{preview:'Will add a rainy day.'},followStatus:'Adding a rainy day…',
+  after:{views:['map: Route','timeline: Days','timeline: Rainy day'],proposal:false,error:false},deeper:{answer:'A long enough answer about the aquarium and how to get there.'}};
+ assert.ok(Object.values(scoreJourney(good)).every(Boolean));
+ const bad=scoreJourney({...good,typing:{...good.typing,highlights:[{type:'Audience',phrase:'How do I'}],tab:' Share the SQL.'},after:{views:['comparison: One'],proposal:false,error:false}});
+ assert.equal(bad['highlights are short details'],false);assert.equal(bad['Tab never asks for something'],false);assert.equal(bad['follow-up keeps the page'],false);
+ assert.deepEqual(scoreJourney({failure:'timeout'}),{'journey completed':false});
+});
