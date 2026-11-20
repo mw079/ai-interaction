@@ -92,7 +92,7 @@ const PAGE_REWRITE_INSTRUCTIONS = [
 
 // ── Luna: Go deeper answers ───────────────────────────────────────────────────
 const DEEPER_INSTRUCTIONS = [
-  'TASK. The reader is on the page in page and may open the questions in followUps. Answer each question, in the same order, as one section.',
+  'TASK. The reader is on the page in page and may open the questions in followUps. Return one section per question, in the same order: sections has exactly as many entries as followUps, each answering its own question.',
   'Each answer is one or two plain sentences (max 300 characters) that go beyond what page already shows. Do not restate the page, the question or the takeaways. Match the audience and level of the page.',
   'Add at most one component to a section, only when seeing or doing something explains it better than a sentence. Keep it small: 2-4 items, one-sentence details. Use only supported, grounded data and lowercase-hyphen ids that differ from the page components. Otherwise leave components empty.'
 ].join('\n');
@@ -111,7 +111,7 @@ const SELECTION = 'TASK. request is text the user highlighted in their draft or 
 
 export function modelInstructions(payload,slideInstructions,contextInstructions){
   const phase=payload.phase;
-  if(phase==='deeper')return [INPUT_CONTRACT,DEEPER_INSTRUCTIONS,CATALOG_INSTRUCTIONS].join('\n');
+  if(phase==='deeper'){const n=payload.followUps?.length;return [INPUT_CONTRACT,DEEPER_INSTRUCTIONS,...(n?['followUps has '+n+' questions, so return exactly '+n+' sections.']:[]),CATALOG_INSTRUCTIONS].join('\n');}
   if(phase==='views')return [INPUT_CONTRACT,VIEWS_INSTRUCTIONS,CATALOG_INSTRUCTIONS].join('\n');
   if(phase==='page-help')return [INPUT_CONTRACT,payload.target?.mode==='rewrite'?PAGE_REWRITE_INSTRUCTIONS:PAGE_HELP_INSTRUCTIONS].join('\n');
   if(phase==='selection')return [INPUT_CONTRACT,SELECTION].join('\n');

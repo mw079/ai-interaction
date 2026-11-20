@@ -129,8 +129,9 @@ if(data.status!=='completed')return json({retryable:false,error:'The preview was
       return json({preview:{kind:'outline',title:'More views',interpretation:'',audience:'',question:'',phrase:'',options:[],body:[],nodes:[],rows:[],information:[],completion:'',components:[]},views:preview.components,model,elapsedMs:Date.now()-start});
     }
     if(deeper){
-      if(!validDeeper(preview,deeper))return json({retryable:false,error:'The follow-up answers exceeded supported limits.'},502);
-      return json({preview:{kind:'outline',title:'Go deeper',interpretation:'',audience:'',question:'',phrase:'',options:[],body:[],nodes:[],rows:[],information:[],completion:'',components:[]},deeper:preview.sections,model,elapsedMs:Date.now()-start});
+      const sections=deeperSections(preview,deeper);
+      if(!sections)return json({retryable:false,error:'The follow-up answers exceeded supported limits.'},502);
+      return json({preview:{kind:'outline',title:'Go deeper',interpretation:'',audience:'',question:'',phrase:'',options:[],body:[],nodes:[],rows:[],information:[],completion:'',components:[]},deeper:sections,model,elapsedMs:Date.now()-start});
     }
     if(pageHelp){
       if(!validPageHelp(preview))return json({retryable:false,error:'The proposed change exceeded supported limits. Your page is unchanged.'},502);
@@ -172,8 +173,14 @@ function liveStreamResponse(upstream,resultOptions,signal,abort){
 }
 
 // Go deeper: one short answer per follow-up question, each with at most one small component.
-export function validDeeper(value,count){
-  return !!value&&Array.isArray(value.sections)&&value.sections.length===count&&value.sections.every(section=>
-    section&&typeof section.answer==='string'&&section.answer.trim()&&section.answer.length<=420&&
-    Array.isArray(section.components)&&section.components.length<=1&&validComponents(section.components));
+export function validDeeperSection(section){
+  return !!section&&typeof section.answer==='string'&&!!section.answer.trim()&&section.answer.length<=420&&
+    Array.isArray(section.components)&&section.components.length<=1&&validComponents(section.components);
+}
+// One entry per question, in order: a valid answer, or null when that one is missing or broken,
+// so one bad answer never costs the others. Null overall when no answer is usable.
+export function deeperSections(value,count){
+  if(!value||!Array.isArray(value.sections))return null;
+  const sections=Array.from({length:count},(_,i)=>validDeeperSection(value.sections[i])?value.sections[i]:null);
+  return sections.some(Boolean)?sections:null;
 }

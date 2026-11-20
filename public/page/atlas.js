@@ -230,7 +230,7 @@ export function renderAtlas(target,p,{titleField,onEdit}){
     panel.append(promote);
     panel.animate?.([{opacity:0,transform:'translateY(4px)'},{opacity:1,transform:'none'}],{duration:220,easing:'ease-out'});
    }else{
-    const waiting=p.deeper==='error'?'This answer is not available right now.':'Preparing an answer…';
+    const waiting=p.deeper==='error'||Array.isArray(p.deeper)?'This answer is not available right now.':'Preparing an answer…';
     panel.replaceChildren(make('p','atlas-next-status',waiting),promote);
    }
    if(reveal&&panel.isConnected)requestAnimationFrame(()=>panel.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}));
