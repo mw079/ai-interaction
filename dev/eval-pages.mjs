@@ -9,7 +9,7 @@
 // Sends each prompt through the local server to OpenAI (Terra for the page, Luna for previews
 // and Go deeper). Results go to artifacts/eval/<timestamp>/ (ignored by Git).
 import {chromium} from 'playwright';
-import {mkdir, writeFile} from 'node:fs/promises';
+import {mkdir, writeFile, readFile} from 'node:fs/promises';
 
 const PROMPTS = [
   {id: 'kepler', text: 'Explain Kepler’s three laws of planetary motion for high school students'},
@@ -93,18 +93,6 @@ async function run() {
   for (const prompt of prompts) {
     const context = await browser.newContext({viewport: {width: 1280, height: 800}});
     const page = await context.newPage();
-    let generated = null;
-    page.on('response', async response => {
-      if (!response.url().endsWith('/api/preview')) return;
-      // Pages stream (title and introduction first): the finished page is the stream's "done" event.
-      try {
-        if (response.request().postDataJSON().phase !== 'page') return;
-        const text = await response.text();
-        const done = text.split('\n\n').map(frame => frame.replace(/^data: /, '')).filter(Boolean)
-          .map(data => { try { return JSON.parse(data); } catch { return null; } }).find(event => event?.type === 'done' || event?.preview);
-        if (done?.preview) generated = done.preview;
-      } catch {}
-    });
     await page.goto(base.href);
     const started = Date.now();
     await page.getByRole('textbox', {name: 'Your next instruction'}).fill(prompt.text);
@@ -131,6 +119,12 @@ async function run() {
     const views = await page.evaluate(() => [...document.querySelectorAll('.atlas-visual .component-block')]
       .map(block => [...block.classList].find(c => c.startsWith('component-') && c !== 'component-block')?.slice(10)));
     await page.screenshot({path: new URL(`${prompt.id}.png`, dir).pathname});
+    // The page as generated, read through the app's own Export (pages stream, so the reply is not one JSON).
+    let generated = null;
+    try {
+      const [download] = await Promise.all([page.waitForEvent('download', {timeout: 5000}), page.locator('#download-button').click()]);
+      generated = JSON.parse(await readFile(await download.path(), 'utf8')).component;
+    } catch {}
     const score = generated ? scorePage(generated, {fitsFirstScreen, textFirst: prompt.textFirst, expect: prompt.expect}) : null;
     results.push({...prompt, ms, title: generated?.title, score, page: generated, views});
     console.log(`${prompt.id.padEnd(15)} ${score ? `${score.passed}/${score.total}` : 'no data'}  ${(ms / 1000).toFixed(1)} s  ${(views.length ? views : score?.types || []).join(' · ')}`);
