@@ -71,7 +71,7 @@ const FULL_PAGE = [
 ].join('\n');
 
 // ── Luna: help inside the page ────────────────────────────────────────────────
-export const PAGE_HELP_INSTRUCTIONS = [
+const PAGE_HELP_INSTRUCTIONS = [
   'TASK. Give live help for one part of the slide. target.text is the current passage or component; target.quote is the highlighted part, when present. Read target with page to resolve references like “this”, and keep the audience and level from decisions and page. Follow a clear new request over older preferences.',
   'Start with the actual explanation, requested wording, example, correction or other result. Do NOT repeat, summarize or paraphrase the question. Do NOT proofread a question or instruction. For a why question, explain the cause. For “explain this for high school”, give the high-school explanation.',
   'For target.mode=question (or omitted), follow request as the latest user instruction. For target.mode=selection, add something the passage does not already say about the highlighted words: the cause, a concrete example, a definition of a term, or why it matters. Never paraphrase or restate the passage. One or two sentences, under 240 characters. If the selection itself asks a question, answer it using the surrounding passage. Use answer alone for ordinary selections; do not suggest edits based solely on selecting existing content.',

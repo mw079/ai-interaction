@@ -2,7 +2,7 @@
 // the model supplies validated content; these renderers own layout, motion and state.
 // Choosing what to look at is view state (no onEdit); only learner writing is a page edit.
 import {SVG, el, svgEl, pct, frame} from './kit.js';
-import {worldPath} from './maps.js';
+import {paintLand} from './maps.js';
 
 const fmt = new Intl.NumberFormat(undefined, {maximumFractionDigits: 2});
 const button = (cls, text, onClick) => {
@@ -333,7 +333,9 @@ function renderMap(content, block, saved, onEdit, detail) {
   f.stage.classList.add('dg-map', 'dg-canvas');
   f.stage.style.aspectRatio = `${w} / ${h}`;
   const svg = svgEl('svg', {viewBox: `${vx} ${vy} ${w} ${h}`, 'aria-hidden': 'true', class: 'dg-svg', preserveAspectRatio: 'xMidYMid slice'});
-  svg.append(svgEl('rect', {x: 0, y: 0, width: 360, height: 180, class: 'dg-sea'}), svgEl('path', {d: worldPath(), class: 'dg-land'}));
+  const land = svgEl('path', {class: 'dg-land'});
+  paintLand(land);
+  svg.append(svgEl('rect', {x: 0, y: 0, width: 360, height: 180, class: 'dg-sea'}), land);
   f.stage.append(svg);
   const pins = items.map((item, i) => {
     const b = button('dg-node dg-pin', '', () => f.select(i));

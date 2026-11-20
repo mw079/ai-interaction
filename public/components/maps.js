@@ -1,10 +1,16 @@
-import {land} from './world-land.js';
-
 // Crisp SVG coastlines in equirectangular coordinates (x = longitude + 180, y = 90 - latitude).
-let landPath;
-export function worldPath(){
-  landPath??=land.map(ring=>'M'+ring.map(([lon,lat])=>`${(lon+180).toFixed(2)} ${(90-lat).toFixed(2)}`).join('L')+'Z').join('');
-  return landPath;
+// The coastline data (about 65 KB) is only fetched the first time a map is drawn.
+let landPath,landLoading;
+function loadLand(){
+  landLoading??=import('./world-land.js').then(({land})=>{
+    landPath=land.map(ring=>'M'+ring.map(([lon,lat])=>`${(lon+180).toFixed(2)} ${(90-lat).toFixed(2)}`).join('L')+'Z').join('');
+  });
+  return landLoading;
+}
+// Gives an SVG path the land outline: at once when loaded, otherwise as soon as it arrives.
+export function paintLand(path){
+  if(landPath){path.setAttribute('d',landPath);return;}
+  loadLand().then(()=>path.setAttribute('d',landPath));
 }
 
 // A clickable world map for choosing a place; returns the chosen latitude and longitude.
@@ -18,7 +24,7 @@ export function areaMap({label,point,onPick}){
   const sea=document.createElementNS(NS,'rect');
   for(const [k,v] of Object.entries({x:0,y:0,width:360,height:180,class:'dg-sea'}))sea.setAttribute(k,v);
   const ground=document.createElementNS(NS,'path');
-  ground.setAttribute('d',worldPath());ground.setAttribute('class','dg-land');
+  paintLand(ground);ground.setAttribute('class','dg-land');
   svg.append(sea,ground);
   if(point){
     const dot=document.createElementNS(NS,'circle');

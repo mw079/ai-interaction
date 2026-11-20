@@ -5,7 +5,7 @@ export const COMPONENT_TYPES=['cycle','graph','timeline','comparison','chart','w
 const str={type:'string'};
 export const COMPONENT_SCHEMA={type:'object',additionalProperties:false,properties:{id:str,type:{type:'string',enum:COMPONENT_TYPES},title:str,prompt:str,items:{type:'array',items:{type:'object',additionalProperties:false,properties:{label:str,detail:str,value:{type:'number'},latitude:{type:['number','null']},longitude:{type:['number','null']}},required:['label','detail','value','latitude','longitude']}},edges:{type:'array',items:{type:'object',additionalProperties:false,properties:{from:{type:'integer'},to:{type:'integer'},label:str},required:['from','to','label']}}},required:['id','type','title','prompt','items','edges']};
 const short=(v,n)=>typeof v==='string'&&v.length<=n;
-export const PLOT_FUNCTIONS=['linear','square','cube','absolute','sine'];
+const PLOT_FUNCTIONS=['linear','square','cube','absolute','sine'];
 const FUNCTION_NAMES={linear:'linear',square:'square',quadratic:'square',cube:'cube',cubic:'cube',absolute:'absolute',abs:'absolute',sine:'sine',sin:'sine'};
 
 // The model sometimes decorates a function name ("sine (radians)", "Square function").

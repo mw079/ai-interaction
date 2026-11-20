@@ -16,6 +16,14 @@ for(const entry of await readdir(publicDir,{recursive:true,withFileTypes:true}))
 }
 assets['/style.css']={body:await stylesheet(),type:types.css};
 
+// Module preloads: list every module app.js imports (statically, at any depth) in index.html, so
+// the browser fetches them in parallel instead of discovering them one import level at a time.
+const graph=new Set(),visit=path=>{if(graph.has(path)||!assets[path])return;graph.add(path);
+  for(const [,spec] of assets[path].body.matchAll(/^import\s[^;]*?from\s*'(\.{1,2}\/[^']+)'/gm))visit(new URL(spec,'https://app'+path).pathname);};
+visit('/app.js');graph.delete('/app.js');
+const preloads=[...graph].sort().map(path=>`<link rel="modulepreload" href="${path}">`).join('');
+assets['/index.html'].body=assets['/index.html'].body.replace('<script type="module" src="/app.js"></script>',preloads+'<script type="module" src="/app.js"></script>');
+
 // Server bundle: the API and the shared modules it needs, concatenated in dependency order with
 // their relative imports removed (everything ends up in one module scope).
 const stripImports=source=>source.replace(/^import\s*\{[^}]*\}\s*from\s*'\.{1,2}\/[^']+';\s*$/gm,'');

@@ -246,3 +246,12 @@ test('concept map: a two-way relationship draws two arrows whose labels do not o
     expect(result).toEqual({labels:2,arrows:2,overlap:false,onArrow:false});
   }
 });
+
+test('map: the coastline data loads on demand and every map draws its land',async({page})=>{
+  const shortest=async selector=>Math.min(...await page.locator(selector).evaluateAll(paths=>paths.map(p=>(p.getAttribute('d')||'').length)));
+  await expect(page.locator('.component-map .dg-land').first()).toBeAttached();
+  await expect.poll(()=>shortest('.component-map .dg-land')).toBeGreaterThan(10000);   // the page map
+  await page.goto(page.url().replace('/__dev/components','/__dev/controls'));
+  await expect(page.locator('.control-map .dg-land').first()).toBeAttached();
+  await expect.poll(()=>shortest('.control-map .dg-land')).toBeGreaterThan(10000);     // the place picker
+});

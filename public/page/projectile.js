@@ -15,7 +15,7 @@ const EARTH = 9.81;
 const GRAVITIES = [['9.81', 'Earth · 9.81 m/s²'], ['1.62', 'Moon · 1.62 m/s²'], ['3.71', 'Mars · 3.71 m/s²']];
 
 // Metres per pixel for a gravity: the widest (45°) and tallest (ANGLE.max) throws at top speed fit.
-export function plotScale(gravity) {
+function plotScale(gravity) {
   const widest = SPEED.max ** 2 / gravity;
   const tallest = (SPEED.max * Math.sin(ANGLE.max * Math.PI / 180)) ** 2 / (2 * gravity);
   const pixels = Math.min((PLOT.right - PLOT.left) / widest, (PLOT.bottom - PLOT.top) / tallest);

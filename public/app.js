@@ -439,13 +439,6 @@ function navigatePage(delta){
  restorePage(page);changed();
 }
 
-function addInlineQuestion(target,selection){
-  const region=node('div','inline-question');region.append(node('p','selection-quote',`“${selection.slice(0,180)}”`));
-  const label=node('label','','Your question about this passage');const field=node('input');field.placeholder='What would you like to understand?';field.maxLength=500;label.append(field);
-  const button=node('button','primary-button','Ask here');const answer=node('p','inline-answer');answer.setAttribute('role','status');
-  button.onclick=async()=>{if(!field.value.trim())return;button.disabled=true;answer.textContent=state.live?'Luna is preparing an explanation…':'Live answers are not available right now.';if(state.live){try{const data=await callPreview({text:`Explain this selected passage: ${selection}\nQuestion: ${field.value}`,audience:state.audience,format:'Outline'},new AbortController().signal);answer.textContent=data.preview.body.join('\n\n');}catch(error){answer.textContent=error.message;}}button.disabled=false;};
-  region.append(label,button,answer);target.append(region);field.focus();
-}
 function livePreviewRequest(text){
   return {text,audience:state.audience,format:state.format,phase:'preview'};
 }
