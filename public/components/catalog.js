@@ -22,7 +22,7 @@ export function normaliseComponents(list){
 }
 
 // A page has up to three components, shown one at a time as views (tabs).
-export const MAX_COMPONENTS=3;
+const MAX_COMPONENTS=3;
 export function validComponents(list){return Array.isArray(list)&&list.length<=MAX_COMPONENTS&&new Set(list.map(c=>c?.id)).size===list.length&&list.every(c=>c&&Object.keys(c).every(k=>['id','type','title','prompt','items','edges'].includes(k))&&typeof c.id==='string'&&/^[a-z][a-z0-9-]{0,39}$/.test(c.id)&&!['constructor','prototype','__proto__'].includes(c.id)&&COMPONENT_TYPES.includes(c.type)&&short(c.title,100)&&short(c.prompt,200)&&Array.isArray(c.items)&&c.items.length>=2&&c.items.length<=(LONG_LISTS.includes(c.type)?8:6)&&c.items.every(i=>i&&Object.keys(i).every(k=>['label','detail','value','latitude','longitude'].includes(k))&&short(i.label,80)&&short(i.detail,600)&&Number.isFinite(i.value)&&Math.abs(i.value)<=1000000)&&Array.isArray(c.edges)&&c.edges.length<=8&&c.edges.every(e=>e&&Object.keys(e).every(k=>['from','to','label'].includes(k))&&Number.isInteger(e.from)&&Number.isInteger(e.to)&&e.from>=0&&e.to>=0&&e.from<c.items.length&&e.to<c.items.length&&short(e.label,80))&&validInteraction(c));}
 function validInteraction(component){
   const {type, items, edges, prompt}=component;

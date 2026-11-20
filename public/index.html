@@ -11,9 +11,6 @@
   <script type="module" src="/app.js"></script>
 </head>
 <body class="intent-first">
-  <header class="site-header">
-    <a class="wordmark" href="/" aria-label="AI Interaction home"><img src="/mark.svg" width="26" height="26" alt="">AI Interaction<span class="prototype-label">Preview</span></a>
-  </header>
   <main>
     <h1 class="sr-only">AI Interaction</h1>
     <div class="workspace">
@@ -43,10 +40,8 @@
           
           <section id="proposal" class="proposal" hidden aria-label="New version of the page"><div class="proposal-heading"><span class="suggestion-marker" aria-hidden="true"></span><span id="proposal-label">A new version is ready</span></div><p id="proposal-reason" class="proposal-reason"></p><h3 id="proposal-title"></h3><div id="proposal-content"></div><div class="proposal-actions"><span id="proposal-provenance" class="proposal-note"></span><button id="dismiss-button" class="proposal-secondary">Keep current page</button><button id="accept-button" class="primary-button">Replace page</button></div></section>
         </div>
-        <div class="document-foot"><span>Edit directly. Review suggested updates.</span><span id="document-state">Available until reload</span></div>
       </section>
     </div>
-    <footer class="site-footer"><span>A small experiment in thinking together.</span><a href="https://demos.liubruce.me/intra-turn/" target="_blank" rel="noopener noreferrer">Inspired by Bruce Liu’s intra-turn experiments<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg></a></footer>
   </main>
   <section id="intent-popover" role="dialog" aria-labelledby="popover-question" hidden><div class="popover-heading"><h2 id="popover-question"></h2><button id="close-popover" class="popover-close" aria-label="Close clarification"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div id="popover-options" class="popover-options"></div><button id="custom-answer-button" class="custom-answer-button" aria-expanded="false" aria-controls="popover-custom-form">Something else…</button><form id="popover-custom-form" hidden><label class="sr-only" for="popover-custom">Your answer</label><input id="popover-custom" maxlength="120" placeholder="In your own words…"><button type="submit" class="custom-apply" aria-label="Use custom answer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></form></section>
 </body>

@@ -11,7 +11,7 @@
 import {chromium} from 'playwright';
 import {mkdir, writeFile} from 'node:fs/promises';
 
-export const PROMPTS = [
+const PROMPTS = [
   {id: 'kepler', text: 'Explain Kepler’s three laws of planetary motion for high school students'},
   {id: 'feynman', text: 'Teach me the Feynman technique for learning'},
   {id: 'vaccines', text: 'Explain how vaccines train the immune system for high school students'},

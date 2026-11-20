@@ -14,7 +14,7 @@ import {renderControl,formatPreview} from './composer/controls.js';
 import {positionPopover} from './composer/popover.js';
 import {workingLine, demoPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isIncompleteComparison, draftWordCount, completedDraft, PREVIEW_WORD_STEP, extendsPreview, workingDraftPreview, draftAnswersQuestion, projectileLaunch} from './shared/model.js';
 const $ = id => document.getElementById(id);
-const state = {live:false, limited:false, composing:false, revision:0, format:'Auto', audience:'', controller:null, timer:null, proposal:null, component:null, history:[], uncertainty:null, popoverTimer:null, clarification:null, openClarification:null, popoverOrigin:null, suppressed:null, customDrafts:new Map(), pendingSend:false, pageController:null, pageRequest:0, taskGoal:'', pageVersion:0, information:[], previousDraft:'', activeInformation:null,confirmedChoices:[],answers:[],intentOverride:'',slideChoice:undefined};
+const state = {live:false, limited:false, composing:false, revision:0, format:'Auto', audience:'', controller:null, timer:null, proposal:null, component:null, history:[], uncertainty:null, popoverTimer:null, clarification:null, openClarification:null, popoverOrigin:null, suppressed:null, customDrafts:new Map(), pageController:null, pageRequest:0, taskGoal:'', pageVersion:0, information:[], previousDraft:'',confirmedChoices:[],answers:[],intentOverride:'',slideChoice:undefined};
 const node=element;
 const {modelPayload,callPreview}=createApiClient({state,pageContext:()=>pageContext(),status:(text,error)=>status(text,error),onLimit:message=>showLimit(message)});
 let composerExperience,workspace;
@@ -108,8 +108,6 @@ function renderQuick(data,source,{tail='',interim=false,fresh=false}={}){
 }
 function updateClarification(clarification){
   state.clarification=clarification;
-  const trigger=$('clarify-phrase');if(composerExperience)return;trigger.hidden=!clarification;
-  trigger.setAttribute('aria-label',clarification?clarification.question:'Refine your intent');
 }
 function renderUncertainty(){
   const input=$('intent-input'),mirror=$('input-mirror'),text=input.value;
@@ -126,7 +124,7 @@ function renderUncertainty(){
   const first=entries.find(e=>!e.confirmed)||entries[0];
   updateClarification(first||u);mirror.style.transform=`translateY(${-input.scrollTop}px)`;
   const rail=$('intent-refinements');rail.replaceChildren();rail.hidden=!entries.length&&!state.answers.length&&!state.slideDecided;
-  entries.forEach(entry=>{const b=node('button','phrase-access',entry.phrase+(entry.value?` (${entry.value})`:''));b.type='button';b.setAttribute('aria-label',`${INFORMATION_TYPES[entry.type].label}: ${entry.phrase}${entry.value?', '+entry.value:''}`);b.onclick=()=>{state.activeInformation=entry;updateClarification(entry);openIntentPopover('click');};rail.append(b);});
+  entries.forEach(entry=>{const b=node('button','phrase-access',entry.phrase+(entry.value?` (${entry.value})`:''));b.type='button';b.setAttribute('aria-label',`${INFORMATION_TYPES[entry.type].label}: ${entry.phrase}${entry.value?', '+entry.value:''}`);b.onclick=()=>{updateClarification(entry);openIntentPopover('click');};rail.append(b);});
   state.answers.forEach(entry=>{const b=node('button','phrase-access',entry.value);b.type='button';b.setAttribute('aria-label',entry.question+': '+entry.value);b.onclick=()=>{updateClarification({...entry,type:undefined});openIntentPopover('click');};rail.append(b);});
   // The chosen way to explore it is a decision like any other: listed, and reopened to change it.
   if(state.slideDecided){
@@ -174,7 +172,7 @@ function closeIntentPopover({restore=false,suppress=false}={}){
   const priorAnchor=state.popoverAnchor;
   if(priorAnchor===$('composer-scope'))priorAnchor.setAttribute('aria-expanded','false');
   if(suppress)state.suppressed=state.openClarification?.question;
-  $('intent-popover').hidden=true;$('intent-popover').classList.remove('audience-picker');if(!composerExperience)$('clarify-phrase').setAttribute('aria-expanded','false');
+  $('intent-popover').hidden=true;$('intent-popover').classList.remove('audience-picker');
   state.openClarification=null;state.popoverOrigin=null;state.popoverAnchor=null;
   if(restore&&origin!=='hover')(priorAnchor?.matches('button')?priorAnchor:$('intent-input')).focus();
 }
@@ -244,11 +242,9 @@ function openIntentPopover(origin='click',sourceAnchor=null){
   $('popover-custom-form').hidden=!hasDraft||ownEntry;$('custom-answer-button').hidden=hasDraft||ownEntry;$('custom-answer-button').setAttribute('aria-expanded',String(hasDraft));
   pop.hidden=false;
   positionIntentPopover();
-  if(!composerExperience)$('clarify-phrase').setAttribute('aria-expanded','true');
   if(origin!=='hover')(pop.querySelector('#popover-options input, #popover-options select')||pop.querySelector('#popover-options button')||(hasDraft?$('popover-custom'):$('custom-answer-button'))).focus();
 }
 function schedulePopoverClose(){clearTimeout(state.popoverTimer);state.popoverTimer=setTimeout(()=>{if(!$('intent-popover').contains(document.activeElement))closeIntentPopover();},260);}
-$('clarify-phrase').onclick=()=>openIntentPopover('click');
 function phraseAt(event){return [...$('input-mirror').querySelectorAll('mark')].find(mark=>[...mark.getClientRects()].some(r=>event.clientX>=r.left&&event.clientX<=r.right&&event.clientY>=r.top&&event.clientY<=r.bottom));}
 function openMarkedPhrase(mark,origin){const entry=state.information.find(e=>e.key===mark.dataset.key)||state.uncertainty;if(!entry)return;if(state.openClarification?.key!==entry.key)closeIntentPopover();updateClarification(entry);openIntentPopover(origin);}
 $('intent-input').addEventListener('pointermove',event=>{if(event.pointerType==='touch'||event.buttons)return;const mark=phraseAt(event);if(mark)openMarkedPhrase(mark,'hover');else if(!$('intent-popover').hidden)schedulePopoverClose();else state.suppressed=null;});
