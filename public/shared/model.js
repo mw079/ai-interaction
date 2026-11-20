@@ -208,3 +208,20 @@ export function tidyPage(page){
  const [intro='',...rest]=page.body;
  return {...page,body:[firstSentences(intro),...rest.slice(0,3).map(text=>firstSentences(text))].filter((text,i)=>i===0||text)};
 }
+
+// While a follow-up is being made, its preview ("Will add a quiz on tilt.") becomes the status
+// line ("Adding a quiz on tilt…"); without a preview, the request itself is shown.
+const DOUBLED={put:'putting',set:'setting',cut:'cutting',get:'getting',run:'running',swap:'swapping',plan:'planning',drop:'dropping',stop:'stopping',map:'mapping',trim:'trimming',split:'splitting'};
+function gerund(verb){
+ if(DOUBLED[verb])return DOUBLED[verb];
+ if(/ie$/.test(verb))return verb.slice(0,-2)+'ying';
+ if(/[^eoy]e$/.test(verb))return verb.slice(0,-1)+'ing';
+ return verb+'ing';
+}
+export function workingLine(promised,request=''){
+ const match=String(promised||'').trim().match(/^Will\s+([a-z]+)\b([\s\S]*?)[.…]*$/);
+ if(match){const verb=gerund(match[1]);return verb[0].toUpperCase()+verb.slice(1)+match[2]+'…';}
+ const text=String(request).trim().replace(/\s+/g,' ');
+ return 'Working on “'+(text.length>70?text.slice(0,69).replace(/\s+\S*$/,'')+'…':text)+'”';
+}
+

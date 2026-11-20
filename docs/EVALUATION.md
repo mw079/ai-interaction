@@ -165,3 +165,7 @@ Left as is: a question shown while typing can be replaced once right after typin
 ## Pages that appear while they are written, 2026-11-20
 
 After Send, a new page used to show only "Creating…" for 6–16 s. Pages now stream: the model writes the title first, then the introduction, and the app shows both in their final places with a "Building the visual…" placeholder; the finished page replaces only the placeholder. Measured in the app: title on screen after 1.4–3.5 s, full page after 6–11 s, title moved 0.0 px when the page arrived (desktop and phone). Writing the title first did not slow the page (Athens 13.0 s before, 7–11 s after). Also fixed: sending with ⌘+Enter left the field in its typing state, so the dock jumped down when the page arrived.
+
+## Follow-up status, 2026-11-20
+
+A follow-up takes 6–15 s, during which the page used to show only a small "Creating…" pill at the top of the card. Now a status line above the field says what is changing, made from the preview the user read: "Will add a short quiz about Earth's tilt…" becomes "Adding a short quiz about Earth's tilt…" (desktop, live). When the shown preview was for slightly different text, the request is quoted instead ("Working on “Add a short quiz”"), so the line never promises something Send was not asked to do. The same check showed a third tab name cut off on desktop; tab names are now asked to be at most 24 characters, and tabs wrap instead of hiding.

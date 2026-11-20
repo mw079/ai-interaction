@@ -384,12 +384,13 @@ test('a new page shows its title while the visual is built, then the page appear
   try{
     await composer.fill(update);
     await button(page,'Explore interactively').click();
-    await expect(progress).toBeVisible();
+    await expect(page.locator('#change-status')).toBeVisible();   // a follow-up: a status line above the field…
+    await expect(progress).toBeHidden();                          // …not the creating pill
     await expect(notes).toBeHidden();
     await expect(title(page)).toBeVisible();
   }finally{resumeUpdate();}
   await expect(notes).toBeVisible();
-  await expect(progress).toBeHidden();
+  await expect(page.locator('#change-status')).toBeHidden();
 });
 
 test('one over-long takeaway label does not turn the other takeaways back into prose',async({page})=>{
@@ -538,7 +539,7 @@ test('more views arrive in the background as tabs, without moving the page; swit
   expect(underline).toBe(true);
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
   const fits=await page.getByRole('tablist',{name:'Views'}).evaluate(row=>[...row.children].every(tab=>{const t=tab.getBoundingClientRect(),r=row.getBoundingClientRect();return t.left>=r.left-1&&t.right<=r.right+1;}));
-  expect(fits).toBe(true);                                                   // every tab fully visible, also on a phone
+  expect(fits).toBe(true);                                                   // every tab fully visible, on any screen
   await page.getByRole('tab',{name:'Day by day'}).click();
   await expect(page.getByRole('tabpanel',{name:'Day by day'})).toBeVisible();
   await expect(map).toBeHidden();
@@ -571,5 +572,23 @@ test('sending with Cmd+Enter steps the field back like the Send button, so the d
     await expect(page.locator('body')).not.toHaveClass(/composer-active/);
   }finally{resume();}
   await expect(title(page)).toHaveValue(vaccineTitle);
+});
+
+test('while a follow-up is being made, a status line above the field says what is changing, and the page stays',async({page})=>{
+  await send(page,'Explain how vaccines work.',vaccineTitle);
+  const resume=server.holdPreview('Add a quiz about vaccines.');
+  try{
+    await page.getByRole('textbox',{name:'Your next instruction'}).fill('Add a quiz about vaccines.');
+    await button(page,'Explore interactively').click();
+    const line=page.locator('#change-status');
+    await expect(line).toBeVisible();
+    await expect(line).toContainText('Add a quiz about vaccines.');             // no preview was read: the request is quoted
+    const field=await page.locator('.composer').boundingBox(),box=await line.boundingBox();
+    expect(box.y+box.height).toBeLessThanOrEqual(field.y+1);                     // above the field
+    await expect(title(page)).toHaveValue(vaccineTitle);                         // the page stays in view
+    await expect(page.locator('#page-progress')).toBeHidden();
+  }finally{resume();}
+  await expect(page.locator('[data-component-id="vaccine-quiz"]')).toBeVisible();
+  await expect(page.locator('#change-status')).toBeHidden();
 });
 

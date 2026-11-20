@@ -98,3 +98,12 @@ test('each highlight and the Tab prediction stream as soon as they are complete 
  assert.deepEqual(a.information.map(i=>i.phrase),['weekend']);              // the invalid one and the half-written one wait
  assert.equal(partialLivePreview('{"body":["Hi."],"completion":"par').completion,undefined);
 });
+
+test('a follow-up’s preview becomes its status line while it is being made',async()=>{
+ const {workingLine}=await import('../public/shared/model.js');
+ assert.equal(workingLine('Will add a three-question quiz on tilt.','x'),'Adding a three-question quiz on tilt…');
+ assert.equal(workingLine('Will simplify the wording.','x'),'Simplifying the wording…');
+ assert.equal(workingLine('Will replace the slider with a chart.','x'),'Replacing the slider with a chart…');
+ assert.equal(workingLine('Will put the year first.','x'),'Putting the year first…');
+ assert.equal(workingLine('','Add a quiz'),'Working on “Add a quiz”');
+});

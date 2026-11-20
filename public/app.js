@@ -12,7 +12,7 @@ import {setupComposerExperience} from './composer/composer.js';
 import {INFORMATION_TYPES, informationFor, rebaseInformation, chooseInformation, mergeInformation} from './composer/intent.js';
 import {renderControl,formatPreview} from './composer/controls.js';
 import {positionPopover} from './composer/popover.js';
-import {demoPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isIncompleteComparison, draftWordCount, completedDraft, PREVIEW_WORD_STEP, extendsPreview, workingDraftPreview, draftAnswersQuestion, projectileLaunch} from './shared/model.js';
+import {workingLine, demoPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isIncompleteComparison, draftWordCount, completedDraft, PREVIEW_WORD_STEP, extendsPreview, workingDraftPreview, draftAnswersQuestion, projectileLaunch} from './shared/model.js';
 const $ = id => document.getElementById(id);
 const state = {live:false, limited:false, composing:false, revision:0, format:'Auto', audience:'', controller:null, timer:null, proposal:null, component:null, history:[], uncertainty:null, popoverTimer:null, clarification:null, openClarification:null, popoverOrigin:null, suppressed:null, customDrafts:new Map(), pendingSend:false, pageController:null, pageRequest:0, taskGoal:'', pageVersion:0, information:[], previousDraft:'', activeInformation:null,confirmedChoices:[],answers:[],intentOverride:'',slideChoice:undefined};
 const node=element;
@@ -351,6 +351,11 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
   status('');
   const progressTimer=showPageProgress();
   $('submitted-request').textContent=text;
+  // A follow-up keeps the page in view; a status line above the field says what is being changed.
+  if(state.component){
+    changeStatus.replaceChildren(node('span','page-spinner'),node('span','',workingLine(promised,text)));
+    changeStatus.hidden=false;
+  }
   // A first page shows its title and introduction as soon as they are written (about 1-2 s),
   // with a placeholder for the visual; a follow-up keeps the current page until the new one is ready.
   let draft=null;
@@ -399,6 +404,7 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
     if(id===state.pageRequest){
       state.pageController=null;
       documentPanel.classList.remove('is-drafting');
+      changeStatus.hidden=true;
       if(documentPanel.hasAttribute('data-generating'))hidePageProgress();
     }
   }
@@ -673,6 +679,9 @@ setupPageAssistant({state,request:callPreview,commit(apply,id){
  state.pageVersion++;renderActive();appendPage();renderPageNavigation();showUpdatedPart(id,undefined,true);
 }});
 
+// The follow-up status line sits in the dock, above the live question row and the field.
+const changeStatus=node('div','change-status');changeStatus.id='change-status';changeStatus.setAttribute('role','status');changeStatus.hidden=true;
+$('live-question').before(changeStatus);
 workspace=setupWorkspace();$('page-back').onclick=()=>navigatePage(-1);$('page-forward').onclick=()=>navigatePage(1);
 window.addEventListener('pagehide',()=>{stop();state.pageController?.abort();});changed();
 // Live help needs the server's key; a visitor over today's limit sees the try-tomorrow card instead.
