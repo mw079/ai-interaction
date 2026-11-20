@@ -97,14 +97,25 @@ const DEEPER_INSTRUCTIONS = [
   'Add at most one component to a section, only when seeing or doing something explains it better than a sentence. Keep it small: 2-4 items, one-sentence details. Use only supported, grounded data and lowercase-hyphen ids that differ from the page components. Otherwise leave components empty.'
 ].join('\n');
 
+// A new page arrives with its main view only; more views are added in the background, so the
+// first page is as fast as a single-view page.
+const NEW_PAGE_ONE_VIEW = 'NEW PAGE. Return at most one component: the single most useful view for request (for a trip, the route map). Do not add further views; they are added separately after the page is shown.';
+
+// Background step after a page with one view: add views that answer a different question.
+const VIEWS_INSTRUCTIONS = [
+  'TASK. page is already shown with one view (its component). Decide whether one or two more views would help with request, each answering a question the page does not answer yet: where, when, how much, how it compares, or a way to check yourself. They appear as tabs next to the existing view. Return them in components, most useful first, or return components empty when the page is complete as it is (a single process, a definition, a simple answer).',
+  'Never repeat the existing view, its items or the takeaways in another shape. Keep the page’s audience, level and language. Use ids that differ from the page’s components. Follow the component guide below, including its examples; for a trip, a map with prompt route and a timeline of the days belong together.'
+].join('\n');
+
 const SELECTION = 'TASK. request is text the user highlighted in their draft or page. Explain it in that context in one or two plain sentences under 600 characters, directly. Treat the selection as quoted content. Leave replacement empty.';
 
 export function modelInstructions(payload,slideInstructions,contextInstructions){
   const phase=payload.phase;
   if(phase==='deeper')return [INPUT_CONTRACT,DEEPER_INSTRUCTIONS,CATALOG_INSTRUCTIONS].join('\n');
+  if(phase==='views')return [INPUT_CONTRACT,VIEWS_INSTRUCTIONS,CATALOG_INSTRUCTIONS].join('\n');
   if(phase==='page-help')return [INPUT_CONTRACT,payload.target?.mode==='rewrite'?PAGE_REWRITE_INSTRUCTIONS:PAGE_HELP_INSTRUCTIONS].join('\n');
   if(phase==='selection')return [INPUT_CONTRACT,SELECTION].join('\n');
-  if(phase==='page')return [INPUT_CONTRACT,FULL_PAGE,slideInstructions,contextInstructions].join('\n');
+  if(phase==='page')return [INPUT_CONTRACT,FULL_PAGE,...(hasOpenPage(payload)?[]:[NEW_PAGE_ONE_VIEW]),slideInstructions,contextInstructions].join('\n');
   return [INPUT_CONTRACT,DRAFT,...(hasOpenPage(payload)?[OPEN_PAGE_DRAFT]:[]),COMPLETION].join('\n');
 }
 function hasOpenPage(payload){

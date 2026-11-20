@@ -118,10 +118,15 @@ async function run() {
       if (!hero) return null;
       return hero.getBoundingClientRect().bottom <= (composer?.getBoundingClientRect().top ?? innerHeight);
     });
+    // More views arrive in the background a few seconds later: wait for them (or 10 s), then read
+    // which components the page shows, so variety counts the whole page.
+    await page.waitForSelector('[role=tablist][aria-label=Views]', {timeout: 10000}).catch(() => {});
+    const views = await page.evaluate(() => [...document.querySelectorAll('.atlas-visual .component-block')]
+      .map(block => [...block.classList].find(c => c.startsWith('component-') && c !== 'component-block')?.slice(10)));
     await page.screenshot({path: new URL(`${prompt.id}.png`, dir).pathname});
     const score = generated ? scorePage(generated, {fitsFirstScreen, textFirst: prompt.textFirst, expect: prompt.expect}) : null;
-    results.push({...prompt, ms, title: generated?.title, score, page: generated});
-    console.log(`${prompt.id.padEnd(15)} ${score ? `${score.passed}/${score.total}` : 'no data'}  ${(ms / 1000).toFixed(1)} s  ${score?.types.join(', ') || ''}`);
+    results.push({...prompt, ms, title: generated?.title, score, page: generated, views});
+    console.log(`${prompt.id.padEnd(15)} ${score ? `${score.passed}/${score.total}` : 'no data'}  ${(ms / 1000).toFixed(1)} s  ${(views.length ? views : score?.types || []).join(' · ')}`);
     await context.close();
   }
   await browser.close();
@@ -134,8 +139,8 @@ async function run() {
   };
   await writeFile(new URL('results.json', dir), JSON.stringify({summary, results}, null, 2));
   // Variety: pages should not all look alike.
-  summary.componentTypes = [...new Set(scored.flatMap(r => r.score.types))].sort();
-  summary.multiView = scored.filter(r => (r.page?.components?.length || 0) > 1).length;
+  summary.componentTypes = [...new Set(scored.flatMap(r => r.views?.length ? r.views : r.score.types))].sort();
+  summary.multiView = scored.filter(r => (r.views?.length || 0) > 1).length;
   console.log(`\nPass rate ${(summary.passRate * 100).toFixed(0)} %, median ${summary.medianSeconds?.toFixed(1)} s`);
   console.log(`${summary.componentTypes.length} different components (${summary.componentTypes.join(', ')}); ${summary.multiView} pages with 2–3 views`);
   console.log('Failed checks:', JSON.stringify(summary.failures, null, 1));

@@ -8,6 +8,15 @@ export const billDraft='Explain how a bill becomes a law.';
 export const keplerDraft='I want to understand Kepler’s laws as an undergraduate.\nConnect all three laws to Newtonian gravity and explain the equal-areas law.';
 export const keplerCompletion='Include a worked example linking the orbital speed to conservation of angular momentum.';
 // A draft paused mid-word: the model repeats the unfinished word and predicts the rest.
+// The views the background step adds to the Rome page: the days and the costs.
+export const romeViews=[
+  {id:'rome-days',type:'timeline',title:'Day by day',prompt:'',edges:[],items:[
+    {label:'Day 1',detail:'Ancient Rome.',value:0,latitude:null,longitude:null},
+    {label:'Day 2',detail:'The centre.',value:0,latitude:null,longitude:null},
+    {label:'Day 3',detail:'The Vatican.',value:0,latitude:null,longitude:null}]},
+  {id:'rome-costs',type:'key_numbers',title:'Costs',prompt:'€',edges:[],items:[
+    {label:'Colosseum ticket',detail:'Book ahead.',value:18,latitude:null,longitude:null},
+    {label:'Vatican Museums',detail:'Timed entry.',value:20,latitude:null,longitude:null}]}];
 export const lisbonDraft='Plan a weekend trip to Lisbon with my par';
 export const lisbonPrediction='parents for a relaxed weekend.';
 export const keplerFollowUp='Angular momentum stays constant, so the orbital radius sweeps out equal areas in equal times.';
@@ -64,14 +73,7 @@ function previewFor({phase,text}){
         {id:'rome-route',type:'map',title:'Your route',prompt:'route',edges:[],items:[
           {label:'Colosseum',detail:'Day 1: the arena and the Forum.',value:0,latitude:41.8902,longitude:12.4922},
           {label:'Pantheon',detail:'Day 2: the dome, then Piazza Navona.',value:0,latitude:41.8986,longitude:12.4769},
-          {label:'Vatican',detail:'Day 3: the museums and St Peter’s.',value:0,latitude:41.9029,longitude:12.4534}]},
-        {id:'rome-days',type:'timeline',title:'Day by day',prompt:'',edges:[],items:[
-          {label:'Day 1',detail:'Ancient Rome.',value:0,latitude:null,longitude:null},
-          {label:'Day 2',detail:'The centre.',value:0,latitude:null,longitude:null},
-          {label:'Day 3',detail:'The Vatican.',value:0,latitude:null,longitude:null}]},
-        {id:'rome-costs',type:'key_numbers',title:'Costs',prompt:'€',edges:[],items:[
-          {label:'Colosseum ticket',detail:'Book ahead.',value:18,latitude:null,longitude:null},
-          {label:'Vatican Museums',detail:'Timed entry.',value:20,latitude:null,longitude:null}]}],
+          {label:'Vatican',detail:'Day 3: the museums and St Peter’s.',value:0,latitude:41.9029,longitude:12.4534}]}],
       followUps:['Where should I eat?']};
     if(text==='Make a running plan.')return {...preview,kind:'planner',title:'Zero to 5K',body:['Build up gradually over four weeks.'],
       rows:[{criterion:'Week 1',a:'Run 1 minute, walk 2 minutes; repeat 8 times.',b:''},
@@ -132,7 +134,7 @@ async function fixtureUpstream(options,gates){
   const {stream}=sent;
   // The model input carries no phase; infer it the way the request itself implies it.
   const input=JSON.parse(sent.input);
-  const phase=sent.text.format.name==='go_deeper'?'deeper':sent.model==='gpt-6.1-terra'?'page':sent.text.format.name==='local_assistance'?'page-help':'preview';
+  const phase=sent.text.format.name==='go_deeper'?'deeper':sent.text.format.name==='more_views'?'views':sent.model==='gpt-6.1-terra'?'page':sent.text.format.name==='local_assistance'?'page-help':'preview';
   const request={...input,phase,text:input.request};
   const exactRewrite=request.target?.mode==='rewrite'
     ? request.text.match(/^Replace this entire (?:paragraph|note) with exactly this sentence: (.+)$/)?.[1]
@@ -152,12 +154,14 @@ async function fixtureUpstream(options,gates){
       replacement:request.text===windQuestion?windReplacement:/cool day|Why below boiling/.test(request.target.text)?slideReplacement:'',
       components:[]
     }
+    : request.phase==='views'
+    ? {components:request.text==='Plan three days in Rome.'?romeViews:[]}
     : request.phase==='deeper'
     ? {sections:request.followUps.map(question=>({answer:deeperAnswer(question),components:[]}))}
     : previewFor(request);
   const text=JSON.stringify(preview);
   const response={status:'completed',output:[{type:'message',content:[{type:'output_text',text}]}]};
-  const gate=gates.get(request.text);
+  const gate=gates.get(request.phase==='views'?'views:'+request.text:request.text);
   if(!stream){await gate;return Response.json(response);}
   const delta=JSON.stringify(request.phase==='page-help'?{answer:preview.answer}:{body:preview.body}).slice(0,-1);
   const push=(controller,event)=>controller.enqueue(new TextEncoder().encode('data: '+JSON.stringify(event)+'\n\n'));

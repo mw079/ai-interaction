@@ -109,3 +109,9 @@ Changes: the component guide is ordered by what the user wants to see or do (pla
 | Component types across the set | 7 | 9 |
 
 `eval:pages` gained five plan and trip prompts with checks (no form, uses a map, the map is a route) and reports component variety: 99 % (97/98), 10 different components, 5 pages with views; the one miss was a repeated phrase on the dinner page. Pages with two views take longer (12–17 s instead of 5–11 s). `eval:followups`: 45/46 at first; the miss was the eval clicking the first tab on the page, now a view tab, so Go deeper's tab list is named and the eval targets it; the re-run passed 10/10.
+
+## More views in the background, 2026-11-20
+
+Pages with two views took 12–17 s, because one request wrote both. Now a new page asks for its main view only, and right after it appears a second, background request (Luna) sees the page and adds 0–2 views that answer a different question; the component title turns into the first tab in the same place, so nothing moves, and views arriving after an edit are dropped.
+
+Live, ten requests: every page got 1–2 fitting extra views 2.2–4.3 s after it appeared, for example a cycle plus a labelled diagram of the parts (heat pump), a chart plus a map (Europe's cities), a comparison plus a "choose by priority" matrix (iPhone vs Pixel), and a cooking timeline plus quantities and a checklist (dinner). `eval:pages`, now waiting for the background views: 99 % (97/98), median 8.1 s to the first page (Rome and Venice 11.9 s instead of 15.3 s), 13 different components, 12 of 15 pages with views. `eval:followups`: 48/48. Cost: a page with one view makes one more request.

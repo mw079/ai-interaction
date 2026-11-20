@@ -519,21 +519,45 @@ test('a plan step is never cut off: its field wraps and grows with the text, and
   await expect(step).toHaveValue(/Cool down\.$/);
 });
 
-test('up to three views show one at a time as tabs; switching is viewing, not editing',async({page})=>{
+test('more views arrive in the background as tabs, without moving the page; switching is viewing, not editing',async({page})=>{
+  const resume=server.holdPreview('views:Plan three days in Rome.');        // the background step waits
   await send(page,'Plan three days in Rome.','Three days in Rome');
-  const tabs=page.getByRole('tab',{name:/^(Your route|Day by day|Costs)$/});
+  const map=page.locator('[data-component-id="rome-route"]');
+  await expect(map.getByRole('heading',{name:'Your route'})).toBeVisible();   // one view: its title, no tabs
+  await expect(page.getByRole('tab',{name:'Day by day'})).toHaveCount(0);
+  await map.locator('.dg-pin').nth(2).click();
+  const before=await map.locator('.dg-stage').boundingBox();
+  resume();
+  const tabs=page.getByRole('tablist',{name:'Views'}).getByRole('tab');
   await expect(tabs).toHaveText(['Your route','Day by day','Costs']);
-  await expect(page.getByRole('tabpanel')).toHaveCount(1);                   // hidden panels are not exposed
-  await expect(page.getByRole('tabpanel',{name:'Your route'})).toBeVisible();
-  await page.getByRole('tabpanel',{name:'Your route'}).locator('.dg-pin').nth(2).click();
+  const after=await map.locator('.dg-stage').boundingBox();
+  for(const key of ['x','y','width','height'])expect(Math.abs(after[key]-before[key]),key).toBeLessThanOrEqual(1);  // nothing moved
+  await expect(map.locator('.dg-pin').nth(2)).toHaveAttribute('aria-pressed','true');                        // nothing reset
+  await expect(page.getByRole('tab',{name:'Your route'})).toHaveAttribute('aria-selected','true');
+  // The selected tab is underlined, not only darker, and the underline is not clipped by the row.
+  const underline=await page.getByRole('tab',{name:'Your route'}).evaluate(tab=>{const row=tab.parentElement,style=getComputedStyle(tab);
+    return style.textDecorationLine.includes('underline')&&style.textDecorationColor!=='rgba(0, 0, 0, 0)'&&row.scrollHeight<=row.clientHeight;});
+  expect(underline).toBe(true);
+  await expect(page.getByRole('tabpanel')).toHaveCount(1);
   await page.getByRole('tab',{name:'Day by day'}).click();
   await expect(page.getByRole('tabpanel',{name:'Day by day'})).toBeVisible();
-  await expect(page.locator('[data-component-id="rome-route"]')).toBeHidden();
+  await expect(map).toBeHidden();
   await page.getByRole('tab',{name:'Day by day'}).press('ArrowRight');       // arrow keys move between views
   await expect(page.getByRole('tab',{name:'Costs'})).toHaveAttribute('aria-selected','true');
   await expect(page.getByRole('tab',{name:'Costs'})).toBeFocused();
   await page.getByRole('tab',{name:'Your route'}).click();
-  await expect(page.locator('[data-component-id="rome-route"] .dg-pin').nth(2)).toHaveAttribute('aria-pressed','true'); // its state is kept
+  await expect(map.locator('.dg-pin').nth(2)).toHaveAttribute('aria-pressed','true');
   await expect(page.getByRole('button',{name:'Undo'})).toBeDisabled();       // nothing was edited
+});
+
+test('views that arrive after the page was edited are dropped',async({page})=>{
+  const resume=server.holdPreview('views:Plan three days in Rome.');
+  await send(page,'Plan three days in Rome.','Three days in Rome');
+  const intro=page.locator('textarea[data-passage-index="0"]');
+  await intro.click();await page.keyboard.press('End');await page.keyboard.type(' Bring good shoes.');
+  resume();
+  await page.waitForTimeout(500);
+  await expect(page.getByRole('tablist',{name:'Views'})).toHaveCount(0);
+  await expect(page.locator('[data-component-id="rome-days"]')).toHaveCount(0);
 });
 

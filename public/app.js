@@ -2,9 +2,9 @@ import {element} from './shared/dom.js';
 import {createApiClient} from './shared/api-client.js';
 import {renderProjectile} from './page/projectile.js';
 import {renderFollowUpScope,followUpScopes,applyFollowUpScope} from './composer/controls-extended.js';
-import {slideRecipe} from './components/catalog.js';
+import {slideRecipe,validComponents} from './components/catalog.js';
 import {setupPageAssistant} from './page/assistant.js';
-import {renderAtlas,refreshDeeper} from './page/atlas.js';
+import {renderAtlas,refreshDeeper,addViews} from './page/atlas.js';
 import {PageTimeline,DirectEditUndo,historyLimit} from './page/timeline.js';
 import {setupWorkspace} from './page/workspace.js';
 import {confirmedChoices} from './composer/request-context.js';
@@ -286,6 +286,21 @@ document.addEventListener('page:deeper',async event=>{
   }catch{page.deeper='error';}
   refreshDeeper(page);
 });
+// More views: a page shown with one view asks, in the background, for up to two views that
+// answer a different question. They join as tabs only if the page is still the same, unedited.
+function requestViews(page){
+  if(!state.live||page.kind!=='outline'||page.components?.length!==1||page.viewsRequested)return;
+  page.viewsRequested=true;
+  const version=state.pageVersion;
+  callPreview({text:state.taskGoal||page.title,audience:state.audience,format:state.format,phase:'views'}).then(data=>{
+    if(state.component!==page||state.pageVersion!==version||!Array.isArray(data.views))return;
+    const taken=new Set(page.components.map(c=>c.id));
+    const extra=data.views.filter(c=>!taken.has(c.id)).slice(0,3-page.components.length);
+    if(!extra.length||!validComponents([...page.components,...extra]))return;
+    addViews(page,extra);
+    timeline.save(capturePage());
+  }).catch(()=>{});
+}
 document.addEventListener('page:follow-up',event=>{if(typeof event.detail==='string'&&event.detail.trim())submitPage(event.detail.trim(),undefined);});
 
 function pageContext(){
@@ -356,6 +371,7 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
       renderActive();renderProposal();appendPage();renderPageNavigation();workspace?.reading();
       if(added)showUpdatedPart('block:'+added.id,added.title,false,'added');
       else showUpdatedPart(scope?.id,scope?.label);
+      if(!scope)requestViews(p);
     }
     else{p.baseVersion=state.pageVersion;state.proposal=p;renderProposal();}
     status(state.proposal?'Updated page ready to review. Your existing page is preserved.':'Your page is ready. Edit it directly or ask for a change below.');

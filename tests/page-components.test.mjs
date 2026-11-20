@@ -182,3 +182,15 @@ test('a page has up to three components (views), never four',()=>{
  assert.equal(validComponents([block('a'),block('b'),block('c')]),true);
  assert.equal(validComponents([block('a'),block('b'),block('c'),block('d')]),false);
 });
+
+test('the background views step returns 0-2 valid extra views and needs the page',async()=>{
+ const call=(body,views)=>handleAPI(new Request('http://127.0.0.1/api/preview',{method:'POST',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({text:'Plan three days in Rome',audience:'',format:'Auto',phase:'views',...body})}),
+  async(_,options)=>{const sent=JSON.parse(options.body);assert.equal(sent.text.format.name,'more_views');assert.equal(sent.model,'gpt-6-luna');
+   return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({components:views})}]}]});});
+ const context=JSON.stringify({page:{title:'Rome',page:{kind:'outline',components:[cycle]}}});
+ const ok=await call({context},[{...cycle,id:'days'}]);
+ assert.equal(ok.status,200);assert.deepEqual((await ok.json()).views.map(v=>v.id),['days']);
+ assert.equal((await call({context},[{...cycle,id:'a'},{...cycle,id:'b'},{...cycle,id:'c'}])).status,502);   // at most two more
+ assert.equal((await call({},[])).status,400);                                                            // needs the page
+});
