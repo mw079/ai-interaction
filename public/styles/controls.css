@@ -37,7 +37,6 @@
 .composer-choice-row{flex-wrap:wrap;padding:8px 6px;border-bottom:1px solid #f0f0f0;font-size:13px}
 .composer-choice-row:last-of-type{border-bottom:0}
 .control-tone-sample{margin:4px 6px;padding:12px 14px;border-radius:12px;background:#f6f6f6;border-left:3px solid #b6b6b6;font-size:13.5px;line-height:1.55;color:#303030}
-.control-tradeoff span{padding:10px 12px;border-radius:10px;background:#fff;border:1px solid #e3e3e3;font-size:12.5px}
 /* Format previews */
 .control-cards{gap:8px;padding:4px}
 .control-cards .control-option{flex-direction:column;align-items:stretch;gap:8px;padding:8px;border:1px solid #e3e3e3;border-radius:12px;background:#fff;font-size:12.5px}

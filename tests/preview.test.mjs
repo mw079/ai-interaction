@@ -63,7 +63,7 @@ test('live clarification follows the complete draft and permits no question',()=
 
 test('automatic format and typed contextual refinements are accepted and bounded',async()=>{
  const refinement={type:'output_format',phrase:'Kepler laws',question:'How would you like to explore the laws?',options:['Orbit diagram','Mathematical derivation'],unit:''};
- const upstream=async(url,opts)=>{const request=JSON.parse(opts.body);assert.equal(JSON.parse(request.input).decisions?.responseFormat,undefined,'Auto is a default, not a decision');assert.equal(request.text.format.schema.properties.information.items.properties.type.enum.length,28);return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({...demoPreview('Kepler laws'),information:[refinement]})}]}]});};
+ const upstream=async(url,opts)=>{const request=JSON.parse(opts.body);assert.equal(JSON.parse(request.input).decisions?.responseFormat,undefined,'Auto is a default, not a decision');assert.equal(request.text.format.schema.properties.information.items.properties.type.enum.length,24);return Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify({...demoPreview('Kepler laws'),information:[refinement]})}]}]});};
  assert.equal((await handleAPI(req({...payload,text:'Explain Kepler laws',format:'Auto'}),upstream)).status,200);
  assert.equal(validPreview({...demoPreview('Kepler laws'),information:[{...refinement,type:'execute_html'}]}),false);
 });

@@ -6,20 +6,18 @@ export const INFORMATION_TYPES = {
   tone:{label:'Tone',family:'tone'}, language:{label:'Language',family:'search'},
   date:{label:'Date',family:'datetime'}, date_range:{label:'Date range',family:'datetime'},
   time:{label:'Time',family:'datetime'}, duration:{label:'Duration',family:'number'},
-  location:{label:'Location',family:'search'}, geographic_scope:{label:'Area',family:'search'},
+  location:{label:'Place or area',family:'search'},
   budget:{label:'Budget',family:'number'}, quantity:{label:'Quantity',family:'number'},
-  priorities:{label:'Priorities',family:'list'}, requirements:{label:'Requirements',family:'list'},
-  exclusions:{label:'Exclusions',family:'list'}, comparison_options:{label:'Compare',family:'list'},
+  priorities:{label:'Priorities',family:'list'}, requirements:{label:'Must-haves and must-nots',family:'list'},
+  comparison_options:{label:'Compare',family:'list'},
   flexible_dates:{label:'Date flexibility',family:'flexible_dates'},
   area_map:{label:'Search area',family:'area_map'},
   assumption:{label:'Assumption',family:'assumption'},
   goal_comparison:{label:'Goal',family:'goal_comparison'},
-  audience_knowledge:{label:'Audience and prior knowledge',family:'audience_knowledge'},
   example:{label:'Example',family:'example'},
-  include_exclude:{label:'Include or exclude topics',family:'include_exclude'},
-  tradeoff:{label:'Trade-off',family:'tradeoff'}
+  include_exclude:{label:'Include or exclude topics',family:'include_exclude'}
 };
-export const CONTROL_FAMILIES=['choices','cards','search','number','datetime','list','depth','tone','flexible_dates','area_map','assumption','goal_comparison','audience_knowledge','example','include_exclude','tradeoff'];
+export const CONTROL_FAMILIES=['choices','cards','search','number','datetime','list','depth','tone','flexible_dates','area_map','assumption','goal_comparison','example','include_exclude'];
 export function validInformation(items){
   const short=(s,n)=>typeof s==='string'&&s.length<=n;
   return Array.isArray(items)&&items.length<=6&&items.every(i=>i&&Object.hasOwn(INFORMATION_TYPES,i.type)&&short(i.phrase,120)&&i.phrase.trim().length>0&&short(i.question,180)&&short(i.unit,30)&&Array.isArray(i.options)&&i.options.length<=5&&i.options.every(o=>short(o,100))&&(i.samples===undefined||(Array.isArray(i.samples)&&i.samples.length<=i.options.length&&i.samples.every(sample=>short(sample,180)))));

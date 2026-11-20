@@ -109,7 +109,7 @@ function previewFor({phase,text}){
   if(text===japanCheckpoint)return {
     ...preview,interpretation:'Plan a Japan trip.',questionKind:'clarify',question:japanQuestion,phrase:'Japan',
     options:['Kyoto and Osaka','Tokyo','Hokkaido'],body:[japanAnswer],
-    information:[{type:'geographic_scope',phrase:'Japan',question:japanQuestion,options:['Kyoto and Osaka','Tokyo','Hokkaido'],unit:'',samples:[]}]
+    information:[{type:'location',phrase:'Japan',question:japanQuestion,options:['Kyoto and Osaka','Tokyo','Hokkaido'],unit:'',samples:[]}]
   };
   if(text.startsWith(japanCheckpoint))return {...preview,body:['With kids, Kyoto is a good base for a week.']};
   if(text===travelDraft)return {

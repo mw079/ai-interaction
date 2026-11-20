@@ -92,7 +92,7 @@ function renderQuick(data,source,{tail='',interim=false,fresh=false}={}){
   $('quick-provenance').textContent=source==='Demo'?'Example':'';
   $('quick-provenance').hidden=source!=='Demo';
   if(source!=='Demo'){state.information=mergeInformation($('intent-input').value,state.information,data.information||[]);state.uncertainty=liveClarificationFor($('intent-input').value,data,state.information);
-    const audienceTypes=['audience','prior_knowledge','audience_knowledge'];
+    const audienceTypes=['audience','prior_knowledge'];
     const knownAudience=state.confirmedChoices.some(choice=>audienceTypes.includes(choice.type));
     if(knownAudience&&audienceTypes.includes(state.uncertainty?.type))state.uncertainty=null;
     const needsClarification=state.uncertainty && state.uncertainty.questionKind!=='explore' && state.uncertainty.type!=='output_format' &&

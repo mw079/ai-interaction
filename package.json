@@ -9,6 +9,7 @@
     "test:browser": "npm run build && playwright test",
     "test:luna": "node dev/smoke-luna.mjs",
     "eval:pages": "node dev/eval-pages.mjs",
+    "eval:pickers": "node dev/eval-pickers.mjs",
     "eval:followups": "node dev/eval-followups.mjs"
   },
   "engines": {

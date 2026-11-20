@@ -9,7 +9,7 @@ test('all twenty-six slide components have a selection recipe',()=>{
   const types=Object.values(SLIDE_RECIPES).flatMap(recipe=>recipe.blocks??[]);
   assert.equal(COMPONENT_TYPES.length+Object.values(SLIDE_RECIPES).filter(recipe=>recipe.kind).length,26);
   assert.deepEqual(new Set(types),new Set(COMPONENT_TYPES));
-  assert.equal(CONTROL_FAMILIES.length,16); // Slide picker and three composer context controls are separate.
+  assert.equal(CONTROL_FAMILIES.length,14); // Slide picker and three composer context controls are separate.
 });
 
 test('invalid trees, coordinates, and executable function expressions are rejected',()=>{

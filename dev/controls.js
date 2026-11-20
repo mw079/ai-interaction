@@ -17,21 +17,17 @@ const fixtures = {
   time: F('What time?', []),
   duration: F('How long is the trip?', ['5 days', '7 days', '10 days'], {unit: 'days'}),
   location: F('Where should it be?', ['Florence', 'Siena', 'Lucca', 'Pisa']),
-  geographic_scope: F('Which region?', ['Tuscany', 'Northern Italy', 'All of Italy']),
   budget: F('What is the budget?', ['100 EUR per night', '150 EUR per night'], {unit: 'EUR per night'}),
   quantity: F('How many people?', ['2', '4']),
   priorities: F('What matters most?', ['Quiet surroundings', 'Easy transport', 'Lower cost']),
   requirements: F('Anything that must be included?', ['Vegetarian meals', 'Step-free access', 'Free cancellation']),
-  exclusions: F('Anything to leave out?', ['No flights', 'No crowded attractions']),
   comparison_options: F('What should be compared?', ['Train', 'Rental car', 'Bus']),
   flexible_dates: F('When could you travel?', []),
   area_map: F('Where should we search?', ['Old town', 'Near the station']),
   assumption: F('Is this assumption right?', ['You are travelling in spring']),
   goal_comparison: F('Which goal fits better?', ['Learn the concepts', 'Pass the exam'], {samples: ['Focus on intuition and examples you can explain.', 'Focus on the question types and formulas that are tested.']}),
-  audience_knowledge: F('Who is it for, and what do they know?', ['Students', 'Parents', 'Teachers']),
   example: F('Which example should it use?', ['A planet', 'A comet'], {samples: ['Earth’s nearly circular orbit shows the laws gently.', 'A comet’s long ellipse makes the speed change obvious.']}),
-  include_exclude: F('Which topics should it cover?', ['Newton’s law of gravity', 'Historical background', 'Equations']),
-  tradeoff: F('Which balance do you prefer?', ['Faster · less scenic', 'Slower · more scenic'], {samples: ['Arrive by noon | Mostly motorway', 'Arrive by evening | Coast road and villages']})
+  include_exclude: F('Which topics should it cover?', ['Newton’s law of gravity', 'Historical background', 'Equations'])
 };
 
 const grid = document.getElementById('grid');

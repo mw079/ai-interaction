@@ -134,3 +134,16 @@ Now every component has a one-line request → component example, and every pick
 | New drafts, never seen by the prompt | — | 24/28 |
 
 Remaining misses are mostly overlapping types (audience vs audience and knowledge; depth or length vs output format) plus "in Italian" not highlighted as a language. All 28 pickers write a correct value when used in a browser. `eval:pages` with the new component examples: 99 %, 13 components, 13 of 15 pages with views (same as before, without the eval-matching examples); `eval:followups` 48/48. Cost: the longer live-help prompt moved the first answer from 0.87 s to 1.01 s and the complete answer from 2.32 s to 2.58 s (medians of 11–12).
+
+## Fewer, clearer pickers and a permanent picker check, 2026-11-20
+
+Most remaining picker misses were between types that overlap, so four were merged (28 → 24): exclusions into requirements ("must-haves and must-nots"), audience and prior knowledge into audience (prior knowledge stays its own picker), trade-off into goal comparison ("a choice between two options that each gain one thing and cost another"), and geographic scope into location (the same control). The two controls only those types used (audience-with-knowledge and the two-column trade-off) were removed.
+
+`npm run eval:pickers` now runs both 28-draft sets through the local app (`dev/eval-pickers.mjs`); a unit test keeps every case on an existing type and every type covered.
+
+| Picker check | 28 types, before examples | 28 types, with examples | 24 types |
+| --- | --- | --- | --- |
+| Tuned set | 18/28 | 24/28 | 25/28 |
+| Unseen set | — | 24/28 | 26/28 |
+
+Remaining misses: "an overview" read as depth, "across Europe" and "in Italian" not highlighted, "near the old town" read as a place, "a family of five" read as a duration. Live-help timing: first answer 0.81 s, complete 2.67 s (medians of 12).

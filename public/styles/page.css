@@ -74,8 +74,6 @@ body.intent-first[data-experience=unified].page-open .composer textarea{max-heig
   
   .composer-choice-row{overflow-wrap:anywhere}
 }
-.control-tradeoff{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.control-tradeoff>span+span{border-left:1px solid #dcdcdc;padding-left:12px}
 
 .page-updated{outline:2px solid #c7c7c7;outline-offset:5px;border-radius:4px}
 

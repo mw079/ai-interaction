@@ -62,20 +62,6 @@ export function renderComposerExtension(target,family,item,choose,onResize){
     target.append(map,presets,area.element);
     return true;
   }
-  if(family==='audience_knowledge'){
-    // Pick who it is for in one click; optionally add what they know (Enter applies both).
-    const parsed=saved.match(/^Audience: (.*?)(?: · Prior knowledge: (.*))?$/);
-    const state={audience:parsed?.[1]||'',knowledge:parsed?.[2]||''};
-    const value=()=>'Audience: '+state.audience+(state.knowledge?' · Prior knowledge: '+state.knowledge:'');
-    const row=make('div','control-presets');
-    const chips=options.map(label=>{const b=button(label,()=>{state.audience=label;paint();live(value());knowledge.input.focus();});row.append(b);return [label,b];});
-    const own=entry('Someone else',{placeholder:'Who is this for?',maxLength:100,onCommit:v=>{state.audience=v;paint();live(value());knowledge.input.focus();}});
-    const knowledge=entry('What do they already know? (optional)',{value:state.knowledge,placeholder:'New to the topic',maxLength:120,
-      validate:()=>state.audience?'':'Choose who it is for first.',onCommit:v=>{state.knowledge=v;choose(value());}});
-    function paint(){chips.forEach(([label,b])=>b.setAttribute('aria-pressed',String(state.audience===label)));}
-    target.append(row,own.element,knowledge.element);paint();
-    return true;
-  }
   if(family==='include_exclude'){
     // Each switch applies live; the picker stays open while topics are sorted.
     const configured=new Map(saved.split(' · ').flatMap(part=>{
@@ -101,17 +87,14 @@ export function renderComposerExtension(target,family,item,choose,onResize){
     target.append(make('p','control-tone-sample',assumption),confirm,correction.element);
     return true;
   }
-  if(['goal_comparison','example','tradeoff'].includes(family)&&options.length){
+  if(['goal_comparison','example'].includes(family)&&options.length){
     // Rows apply on click; hovering or focusing a row previews what it would mean.
     const list=make('div','control-choices');
     const preview=make('div','control-tone-sample');
     preview.setAttribute('aria-live','polite');
     const show=index=>{
       const sample=item.samples?.[index]||'';
-      if(family==='tradeoff'&&sample.includes(' | ')){
-        preview.classList.add('control-tradeoff');
-        preview.replaceChildren(...sample.split(' | ').slice(0,2).map(value=>make('span',undefined,value)));
-      }else{preview.classList.remove('control-tradeoff');preview.textContent=sample;}
+      preview.textContent=sample;
       preview.hidden=!sample;onResize();
     };
     options.forEach((label,index)=>{

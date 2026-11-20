@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {INFORMATION_TYPES,CONTROL_FAMILIES,validInformation,informationFor,chooseInformation,rebaseInformation,mergeInformation} from '../public/composer/intent.js';
 const item=(type,phrase,options=['One','Two'])=>({type,phrase,question:'Which would help?',options,unit:''});
 test('all information types map to the registered control families',()=>{
- assert.equal(Object.keys(INFORMATION_TYPES).length,28);
+ assert.equal(Object.keys(INFORMATION_TYPES).length,24);
  assert.deepEqual([...new Set(Object.values(INFORMATION_TYPES).map(i=>i.family))].sort(),CONTROL_FAMILIES.toSorted());
  for(const type of Object.keys(INFORMATION_TYPES))assert.ok(validInformation([item(type,'topic')]));
  assert.equal(validInformation([item('arbitrary_script','topic')]),false);
@@ -66,4 +66,12 @@ test('tone samples stay aligned with choices and are excluded from the applied d
  assert.deepEqual(entries[0].samples,item.samples);
  assert.equal(chooseInformation(draft,entries,entries[0].key,'Formal').text,'Write an email (Formal)');
  assert.equal(validInformation([{...item,samples:['One','Two','Unpaired']}]),false);
+});
+
+test('the picker eval only expects picker types that exist, and covers every one',async()=>{
+ const {SETS}=await import('../dev/eval-pickers.mjs');
+ for(const [name,cases] of Object.entries(SETS)){
+  for(const [type] of cases)assert.ok(INFORMATION_TYPES[type],name+': unknown type '+type);
+  assert.deepEqual(new Set(cases.map(([type])=>type)),new Set(Object.keys(INFORMATION_TYPES)),name+' covers every type');
+ }
 });

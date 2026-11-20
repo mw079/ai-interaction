@@ -47,7 +47,7 @@ export function renderControl(target,item,onChoose,onResize=()=>{}){
     const show=value=>{const text=item.samples?.[options.indexOf(value)]||'';sample.textContent=text;sample.hidden=!text;onResize();};
     rows(options.map(o=>option(o,{sample:family==='tone'?show:null})));
     if(family==='tone'){target.append(sample);show(item.confirmed&&options.includes(item.value)?item.value:options[0]);}
-  }else if(['choices','cards','goal_comparison','example','tradeoff'].includes(family)){
+  }else if(['choices','cards','goal_comparison','example'].includes(family)){
     const grid=make('div',family==='cards'?'control-cards':'control-choices');
     options.forEach(value=>{const b=option(value);if(family==='cards')b.prepend(formatPreview(value));grid.append(b);});
     target.append(grid);
