@@ -51,12 +51,28 @@ function mountViews(visual,p,options){
   p.edits.view=i;
   buttons.forEach((button,j)=>{button.setAttribute('aria-selected',String(i===j));button.tabIndex=i===j?0:-1;});
   panels.forEach((panel,j)=>{panel.hidden=i!==j;});
+  if(tabs&&buttons[i])reveal(buttons[i]);
+ }
+ // On a phone the tabs scroll sideways: keep the chosen one in view (without scrolling the page) and fade the side with more.
+ function reveal(button){
+  const left=button.offsetLeft-tabs.offsetLeft,right=left+button.offsetWidth,edge=36;
+  if(left<tabs.scrollLeft+edge)tabs.scrollLeft=Math.max(0,left-edge);
+  else if(right>tabs.scrollLeft+tabs.clientWidth-edge)tabs.scrollLeft=right-tabs.clientWidth+edge;
+  fade();
+ }
+ function fade(){
+  if(!tabs)return;
+  const end=tabs.scrollWidth-tabs.clientWidth;
+  tabs.classList.toggle('more-before',tabs.scrollLeft>1);
+  tabs.classList.toggle('more-after',tabs.scrollLeft<end-1);
  }
  function sync(){
   if(panels.length<2)return;
   if(!tabs){
    tabs=make('div','atlas-views');tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Views');
    visual.classList.add('has-views');visual.prepend(tabs);
+   tabs.addEventListener('scroll',fade,{passive:true});
+   if(typeof ResizeObserver==='function')new ResizeObserver(fade).observe(tabs);
   }
   for(let i=buttons.length;i<panels.length;i++){
    const block=p.components[i],button=make('button','atlas-view',block.title);
