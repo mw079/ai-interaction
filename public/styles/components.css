@@ -1,5 +1,5 @@
 /* Page components: shared stage/caption/stepper anatomy, diagrams and interactives, Kepler and projectile. */
-/* ── Prebuilt diagram components (public/diagrams.js) ───────────────────────
+/* ── Prebuilt diagram components (public/components/diagrams.js) ───────────────────────
    One anatomy everywhere: a visual stage, one caption line, a quiet stepper.
    One item is in focus; the rest stay as calm context. */
 /* Colour has one meaning each: grey for the interface, --dg-accent (blue) for the part of a visual in focus,
@@ -99,7 +99,7 @@
 .page-assistant-close:only-child{display:none}
 .page-assistant>.page-response,.page-assistant>.page-assistant-status{padding-right:30px}
 
-/* ── Prebuilt interactives (public/interactives.js) ───────────────────────── */
+/* ── Prebuilt interactives (public/components/interactives.js) ───────────────────────── */
 .dg-eyebrow{display:block;font-size:12px;letter-spacing:.02em;color:var(--dg-muted)}
 .dg-primary{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 18px;border:0;border-radius:999px;background:var(--dg-ui);color:#fff;font:inherit;font-size:14px;font-weight:500;cursor:pointer;transition:background .2s,opacity .2s}
 .dg-primary:hover{background:#3a3a3c}

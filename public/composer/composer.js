@@ -1,4 +1,3 @@
-import {slideRecipe} from '../components/catalog.js';
 import {positionPopover} from './popover.js';
 import {canAcceptCompletion,freshCompletion} from '../shared/model.js';
 const $=id=>document.getElementById(id);
@@ -61,8 +60,8 @@ export function setupComposerExperience({state,changed,request,openDetail,closeD
   trigger.hidden=false;trigger.style.visibility=summary?'visible':'hidden';
   // A decided format is listed under What I understand; the question row only ever holds an open question.
   if(question?.slideOptions&&state.slideDecided)question=null;
-  questionRow.hidden=!question;questionButton.disabled=!!question?.streaming;const slideLabel=question?.slideOptions ? slideRecipe(state.slideChoice)?.label : '';
-  questionButton.textContent=slideLabel||question?.question||'';questionButton.setAttribute('aria-label',(question?.slideOptions?'Slide format: ':question?.questionKind==='explore'?'Explore further: ':'Clarifying question: ')+(slideLabel||question?.question||''));questionButton.setAttribute('aria-expanded',String(!questionRow.hidden&&!$('intent-popover').hidden&&state.openClarification?.question===question?.question));questionButton.setAttribute('aria-controls','intent-popover');
+  questionRow.hidden=!question;questionButton.disabled=!!question?.streaming;
+  questionButton.textContent=question?.question||'';questionButton.setAttribute('aria-label',(question?.slideOptions?'Slide format: ':question?.questionKind==='explore'?'Explore further: ':'Clarifying question: ')+(question?.question||''));questionButton.setAttribute('aria-expanded',String(!questionRow.hidden&&!$('intent-popover').hidden&&state.openClarification?.question===question?.question));questionButton.setAttribute('aria-controls','intent-popover');
  }
  new ResizeObserver(render).observe(input);
  document.addEventListener('focusin',render);document.addEventListener('focusout',()=>setTimeout(()=>{if(!composer.contains(document.activeElement)&&!summaryCard.contains(document.activeElement)&&!$('intent-popover').contains(document.activeElement))closeSummary();render();},0));input.addEventListener('keyup',render);input.addEventListener('click',render);input.addEventListener('select',render);input.addEventListener('scroll',render);input.addEventListener('compositionstart',render);input.addEventListener('compositionend',render);

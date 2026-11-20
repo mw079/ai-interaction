@@ -1,4 +1,4 @@
-// Shared building blocks for composer controls (public/controls.js, public/composer-extensions.js).
+// Shared building blocks for composer controls (controls.js, controls-extended.js).
 // Rule: choosing is committing. There is no separate "Use this" step; a typed answer applies on
 // Enter or the small arrow, and the highlighted option shows the current choice.
 import {element} from '../shared/dom.js';

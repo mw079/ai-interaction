@@ -53,20 +53,20 @@ function summarizePage(source,scale){
  };
 }
 
-export function requestContext({draft='',page='',confirmed=[],date='',timezone='',explicitIntent=''}){
+// The draft itself travels as the request's text, so it is not repeated here.
+export function requestContext({page='',confirmed=[],date='',timezone='',explicitIntent=''}){
  const context={
-  explicitIntent:excerpt(explicitIntent,500),draft:excerpt(draft,2000),page:summarizePage(page,1),
+  explicitIntent:excerpt(explicitIntent,500),page:summarizePage(page,1),
   confirmed:confirmed.slice(-8).map(({type,phrase,value})=>({
    type:excerpt(type,40),phrase:excerpt(phrase,180),value:excerpt(value,300)
   })),
   date:excerpt(date,40),timezone:excerpt(timezone,80)
  };
  let encoded=JSON.stringify(context);
- // Trim draft and page fields before serializing. Confirmed intent and recent choices take priority.
+ // Trim the page first. Confirmed intent and recent choices take priority.
  for(const scale of [.5,.25,.125,.0625,.03125]){
   if(fits(encoded,6000))return encoded;
   context.page=summarizePage(page,scale);
-  context.draft=excerpt(draft,Math.floor(2000*scale));
   encoded=JSON.stringify(context);
  }
  while(!fits(encoded,6000)&&context.confirmed.length>1){

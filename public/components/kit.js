@@ -1,4 +1,4 @@
-// Shared building blocks for prebuilt components (public/diagrams.js, public/interactives.js).
+// Shared building blocks for prebuilt components (diagrams.js, interactives.js).
 export const SVG = 'http://www.w3.org/2000/svg';
 import {element} from '../shared/dom.js';
 export const el = element;

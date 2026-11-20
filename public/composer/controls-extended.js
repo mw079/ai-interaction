@@ -1,27 +1,16 @@
 import {areaMap} from '../components/maps.js';
-import {entry} from './control-kit.js';
+import {entry,make,button as kitButton} from './control-kit.js';
+// Choice buttons in these controls share the option style.
+const button=(text,action)=>kitButton(text,action,'control-option');
 import {blockContextText} from './request-context.js';
-
-const node=(tag,text,className)=>{
-  const element=document.createElement(tag);
-  if(text!==undefined)element.textContent=text;
-  if(className)element.className=className;
-  return element;
-};
-function button(text,action){
-  const element=node('button',text,'control-option');
-  element.type='button';
-  element.onclick=action;
-  return element;
-}
 
 // Segmented switch shared by composer controls: value lives on `state.value`.
 function segmented(label,choices,state,onChange){
-  const element=node('div',undefined,'control-segmented');
+  const element=make('div','control-segmented');
   element.setAttribute('role','radiogroup');
   element.setAttribute('aria-label',label);
   const buttons=choices.map(([id,text])=>{
-    const b=node('button',text,'control-seg');
+    const b=make('button','control-seg',text);
     b.type='button';
     b.setAttribute('role','radio');
     b.onclick=()=>{state.value=id;onChange();};
@@ -42,8 +31,8 @@ export function renderComposerExtension(target,family,item,choose,onResize){
     const dates=saved.match(/\d{4}-\d{2}-\d{2}/g)||[];
     const mode={value:dates.length?'exact':saved==='No date preference'?'any':'flexible'};
     const windowField=entry('When could it happen?',{value:saved.startsWith('Flexible: ')?saved.slice(10):'',placeholder:'Any weekend in June',onCommit:v=>choose('Flexible: '+v)});
-    const row=node('div',undefined,'control-date-row');
-    const date=(label,value)=>{const l=node('label',undefined,'control-entry');l.append(node('span',label,'control-entry-label'));const i=node('input');i.type='date';i.value=value;l.append(i);row.append(l);return i;};
+    const row=make('div','control-date-row');
+    const date=(label,value)=>{const l=make('label','control-entry');l.append(make('span','control-entry-label',label));const i=make('input');i.type='date';i.value=value;l.append(i);row.append(l);return i;};
     const start=date('Start',dates[0]||''),end=date('End (optional)',dates[1]||'');
     const applyDates=()=>{end.min=start.value;if(start.value)live(start.value+(end.value&&end.value>=start.value?' to '+end.value:''));};
     start.onchange=end.onchange=applyDates;
@@ -58,7 +47,7 @@ export function renderComposerExtension(target,family,item,choose,onResize){
   }
   if(family==='area_map'){
     const area=entry('Place or coordinates',{value:saved,placeholder:'Neighbourhood or city',onCommit:v=>choose(v)});
-    const map=node('div');
+    const map=make('div');
     const draw=point=>map.replaceChildren(areaMap({
       label:'World map. Select a place, or type a place or coordinates below.',point,
       onPick(latitude,longitude){
@@ -68,7 +57,7 @@ export function renderComposerExtension(target,family,item,choose,onResize){
       }
     }));
     draw();
-    const presets=node('div',undefined,'control-presets');
+    const presets=make('div','control-presets');
     options.forEach(name=>presets.append(button(name,()=>choose(name))));
     target.append(map,presets,area.element);
     return true;
@@ -78,7 +67,7 @@ export function renderComposerExtension(target,family,item,choose,onResize){
     const parsed=saved.match(/^Audience: (.*?)(?: · Prior knowledge: (.*))?$/);
     const state={audience:parsed?.[1]||'',knowledge:parsed?.[2]||''};
     const value=()=>'Audience: '+state.audience+(state.knowledge?' · Prior knowledge: '+state.knowledge:'');
-    const row=node('div',undefined,'control-presets');
+    const row=make('div','control-presets');
     const chips=options.map(label=>{const b=button(label,()=>{state.audience=label;paint();live(value());knowledge.input.focus();});row.append(b);return [label,b];});
     const own=entry('Someone else',{placeholder:'Who is this for?',maxLength:100,onCommit:v=>{state.audience=v;paint();live(value());knowledge.input.focus();}});
     const knowledge=entry('What do they already know? (optional)',{value:state.knowledge,placeholder:'New to the topic',maxLength:120,
@@ -98,30 +87,30 @@ export function renderComposerExtension(target,family,item,choose,onResize){
       return labels.length?mode+': '+labels.join('; '):'';
     }).filter(Boolean).join(' · ');
     const inputs=options.map(label=>{
-      const row=node('div',undefined,'composer-choice-row');
+      const row=make('div','composer-choice-row');
       const state={value:configured.get(label)||'Undecided'};
       const seg=segmented(label,[['Include','Include'],['Undecided','Maybe'],['Exclude','Leave out']],state,()=>{seg.paint();live(value());});
-      row.append(node('span',label),seg.element);target.append(row);seg.paint();return [label,state];
+      row.append(make('span',undefined,label),seg.element);target.append(row);seg.paint();return [label,state];
     });
     return true;
   }
   if(family==='assumption'){
     const assumption=options[0]||item.phrase;
-    const confirm=node('button','Yes, that’s right','control-apply');confirm.type='button';confirm.onclick=()=>choose(assumption);
+    const confirm=make('button','control-apply','Yes, that’s right');confirm.type='button';confirm.onclick=()=>choose(assumption);
     const correction=entry('Or correct it',{value:saved&&saved!==assumption?saved:'',placeholder:'What should we assume instead?',onCommit:v=>choose(v)});
-    target.append(node('p',assumption,'control-tone-sample'),confirm,correction.element);
+    target.append(make('p','control-tone-sample',assumption),confirm,correction.element);
     return true;
   }
   if(['goal_comparison','example','tradeoff'].includes(family)&&options.length){
     // Rows apply on click; hovering or focusing a row previews what it would mean.
-    const list=node('div',undefined,'control-choices');
-    const preview=node('div',undefined,'control-tone-sample');
+    const list=make('div','control-choices');
+    const preview=make('div','control-tone-sample');
     preview.setAttribute('aria-live','polite');
     const show=index=>{
       const sample=item.samples?.[index]||'';
       if(family==='tradeoff'&&sample.includes(' | ')){
         preview.classList.add('control-tradeoff');
-        preview.replaceChildren(...sample.split(' | ').slice(0,2).map(value=>node('span',value)));
+        preview.replaceChildren(...sample.split(' | ').slice(0,2).map(value=>make('span',undefined,value)));
       }else{preview.classList.remove('control-tradeoff');preview.textContent=sample;}
       preview.hidden=!sample;onResize();
     };
@@ -139,13 +128,13 @@ export function renderComposerExtension(target,family,item,choose,onResize){
 
 export function renderFollowUpScope(target,scopes,active,choose){
   target.replaceChildren();
-  target.append(node('p','Only the selected part will change on Send.','control-hint'));
-  const list=node('div',undefined,'control-choices');
+  target.append(make('p','control-hint','Only the selected part will change on Send.'));
+  const list=make('div','control-choices');
   for(const scope of scopes){
     const control=button(scope.label,()=>choose(scope));
     control.setAttribute('aria-pressed',String(scope.id===(active?.id||'whole')));
     const preview=scope.preview??scope.text;
-    if(preview)control.append(node('span',preview.slice(0,90),'control-scope-preview'));
+    if(preview)control.append(make('span','control-scope-preview',preview.slice(0,90)));
     list.append(control);
   }
   target.append(list);

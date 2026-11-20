@@ -15,5 +15,5 @@ export function setupWorkspace(){
   hoverTimer=setTimeout(()=>{if(!isComposerControl(document.activeElement))focus(false);},140);
  });
  paper.addEventListener('pointerleave',()=>clearTimeout(hoverTimer));paper.addEventListener('pointerdown',()=>focus(false));paper.addEventListener('focusin',()=>focus(false));
- return {reading:()=>focus(false),writing:()=>focus(true)};
+ return {reading:()=>focus(false)};
 }

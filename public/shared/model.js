@@ -115,9 +115,6 @@ export function compactLiveAnswer(data){
   if(clause)return clause.replace(/[,\s]+$/,'')+'.';
   return text.slice(0,157).replace(/\s+\S*$/,'')+'…';
 }
-export function isCurrentPreview(requestRevision, currentRevision, signal) {
-  return requestRevision===currentRevision&&!signal?.aborted;
-}
 export function quickAnswer(text) {
   if(/projectile|trajectory|gravity/i.test(text))return 'In an ideal projectile, horizontal speed stays constant while gravity changes vertical speed. Together, they produce a curved path.';
   if(/\bphysics\b/i.test(text))return 'Physics studies how matter, motion and energy behave. A specific example can make the idea easier to explore.';

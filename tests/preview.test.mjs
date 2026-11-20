@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {trajectory,demoPreview,validPreview,clarificationFor,quickAnswer,liveClarificationFor,isCurrentPreview,isIncompleteComparison} from '../public/shared/model.js';
+import {trajectory,demoPreview,validPreview,clarificationFor,quickAnswer,liveClarificationFor,isIncompleteComparison} from '../public/shared/model.js';
 import {handleAPI} from './helpers.mjs';
 import {readSSE} from '../public/shared/stream.js';
 const headers={Authorization:'Bearer test-key-not-a-real-secret','Content-Type':'application/json',Origin:'https://example.test'};
@@ -59,11 +59,6 @@ test('live clarification follows the complete draft and permits no question',()=
  assert.equal(text.slice(focused.start,focused.end),'kepler laws');
  assert.equal(focused.replace,false);
  assert.equal(liveClarificationFor(text,{question:'What level?',options:[],phrase:'quantum'}).phrase,null);
-});
-test('late or aborted previews never apply to a newer draft',()=>{
- assert.equal(isCurrentPreview(1,2,new AbortController().signal),false);
- const controller=new AbortController();controller.abort();assert.equal(isCurrentPreview(2,2,controller.signal),false);
- assert.equal(isCurrentPreview(2,2,new AbortController().signal),true);
 });
 
 test('automatic format and typed contextual refinements are accepted and bounded',async()=>{
@@ -170,4 +165,14 @@ test('with a page open, typing help asks when an open choice would change the pa
   assert.match(withPage,/QUESTION with a page open: when the instruction leaves open a choice/);
   assert.match(withPage,/sensible default is not a reason to skip the question/);
   assert.match(withPage,/Do not ask when the instruction already says what to change/);
+});
+
+test('a fourth option or follow-up is trimmed instead of rejecting the whole answer',async()=>{
+ const model={...demoPreview('gravity'),questionKind:'clarify',question:'Which level?',phrase:'',options:['A','B','C','D'],followUps:['One?','Two?','Three?','Four?'],
+  information:[],completion:'',components:[],slideOptions:[],launch:{speed:20,angle:45,world:'earth'}};
+ const request=new Request('http://127.0.0.1/api/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'Explain gravity',format:'Auto',audience:'',phase:'preview'})});
+ const response=await handleAPI(request,async()=>Response.json({status:'completed',output:[{type:'message',content:[{type:'output_text',text:JSON.stringify(model)}]}]}));
+ assert.equal(response.status,200);
+ const {preview}=await response.json();
+ assert.deepEqual(preview.options,['A','B','C']);assert.equal(preview.followUps.length,3);
 });

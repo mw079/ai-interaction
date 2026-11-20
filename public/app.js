@@ -239,7 +239,9 @@ function openIntentPopover(origin='click',sourceAnchor=null){
   const hasDraft=!!$('popover-custom').value||(!u.options?.length&&(!u.type||INFORMATION_TYPES[u.type].family==='choices'));
   $('popover-custom').placeholder=hasDraft&&!u.options?.length?'Type your answer…':'In your own words…';
   $('custom-answer-button').textContent='Type your own answer';
-  $('popover-custom-form').hidden=!hasDraft;$('custom-answer-button').hidden=hasDraft;$('custom-answer-button').setAttribute('aria-expanded',String(hasDraft));
+  // A control with its own text field (a range, a search, "Add your own") needs no second one.
+  const ownEntry=!!$('popover-options').querySelector('.control-entry input:not([type=date]):not([type=time])');
+  $('popover-custom-form').hidden=!hasDraft||ownEntry;$('custom-answer-button').hidden=hasDraft||ownEntry;$('custom-answer-button').setAttribute('aria-expanded',String(hasDraft));
   pop.hidden=false;
   positionIntentPopover();
   if(!composerExperience)$('clarify-phrase').setAttribute('aria-expanded','true');

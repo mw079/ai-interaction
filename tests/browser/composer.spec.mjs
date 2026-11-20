@@ -301,6 +301,9 @@ test('multi-select choices apply live in one step and the picker stays open',asy
   await page.getByRole('button',{name:'Clarifying question: '+requirementsQuestion}).click();
   const picker=page.locator('#intent-popover');
   await expect(picker.getByRole('button',{name:/^Use (this|these|\d)/})).toHaveCount(0);
+  await expect(picker.getByLabel('Add your own')).toBeVisible();                          // its own entry…
+  await expect(picker.getByRole('button',{name:'Type your own answer'})).toBeHidden();    // …so no second one
+  await expect(picker.locator('#popover-custom')).toBeHidden();
   await picker.getByRole('button',{name:'Vegetarian meals',exact:true}).click();
   await expect(editor).toHaveValue(requirementsDraft+' (Vegetarian meals)');
   await expect(picker).toBeVisible();

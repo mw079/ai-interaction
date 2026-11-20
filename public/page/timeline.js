@@ -8,6 +8,8 @@ export class PageTimeline {
  append(page){
   const displaced=this.pages.splice(this.index+1);
   this.pages.push(structuredClone(page));
+  // Keep at most historyLimit versions in memory, like History: the oldest goes first.
+  if(this.pages.length>historyLimit)this.pages.shift();
   this.index=this.pages.length-1;
   return displaced;
  }
@@ -33,7 +35,7 @@ export class DirectEditUndo{
  latest(valueFor){return this.entries.findLast(entry=>valueFor(entry.key)===entry.after);}
  take(entry){
   const index=this.entries.indexOf(entry);
-  this.entries.splice(index,1);
+  if(index>=0)this.entries.splice(index,1);
   this.endBurst();
  }
  forget(key){

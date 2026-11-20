@@ -6,10 +6,10 @@ import {handleAPI} from './helpers.mjs';
 test('explicit choices survive clearing the composer and inferred choices stay separate',()=>{
  const entries=[{type:'depth',phrase:'explain',value:'Beginner',confirmed:true},{type:'tone',phrase:'explain',value:'Friendly',confirmed:false}];
  const saved=confirmedChoices(entries);entries.length=0;
- const sent=JSON.parse(requestContext({draft:'',confirmed:saved}));assert.deepEqual(sent.confirmed,[{type:'depth',phrase:'explain',value:'Beginner'}]);
+ const sent=JSON.parse(requestContext({confirmed:saved}));assert.deepEqual(sent.confirmed,[{type:'depth',phrase:'explain',value:'Beginner'}]);
 });
-test('context stays valid JSON within the API bound for escaped drafts and long pages',()=>{
- const encoded=requestContext({draft:'"\n'.repeat(2000),page:'"\n'.repeat(3000),confirmed:[{type:'goal',phrase:'Learn',value:'Physics'}]});assert.ok(encoded.length<=6000);assert.equal(JSON.parse(encoded).confirmed[0].value,'Physics');
+test('context stays valid JSON within the API bound for escaped long pages',()=>{
+ const encoded=requestContext({page:'"\n'.repeat(3000),confirmed:[{type:'goal',phrase:'Learn',value:'Physics'}]});assert.ok(encoded.length<=6000);assert.equal(JSON.parse(encoded).confirmed[0].value,'Physics');
 });
 test('the unified composer requests Luna continuation with live help; Send still uses Terra',async()=>{
  for(const phase of ['preview','page']){
@@ -18,9 +18,9 @@ test('the unified composer requests Luna continuation with live help; Send still
  }
 });
 
-test('manual intent survives context trimming and remains separate from the draft',()=>{
- const context=JSON.parse(requestContext({draft:'"'.repeat(2000),page:'"'.repeat(3000),explicitIntent:'Understand equal areas using a visual example'}));
- assert.equal(context.explicitIntent,'Understand equal areas using a visual example');assert.ok(JSON.stringify(context).length<=6000);
+test('manual intent survives context trimming and the draft is not repeated in the context',()=>{
+ const context=JSON.parse(requestContext({page:'"'.repeat(3000),explicitIntent:'Understand equal areas using a visual example'}));
+ assert.equal(context.explicitIntent,'Understand equal areas using a visual example');assert.equal('draft' in context,false);assert.ok(JSON.stringify(context).length<=6000);
  assert.equal(JSON.parse(requestContext({explicitIntent:'a'.repeat(600)})).explicitIntent.length,500);
 });
 

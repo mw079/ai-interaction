@@ -8,7 +8,7 @@ import {confirmedChoices,requestContext} from '../composer/request-context.js';
 
 export function createApiClient({state,pageContext,status,onLimit=()=>{}}){
   function modelPayload(payload,onProgress){
-    return {...payload,stream:typeof onProgress==='function'&&['preview','page-help'].includes(payload.phase),context:requestContext({explicitIntent:state.intentOverride,draft:payload.text,page:payload.context??pageContext(),confirmed:[...state.confirmedChoices,...confirmedChoices([...state.information,...state.answers])],date:new Date().toLocaleDateString('en-CA'),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone})};
+    return {...payload,stream:typeof onProgress==='function'&&['preview','page-help'].includes(payload.phase),context:requestContext({explicitIntent:state.intentOverride,page:payload.context??pageContext(),confirmed:[...state.confirmedChoices,...confirmedChoices([...state.information,...state.answers])],date:new Date().toLocaleDateString('en-CA'),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone})};
   }
   async function callPreview(payload,signal,onProgress,body=JSON.stringify(modelPayload(payload,onProgress))){
     const revision=state.revision;

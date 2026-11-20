@@ -51,15 +51,13 @@ export async function handleAPI(request,upstream=fetch,env={},{limiter=limiterFo
   const origin=request.headers.get('Origin');if(origin&&origin!==new URL(request.url).origin)return json({error:'This request must come from the same website.'},403);
   if(!serverKey)return json({error:'Live answers are not available right now.'},503);
   const authorization=`Bearer ${env.OPENAI_API_KEY}`;
-  const path=new URL(request.url).pathname;if(path!=='/api/preview')return json({error:'Not found.'},404);
+  if(new URL(request.url).pathname!=='/api/preview')return json({error:'Not found.'},404);
+  if(!request.headers.get('Content-Type')?.startsWith('application/json'))return json({error:'Send a JSON request.'},415);
+  const reader=request.body?.getReader();if(!reader)return json({error:'Add a thought first.'},400);
   let payload;
-  if(path==='/api/preview'){
-    if(!request.headers.get('Content-Type')?.startsWith('application/json'))return json({error:'Send a JSON request.'},415);
-    const reader=request.body?.getReader();if(!reader)return json({error:'Add a thought first.'},400);
-    const chunks=[];let bytes=0;
-    try{while(true){const {done,value}=await reader.read();if(done)break;bytes+=value.byteLength;if(bytes>40000){await reader.cancel();return json({error:'This preview is too long. Keep it under 4,000 characters.'},413);}chunks.push(value);}const data=new Uint8Array(bytes);let offset=0;for(const c of chunks){data.set(c,offset);offset+=c.length;}payload=JSON.parse(new TextDecoder().decode(data));}catch{return json({error:'The request was not valid JSON.'},400);}
-    if(!payload||(payload.stream!==undefined&&typeof payload.stream!=='boolean')||(payload.interaction!==undefined&&payload.interaction!=='unified')||(payload.context!==undefined&&(typeof payload.context!=='string'||payload.context.length>6000))||(payload.phase!==undefined&&!['preview','page','selection','page-help','deeper'].includes(payload.phase))||typeof payload.text!=='string'||!payload.text.trim()||payload.text.length>4000||typeof payload.audience!=='string'||payload.audience.length>120||!FORMATS.includes(payload.format))return json({error:'Use a shorter thought, audience, and supported view.'},400);
-  }
+  const chunks=[];let bytes=0;
+  try{while(true){const {done,value}=await reader.read();if(done)break;bytes+=value.byteLength;if(bytes>40000){await reader.cancel();return json({error:'This preview is too long. Keep it under 4,000 characters.'},413);}chunks.push(value);}const data=new Uint8Array(bytes);let offset=0;for(const c of chunks){data.set(c,offset);offset+=c.length;}payload=JSON.parse(new TextDecoder().decode(data));}catch{return json({error:'The request was not valid JSON.'},400);}
+  if(!payload||(payload.stream!==undefined&&typeof payload.stream!=='boolean')||(payload.interaction!==undefined&&payload.interaction!=='unified')||(payload.context!==undefined&&(typeof payload.context!=='string'||payload.context.length>6000))||(payload.phase!==undefined&&!['preview','page','selection','page-help','deeper'].includes(payload.phase))||typeof payload.text!=='string'||!payload.text.trim()||payload.text.length>4000||typeof payload.audience!=='string'||payload.audience.length>120||!FORMATS.includes(payload.format))return json({error:'Use a shorter thought, audience, and supported view.'},400);
   if(payload?.sources!==undefined)return json({error:'File attachments are unsupported. Paste relevant text into your request.'},400);
   if(payload?.promised!==undefined&&(payload.phase!=='page'||typeof payload.promised!=='string'||payload.promised.length>200))return json({error:'The preview could not be used with this request.'},400);
   if(payload?.pageScope!==undefined && (payload.phase!=='page'||!payload.pageScope||
@@ -119,6 +117,10 @@ function finishModelResponse(data,{model,start,selection=false,pageHelp=false,re
 if(data.status!=='completed')return json({retryable:false,error:'The preview was incomplete. Shorten the request or try again.'},502);
     const content=(data.output||[]).filter(i=>i.type==='message').at(-1)?.content||[];if(content.some(c=>c.type==='refusal'))return json({error:'The model declined this request. Try a different topic.'},422);
     let preview;try{preview=JSON.parse(content.filter(c=>c.type==='output_text').map(c=>c.text).join(''));}catch{return json({retryable:false,error:'The model did not return a valid preview. Your page is unchanged.'},502);}
+    // Optional suggestion lists are trimmed rather than rejected: a fourth option or follow-up
+    // question should not cost the user the whole answer. Content (body, components) is never cut.
+    if(preview&&typeof preview==='object')for(const [key,max] of [['options',3],['followUps',3],['information',4],['slideOptions',3]])
+      if(Array.isArray(preview[key])&&preview[key].length>max)preview[key]=preview[key].slice(0,max);
     if(preview?.components)preview.components=normaliseComponents(preview.components);
     if(Array.isArray(preview?.sections))preview.sections=preview.sections.map(section=>section?.components?{...section,components:normaliseComponents(section.components)}:section);
     if(deeper){

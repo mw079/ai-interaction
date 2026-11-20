@@ -27,7 +27,6 @@ body.intent-first[data-experience=unified] .document-actions{display:flex;gap:8p
 body.intent-first[data-experience=unified] .document-foot,body.intent-first[data-experience=unified] #submitted-request{display:none!important}
 .atlas-stage{transition:height 260ms cubic-bezier(.2,.7,.2,1);position:relative}
 body.intent-first[data-experience=unified] .paper{border:1px solid var(--atlas-line);border-radius:18px;padding:36px;background:#fff;transform-origin:top center;transition:transform 260ms cubic-bezier(.2,.7,.2,1);box-shadow:0 4px 20px #24242404}
-body.intent-first[data-experience=unified].composer-active .paper{transform:scale(.9)}
 /* Top-aligned, not centred: an explanation opening under the intro must not move the text being read. */
 .atlas-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:42px;align-items:start}.atlas-layout.atlas-prose{display:block;max-width:760px;margin:0 auto}.atlas-copy,.atlas-visual{min-width:0}
 body.intent-first[data-experience=unified] .document-title{font:400 clamp(28px,3.4vw,40px)/1.12 Georgia,'Times New Roman',serif;letter-spacing:-1px;background:transparent;border:0;border-radius:3px;width:100%;padding:0;margin:0 0 18px;resize:none;min-height:40px;max-height:none;overflow:hidden;color:var(--atlas-ink)}
