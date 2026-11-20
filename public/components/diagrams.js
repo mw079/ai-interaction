@@ -300,7 +300,9 @@ function renderConceptMap(content, block, saved, onEdit, detail) {
       return {left: x - w, right: x + w, top: y - h, bottom: y + h};
     });
     const overlaps = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
-    valid.filter(e => e.from === i || e.to === i).forEach(e => {
+    // First every arrow, then the labels: a label must keep clear of all arrowheads and of the
+    // other arrows, not only of the ones drawn before it.
+    const arrows = valid.filter(e => e.from === i || e.to === i).map(e => {
       near.add(e.from);
       near.add(e.to);
       const [x0, y0] = pos.get(e.from), [x1, y1] = pos.get(e.to);
@@ -316,18 +318,32 @@ function renderConceptMap(content, block, saved, onEdit, detail) {
       const sx = x0 + dx / len * r0 + nx * shift, sy = y0 + dy / len * r0 + ny * shift;
       const ex = x1 - dx / len * r1 + nx * shift, ey = y1 - dy / len * r1 + ny * shift;
       layer.append(svgEl('path', {d: `M${sx} ${sy} L${ex} ${ey}`, class: 'dg-link dg-on', 'marker-end': `url(#${id}-on)`}));
+      // The line as a row of small boxes, so a label can tell when it would cross it.
+      const steps = Math.max(1, Math.round(Math.hypot(ex - sx, ey - sy) / 8));
+      const line = Array.from({length: steps + 1}, (_, k) => {
+        const px = sx + (ex - sx) * k / steps, py = sy + (ey - sy) * k / steps;
+        return {left: px - 1.5, right: px + 1.5, top: py - 1.5, bottom: py + 1.5};
+      });
+      return {e, sx, sy, ex, ey, side, nx, ny, line, head: {left: ex - 9, right: ex + 9, top: ey - 9, bottom: ey + 9}};
+    });
+    arrows.forEach((a, k) => {
+      const {e, sx, sy, ex, ey, side, nx, ny} = a;
       if (e.label) {
         const mx = (sx + ex) / 2, my = (sy + ey) / 2;
         const attrs = {x: mx, y: my + 5, class: 'dg-edge-label dg-on'};
+        // Alignment is set through element.style: a style attribute would be blocked by the page's
+        // content security policy, and the two labels of a two-way pair would sit on each other.
+        let align = '';
         if (side) {
           const ox = nx * side, oy = ny * side;
           attrs.x = mx + ox * 12;
           attrs.y = my + oy * 12 + 5;
           // Anchor the text away from the arrow: to the side for a mostly vertical arrow.
-          if (Math.abs(ox) > 0.5) attrs.style = 'text-anchor:' + (ox > 0 ? 'start' : 'end');
+          if (Math.abs(ox) > 0.5) align = ox > 0 ? 'start' : 'end';
           else attrs.y = my + oy * 18 + (oy > 0 ? 12 : -2);
         }
         const text = svgEl('text', attrs);
+        if (align) text.style.textAnchor = align;
         text.textContent = e.label;
         layer.append(text);
         // A label wider than about 40% of the map wraps onto two lines at the space nearest its middle.
@@ -349,28 +365,32 @@ function renderConceptMap(content, block, saved, onEdit, detail) {
           attrs.y = +attrs.y - 8;
         }
         const moveTo = (x, y) => { text.setAttribute('x', x); text.setAttribute('y', y); lines[1]?.setAttribute('x', x); };
-        // Try spots until the label is clear of every node and every label already placed: on the
-        // arrow, then beside it on the side of the outer idea (an idea on the left gets its label to
-        // the left), nearer that idea, then above or below. A label is slid back inside the map
-        // rather than cut off; if no spot is clear, the one with the least overlap is kept.
+        // Try spots until the label is clear of every node, arrowhead, other arrow and label already
+        // placed: on the arrow, then beside it on the side of the outer idea (an idea on the left gets
+        // its label to the left), nearer that idea, then above or below. A two-way label stays on its
+        // own side and moves along or away from its arrow. A label is slid back inside the map rather
+        // than cut off; if no spot is clear, the one with the least overlap is kept.
         const base = {x: +attrs.x, y: +attrs.y};
         const [ox0, oy0] = pos.get(e.from === i ? e.to : e.from);
         const outward = Math.abs(ox0 - cx) > 8 ? Math.sign(ox0 - cx) : 1;
         const toward = u => [(ox0 - cx) * u, (oy0 - cy) * u];
-        const spots = side ? [[0, 0, 0, '']] : [[0, 0, 0, ''],
-          ...[0, 0.12, 0.24].flatMap(u => [[...toward(u), 8 * outward, 'out'], [...toward(u), -8 * outward, 'in']]),
-          ...[-16, 16].map(dy => [0, dy, 0, ''])];
-        const anchor = text.style.textAnchor;
+        const away = side ? [nx * side, ny * side] : [0, 0];
+        const spots = side ? [[0, 0, 0, ''], [away[0] * 10, away[1] * 10, 0, ''], [...toward(0.15), 0, ''], [...toward(-0.15), 0, ''],
+          [...toward(0.15).map((v, d) => v + away[d] * 10), 0, ''], [...toward(-0.15).map((v, d) => v + away[d] * 10), 0, '']] : [[0, 0, 0, ''],
+          ...[0, 0.12, 0.24, 0.36].flatMap(u => [[...toward(u), 8 * outward, 'out'], [...toward(u), -8 * outward, 'in']]),
+          ...[-16, 16, -28, 28].flatMap(dy => [[0, dy, 0, ''], [...toward(0.24).map((v, d) => d ? v + dy : v), 0, '']])];
+        const others = arrows.filter((_, m) => m !== k).flatMap(o => o.line), heads = arrows.filter((_, m) => m !== k).map(o => o.head);
         let best = null;
         for (const [ax, ay, ox, where] of spots) {
-          text.style.textAnchor = where ? ((where === 'out') === (outward > 0) ? 'start' : 'end') : anchor;
+          text.style.textAnchor = where ? ((where === 'out') === (outward > 0) ? 'start' : 'end') : align;
           moveTo(base.x + ax + ox, base.y + ay);
           let r;
           try { r = text.getBBox(); } catch { r = {x: 0, y: 0, width: 0, height: 0}; }
           const slide = r.x < 2 ? 2 - r.x : r.x + r.width > W - 2 ? W - 2 - r.x - r.width : 0;
           if (slide) moveTo(base.x + ax + ox + slide, base.y + ay);
           const rect = {left: r.x + slide - 2, right: r.x + slide + r.width + 2, top: r.y - 1, bottom: r.y + r.height + 1};
-          const hits = blocked.filter(n => overlaps(rect, n)).length;
+          // Covering an idea or a label is worst; covering another arrow's head or line is minor.
+          const hits = blocked.filter(n => overlaps(rect, n)).length * 4 + heads.filter(n => overlaps(rect, n)).length + (others.some(n => overlaps(rect, n)) ? 1 : 0);
           if (!best || hits < best.hits) best = {hits, x: text.getAttribute('x'), y: text.getAttribute('y'), anchor: text.style.textAnchor, rect};
           if (!hits) break;
         }

@@ -253,6 +253,27 @@ test('concept map: a two-way relationship draws two arrows whose labels do not o
   }
 });
 
+test('concept map on the real page: two-way labels on vertical arrows sit apart, and no label covers an arrowhead',async({page})=>{
+  // The app page sends the content security policy that blocks style attributes; the gallery does not.
+  await page.goto(new URL('/',page.url()).href);
+  for(const width of [900,600,340]){
+    const result=await page.evaluate(async width=>{
+      const {renderComponent}=await import('/components/renderer.js');
+      const host=document.createElement('div');host.style.width=width+'px';document.body.prepend(host);
+      const item=label=>({label,detail:label+'.',value:0,latitude:null,longitude:null});
+      renderComponent(host,{id:'rocket',type:'hotspot_diagram',title:'Rocket interactions',prompt:'',items:['Rocket','Exhaust gas','Earth'].map(item),
+        edges:[{from:1,to:0,label:'pushes forward on'},{from:0,to:1,label:'pushes backward on'},{from:2,to:0,label:'pulls down on'}]},{edits:{}},{onEdit(){},ask(){}});
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+      const labels=[...host.querySelectorAll('.dg-edge-label.dg-on')].map(t=>t.getBoundingClientRect());
+      const heads=[...host.querySelectorAll('path.dg-link.dg-on')].map(p=>{const pt=p.getPointAtLength(p.getTotalLength()),m=p.getScreenCTM();const x=pt.x*m.a+m.e,y=pt.y*m.d+m.f;return {left:x-5,right:x+5,top:y-5,bottom:y+5};});
+      const hit=(a,b)=>a.left<b.right-1&&b.left<a.right-1&&a.top<b.bottom-1&&b.top<a.bottom-1;
+      host.remove();
+      return {labels:labels.length,overlap:labels.some((a,i)=>labels.some((b,j)=>i<j&&hit(a,b))),onHead:labels.some(l=>heads.some(h=>hit(l,h)))};
+    },width);
+    expect(result,'width '+width).toEqual({labels:3,overlap:false,onHead:false});
+  }
+});
+
 test('map: the coastline data loads on demand and every map draws its land',async({page})=>{
   const shortest=async selector=>Math.min(...await page.locator(selector).evaluateAll(paths=>paths.map(p=>(p.getAttribute('d')||'').length)));
   await expect(page.locator('.component-map .dg-land').first()).toBeAttached();
