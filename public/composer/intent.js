@@ -22,9 +22,12 @@ export function validInformation(items){
   const short=(s,n)=>typeof s==='string'&&s.length<=n;
   return Array.isArray(items)&&items.length<=6&&items.every(i=>i&&Object.hasOwn(INFORMATION_TYPES,i.type)&&short(i.phrase,120)&&i.phrase.trim().length>0&&short(i.question,180)&&short(i.unit,30)&&Array.isArray(i.options)&&i.options.length<=5&&i.options.every(o=>short(o,100))&&(i.samples===undefined||(Array.isArray(i.samples)&&i.samples.length<=i.options.length&&i.samples.every(sample=>short(sample,180)))));
 }
+const letters=value=>value.replace(/[^\p{L}\p{N}]/gu,'').length;
 const FILLER_WORDS=new Set('how do does did i me my we you can could should would will what why when where which who is are am be to a an the it this that of in on for with and or'.split(' '));
 export function informationFor(text,items=[]){
   if(!validInformation(items))return [];
+  // A highlight is one detail of the request, never (almost) the whole request.
+  items=items.filter(item=>!(letters(item.phrase)>=letters(text)*0.8&&letters(text)>20));
   const result=[];
   // Preserve distinct controls when the model returns a long phrase containing another anchor.
   // Use an uncovered exact fragment; never invent words or choices.

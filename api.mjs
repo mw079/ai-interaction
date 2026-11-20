@@ -116,7 +116,8 @@ function validPageActivity(target){
 }
 
 function finishModelResponse(data,{model,start,selection=false,pageHelp=false,recipe,activity,tidy=false,deeper=0,views=false}){
-if(data.status!=='completed')return json({retryable:false,error:'The preview was incomplete. Shorten the request or try again.'},502);
+// An answer cut off by the length limit is a rare, random overrun: one retry almost always completes it.
+if(data.status!=='completed')return json({retryable:true,error:'The preview was incomplete. Try again.'},502);
     const content=(data.output||[]).filter(i=>i.type==='message').at(-1)?.content||[];if(content.some(c=>c.type==='refusal'))return json({error:'The model declined this request. Try a different topic.'},422);
     let preview;try{preview=JSON.parse(content.filter(c=>c.type==='output_text').map(c=>c.text).join(''));}catch{return json({retryable:false,error:'The model did not return a valid preview. Your page is unchanged.'},502);}
     // Optional suggestion lists are trimmed rather than rejected: a fourth option or follow-up
@@ -164,7 +165,7 @@ function liveStreamResponse(upstream,resultOptions,signal,abort){
      const preview=partialResponse(text),encoded=JSON.stringify(preview);if(encoded!==previous&&Object.keys(preview).length){previous=encoded;send({type:'partial',preview});}
     }else if(event.type==='response.completed'){
      const result=finishModelResponse(event.response,resultOptions);const data=await result.json();send(result.ok?{type:'done',...data}:{type:'error',error:data.error,retryable:data.retryable===true});completed=true;break;
-    }else if(['response.failed','response.incomplete','error','response.refusal.done'].includes(event.type)){const code=event.response?.error?.code||event.error?.code||event.code;const retryable=['server_error','internal_server_error','timeout'].includes(code);throw Object.assign(new Error('Incomplete preview'),{retryable});}
+    }else if(['response.failed','response.incomplete','error','response.refusal.done'].includes(event.type)){const code=event.response?.error?.code||event.error?.code||event.code;const retryable=event.type==='response.incomplete'||['server_error','internal_server_error','timeout'].includes(code);throw Object.assign(new Error('Incomplete preview'),{retryable});}
    }
    if(!completed)throw new Error('Interrupted preview');
   }catch(error){if(!cancelled)send({type:'error',error:resultOptions.page?'The page was interrupted. Try again.':resultOptions.pageHelp?'The answer was interrupted. Try again.':'The live preview was interrupted. Keep typing or try again.',retryable:error.retryable??(!signal.aborted||signal.reason?.name==='TimeoutError')});}

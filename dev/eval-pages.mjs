@@ -96,7 +96,14 @@ async function run() {
     let generated = null;
     page.on('response', async response => {
       if (!response.url().endsWith('/api/preview')) return;
-      try { if (response.request().postDataJSON().phase === 'page') generated = (await response.json()).preview; } catch {}
+      // Pages stream (title and introduction first): the finished page is the stream's "done" event.
+      try {
+        if (response.request().postDataJSON().phase !== 'page') return;
+        const text = await response.text();
+        const done = text.split('\n\n').map(frame => frame.replace(/^data: /, '')).filter(Boolean)
+          .map(data => { try { return JSON.parse(data); } catch { return null; } }).find(event => event?.type === 'done' || event?.preview);
+        if (done?.preview) generated = done.preview;
+      } catch {}
     });
     await page.goto(base.href);
     const started = Date.now();

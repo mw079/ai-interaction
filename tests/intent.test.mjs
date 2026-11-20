@@ -81,3 +81,10 @@ test('a highlight made only of question words is dropped',()=>{
  const item=(phrase,type)=>({type,phrase,question:'?',options:['A','B','C'],unit:'',samples:[]});
  assert.deepEqual(informationFor(text,[item('How do I','audience'),item('Italian dishes','requirements')]).map(e=>e.phrase),['Italian dishes']);
 });
+
+test('a highlight covering (almost) the whole request is ignored; real details stay',()=>{
+ const text='How do aperture, shutter speed and ISO work together';
+ const item=(phrase,type='audience')=>({type,phrase,question:'Q?',options:['a','b','c'],unit:'',samples:[]});
+ assert.deepEqual(informationFor(text,[item(text)]),[]);
+ assert.deepEqual(informationFor(text,[item(text),item('shutter speed','depth')]).map(e=>e.phrase),['shutter speed']);
+});
