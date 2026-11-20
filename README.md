@@ -41,7 +41,7 @@ Open **http://127.0.0.1:4317**. The server builds the assets at startup, so rest
 
 The model chooses and fills these; the app owns rendering, layout and behaviour.
 
-- **Page components** (`public/components/`): 24 types plus the Kepler and projectile simulations. Diagrams: cycle, timeline, comparison, chart, hierarchy, decision tree, concept map, labelled diagram. Activities and explorers: parameter explorer, prediction quiz, before/after, sorting, function plot, evidence, map (real coastlines; routes with numbered stops; city plans with true distances), linked scenarios, worked example, practice. Numbers and practice: proportion, 2×2 matrix, checklist, flashcards, spectrum, key numbers. Contracts are in [docs/COMPONENT_LIBRARY.md](docs/COMPONENT_LIBRARY.md).
+- **Page components** (`public/components/`): 24 types plus the Kepler and projectile simulations. Diagrams: cycle, timeline, comparison, chart, hierarchy, decision tree, concept map, labelled diagram. Activities and explorers: parameter explorer, prediction quiz, before/after, sorting, function plot, evidence, map (real coastlines; routes with numbered stops; city plans with true distances), linked scenarios, worked example, practice. Numbers and practice: proportion, 2×2 matrix, checklist, flashcards, spectrum, key numbers.
 - **Composer pickers** (`public/composer/`): 24 information types (audience, budget, dates, tone, place on a map, must-haves, and more) in 14 control families. Choosing is committing: the draft gets `phrase (value)`, which stays editable.
 
 ## Decisions
@@ -61,7 +61,7 @@ Install the development dependency (Playwright) with `npm ci`.
 | `npm test` | Unit and API tests with mocked model responses |
 | `PLAYWRIGHT_CHANNEL=chrome npm run test:browser` | Browser tests at 1280 and 390 px against a fixture server, including tests that measure each component against its data |
 | `npm run eval:journeys` | Full journeys in 20 domains (typing, live help, a picker, Send, views, a follow-up, Go deeper) with 12 checks each and an `overview.html`; set `EVAL_WIDTHS=1280,390` for phones and run the app with a higher `DAILY_LIMIT` |
-| `npm run eval:pages` | Page quality on ten fixed prompts, with screenshots and design-rule scores ([results](docs/EVALUATION.md)) |
+| `npm run eval:pages` | Page quality on ten fixed prompts, with screenshots and design-rule scores |
 | `npm run eval:followups` | Follow-up instructions on existing pages (13 short journeys, 26 steps), with data checked against reference values |
 | `npm run eval:pickers` | Which picker live help attaches: 2 × 28 drafts covering all 24 picker types, on a tuned and an unseen set |
 | `npm run test:luna` | Live checks of three Luna answers, with time to first text |
@@ -84,7 +84,6 @@ prompts.mjs            model input and the instructions for each phase
 server.mjs             local server; build.mjs and styles.mjs produce the bundle
 dev/                   galleries, sample data and the live evaluations
 tests/                 unit and API tests; tests/browser/ for Playwright and its fixture server
-docs/                  component contracts and evaluation results
 ```
 
 ## Privacy and limits
