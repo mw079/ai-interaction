@@ -18,7 +18,8 @@ PREVIEW_SCHEMA.properties.launch={type:'object',additionalProperties:false,prope
 // The model writes fields in this order, so put what the composer shows first: the answer, the
 // question, the Tab prediction (short) and the highlights stream before page-only metadata.
 {const p=PREVIEW_SCHEMA.properties;PREVIEW_SCHEMA.properties={body:p.body,question:p.question,phrase:p.phrase,options:p.options,questionKind:p.questionKind,completion:p.completion,information:p.information,...p};}
-const DEEPER_SCHEMA={type:'object',additionalProperties:false,properties:{sections:{type:'array',items:{type:'object',additionalProperties:false,properties:{answer:string,components:{type:'array',items:COMPONENT_SCHEMA}},required:['answer','components']}}},required:['sections']};
+// Go deeper: exactly one section per question, enforced by the schema (the model once returned none).
+const deeperSchema=count=>({type:'object',additionalProperties:false,properties:{sections:{type:'array',minItems:count,maxItems:count,items:{type:'object',additionalProperties:false,properties:{answer:string,components:{type:'array',items:COMPONENT_SCHEMA}},required:['answer','components']}}},required:['sections']});
 // A page is written title first, then the introduction, so both can be shown while the visual
 // is still being written. Same fields as the live preview, in a different order.
 const PAGE_SCHEMA={...PREVIEW_SCHEMA,properties:{title:PREVIEW_SCHEMA.properties.title,body:PREVIEW_SCHEMA.properties.body,...PREVIEW_SCHEMA.properties}};
@@ -95,7 +96,7 @@ export async function handleAPI(request,upstream=fetch,env={},{limiter=limiterFo
       method:'POST',headers:{Authorization:authorization,'Content-Type':'application/json'},redirect:'error',signal,
       ...({body:JSON.stringify({model,store:false,...(streaming?{stream:true}:{}),reasoning:{effort:page?'low':'none'},max_output_tokens:page?5000:pageHelp?2200:deeper?2600:views?2600:1300,
         instructions:modelInstructions(payload,slideInstructions,contextInstructions),
-        input:JSON.stringify(buildModelInput(payload,{slideLabel:recipe?.label})),text:{format:{type:'json_schema',name:deeper?'go_deeper':views?'more_views':pageHelp||selection?'local_assistance':'interactive_preview',strict:true,schema:deeper?DEEPER_SCHEMA:views?VIEWS_SCHEMA:pageHelp?PAGE_HELP_SCHEMA:selection?SELECTION_SCHEMA:page?PAGE_SCHEMA:PREVIEW_SCHEMA}}
+        input:JSON.stringify(buildModelInput(payload,{slideLabel:recipe?.label})),text:{format:{type:'json_schema',name:deeper?'go_deeper':views?'more_views':pageHelp||selection?'local_assistance':'interactive_preview',strict:true,schema:deeper?deeperSchema(payload.followUps.length):views?VIEWS_SCHEMA:pageHelp?PAGE_HELP_SCHEMA:selection?SELECTION_SCHEMA:page?PAGE_SCHEMA:PREVIEW_SCHEMA}}
       })})
     });
     if(!response.ok){const messages={401:'Live answers are not available right now.',403:'Live answers are not available right now.',404:'Live answers are not available right now.',429:'The service is busy. Try again in a moment.'};return json({retryable:response.status>=500,error:messages[response.status]||'OpenAI could not complete the request. Your page is unchanged.'},[401,403,404].includes(response.status)?503:response.status===429?503:502);}
@@ -181,6 +182,8 @@ export function validDeeperSection(section){
 // so one bad answer never costs the others. Null overall when no answer is usable.
 export function deeperSections(value,count){
   if(!value||!Array.isArray(value.sections))return null;
-  const sections=Array.from({length:count},(_,i)=>validDeeperSection(value.sections[i])?value.sections[i]:null);
+  // An answer whose small visual breaks the rules keeps its text and loses only the visual.
+  const usable=section=>validDeeperSection(section)?section:validDeeperSection({...section,components:[]})?{...section,components:[]}:null;
+  const sections=Array.from({length:count},(_,i)=>usable(value.sections[i]));
   return sections.some(Boolean)?sections:null;
 }

@@ -166,6 +166,8 @@ test('go deeper answers every follow-up once with at most one valid component',a
  assert.deepEqual(deeperSections({sections:sections.slice(0,1)},2),[sections[0],null],'a missing answer is marked, the others are kept');
  assert.deepEqual(deeperSections({sections:[{answer:'x'.repeat(500),components:[]},sections[1]]},2),[null,sections[1]],'an over-long answer is dropped on its own');
  assert.equal(deeperSections({sections:[]},2),null,'no usable answer is a failure');
+ const badVisual={answer:'About 20,000 yen a day.',components:[{id:'cost',type:'key_numbers',title:'Daily cost',prompt:'JPY per day for two, excluding lodging',items:[{label:'Lean',detail:'x',value:20000},{label:'Comfortable',detail:'x',value:40000}],edges:[]}]};
+ assert.deepEqual(deeperSections({sections:[badVisual,sections[1]]},2),[{...badVisual,components:[]},sections[1]],'a broken visual is dropped, its answer kept');
  assert.ok(sent.instructions.includes('return exactly 2 sections'));
  const bad=await handleAPI(new Request('http://127.0.0.1/api/preview',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer test-key-abcdefghijklmnop'},
   body:JSON.stringify({text:'x',audience:'',format:'Auto',phase:'deeper',followUps:['a','b','c','d']})}),async()=>{throw new Error('must not call the model');});
