@@ -63,3 +63,16 @@ The checks are rule-based. They cannot judge whether an explanation is correct, 
 Regression re-run after the fixes: 46/48 checks across 26 steps; both misses were one undated step on the first WWI page, which the year-label follow-up then fixed. `test:luna` passed all three prompts.
 
 Manual checks on a live page: a question typed into a passage was answered correctly and Undo restored the text; a composer rewrite changed only the intro; Back restored the earlier version. Manual testing also found six-step process labels overlapping in the visual column; steps now stack vertically when each would get under 90 px, with a browser test that measures the rendered text. History opened below the page, off-screen, so clicking it looked like nothing happened; it now opens under its button with focus on Close, and Restore brought back the earlier page while saving the current one. Highlighting a phrase gave a correct explanation that added something new, and Escape closed it.
+
+## Live questions with a page open, 2026-11-20
+
+Twelve drafts typed live (real model), counting whether a live question appeared. On the start screen 6 of 6 got one. With a Kepler page open, 0 of 6 open instructions did: the page-mode prompt described the preview line but not when to ask, and the input contract's "fill open choices with sensible defaults" won. After adding a page-mode question rule (ask when an open choice would visibly change the page, with options from the page; never for specific instructions):
+
+| Draft (page open) | Before | After, run 1 | After, run 2 |
+| --- | --- | --- | --- |
+| Add an example / Make it more detailed / Compare two planets / Show it differently / Add a quiz | 0–2 of 5 | 5 of 5 | 5 of 5 |
+| Very simple terms, what each law means (already specific) | none | none | none |
+| Translate / shorten intro / remove the formula | none | none | none |
+| Three-question quiz about the third law | none | asked | none |
+
+Questions came with three options each, e.g. "How many quiz questions?" 3, 6 or 10.

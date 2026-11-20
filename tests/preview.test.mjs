@@ -164,3 +164,10 @@ test('the preview the user read is sent with the page request as a promise, and 
   const {modelInstructions}=await import('../prompts.mjs');
   assert.match(modelInstructions({phase:'page',text:'x'}),/promised: the one-line preview.*request wins/);
 });
+test('with a page open, typing help asks when an open choice would change the page',async()=>{
+  const {modelInstructions}=await import('../prompts.mjs');
+  const withPage=modelInstructions({phase:'preview',text:'Make it more detailed',context:JSON.stringify({page:{title:'Kepler’s laws'}})});
+  assert.match(withPage,/QUESTION with a page open: when the instruction leaves open a choice/);
+  assert.match(withPage,/sensible default is not a reason to skip the question/);
+  assert.match(withPage,/Do not ask when the instruction already says what to change/);
+});
