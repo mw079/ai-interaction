@@ -1,10 +1,16 @@
+# Dependencies and build output
 node_modules/
 dist/
+
+# Secrets: only the example file is committed
 .env*
 !.env.example
-*.log
-.DS_Store
-.sites-local/
+
+# Test and evaluation output
+test-results/
+playwright-report/
 artifacts/
 
-test-results/
+# System files and logs
+.DS_Store
+*.log

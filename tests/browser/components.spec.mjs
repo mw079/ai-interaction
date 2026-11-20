@@ -1,5 +1,5 @@
 // Every interactive component is checked on what it draws, not only on its text: when a control
-// changes, the visual must change in proportion to the data (see DESIGN.md, "truthful visuals").
+// changes, the visual must change in proportion to the data (truthful visuals).
 // Uses the component gallery and its sample data (dev/component-fixtures.js).
 import {expect,test} from '@playwright/test';
 import {startFixtureServer} from './fixture-server.mjs';

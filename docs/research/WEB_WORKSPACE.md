@@ -12,7 +12,7 @@ Official compatibility sources: [Luna](https://developers.openai.com/api/docs/mo
 
 ## Clarification visual refinement
 
-The latest pass removes the duplicated inline question/choice form. A single anchored choice popover serves the highlighted phrase or a general model question; its custom field is disclosed on demand. The writing surface stays at a fixed vertical origin, short answers remain glanceable below it, and the full-page action is a circular arrow within the composer. Escape/outside dismissal, focus return, per-question custom draft retention and viewport placement are covered in [the design record](../../DESIGN.md). Fourteen checks pass. This refines the same two-stage interaction and does not change the model/API contract.
+The latest pass removes the duplicated inline question/choice form. A single anchored choice popover serves the highlighted phrase or a general model question; its custom field is disclosed on demand. The writing surface stays at a fixed vertical origin, short answers remain glanceable below it, and the full-page action is a circular arrow within the composer. Escape/outside dismissal, focus return, per-question custom draft retention and viewport placement were covered in the design rules. Fourteen checks pass. This refines the same two-stage interaction and does not change the model/API contract.
 
 ## Product contract
 
