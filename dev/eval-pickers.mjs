@@ -6,7 +6,7 @@
 // Usage (with the local app running and an OpenAI key configured):
 //   npm run eval:pickers                  # both sets
 //   EVAL_ONLY=unseen npm run eval:pickers
-// Each case sends one live-help request (Luna) through the local server; 48 requests in all.
+// Each case sends one live-help request (Luna) through the local server; 56 requests in all.
 // Results go to artifacts/eval/pickers-<timestamp>/ (ignored by Git).
 import {mkdir, writeFile} from 'node:fs/promises';
 import {informationFor, INFORMATION_TYPES} from '../public/composer/intent.js';

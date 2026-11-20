@@ -9,7 +9,7 @@ import {PageTimeline,DirectEditUndo,historyLimit} from './page/timeline.js';
 import {setupWorkspace} from './page/workspace.js';
 import {confirmedChoices} from './composer/request-context.js';
 import {setupComposerExperience} from './composer/composer.js';
-import {INFORMATION_TYPES, informationFor, rebaseInformation, chooseInformation, mergeInformation} from './composer/intent.js';
+import {INFORMATION_TYPES, rebaseInformation, chooseInformation, mergeInformation} from './composer/intent.js';
 import {renderControl,formatPreview} from './composer/controls.js';
 import {positionPopover} from './composer/popover.js';
 import {workingLine, demoPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isIncompleteComparison, draftWordCount, completedDraft, PREVIEW_WORD_STEP, extendsPreview, workingDraftPreview, draftAnswersQuestion, projectileLaunch} from './shared/model.js';
@@ -364,15 +364,15 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
     const data=await callPreview({text,context,audience:state.audience,format:state.format,phase:'page',slideChoice:scope?undefined:slideChoice,pageScope:scope?{id:scope.id,text:scope.text}:undefined,promised},controller.signal,progress);
     if(id!==state.pageRequest)return;
     if(scope&&version!==state.pageVersion)throw new Error('The selected part changed while the response was being prepared.');
-    const draft=scope?applyFollowUpScope(base,data.preview,scope):data.preview;
-    if(scope)draft.title=$('document-title').value;
-    const p={...structuredClone(draft),revision:state.revision,baseVersion:version,source:data.model,physics:scope?draft.physics:projectileLaunch(draft.launch),edits:scope?draft.edits:{},selected:scope?draft.selected:0};
+    const result=scope?applyFollowUpScope(base,data.preview,scope):data.preview;
+    if(scope)result.title=$('document-title').value;
+    const p={...structuredClone(result),revision:state.revision,baseVersion:version,source:data.model,physics:scope?result.physics:projectileLaunch(result.launch),edits:scope?result.edits:{},selected:scope?result.selected:0};
     if(!state.component||version===state.pageVersion){
       // A follow-up that adds a part below the first visual (a quiz, a second chart) scrolls to it.
       const earlier=state.component&&new Map((state.component.components||[]).map(c=>[c.id,JSON.stringify(c)]));
       const added=!scope&&earlier?(p.components||[]).slice(1).find(c=>!earlier.has(c.id)):null;
       // A follow-up that changes a view in place (new checklist items) shows that view too.
-      const changed=!scope&&earlier&&!added?(p.components||[]).find(c=>earlier.has(c.id)&&earlier.get(c.id)!==JSON.stringify(c)):null;
+      const updated=!scope&&earlier&&!added?(p.components||[]).find(c=>earlier.has(c.id)&&earlier.get(c.id)!==JSON.stringify(c)):null;
       if(state.component){timeline.save(capturePage());snapshot(scope?'Before focused change':'Before new page');}
       state.component=p;$('document-title').value=p.title;
       if(!scope)directEdits=new DirectEditUndo();
@@ -381,7 +381,7 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
       state.proposal=null;state.pageVersion++;
       renderActive();renderProposal();appendPage();renderPageNavigation();workspace?.reading();
       if(added)showUpdatedPart('block:'+added.id,added.title,false,'added');
-      else if(changed)showUpdatedPart('block:'+changed.id,changed.title,false,'updated');
+      else if(updated)showUpdatedPart('block:'+updated.id,updated.title,false,'updated');
       else showUpdatedPart(scope?.id,scope?.label);
       if(!scope)requestViews(p);
     }

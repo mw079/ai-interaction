@@ -21,7 +21,6 @@ body.intent-first[data-experience=unified] .explore-button:disabled{background:#
 body.intent-first[data-experience=unified] .document-panel{border:0;box-shadow:none;background:transparent;overflow:visible}
 body.intent-first[data-experience=unified] .document-toolbar{border:0;padding:10px 4px 20px}
 body.intent-first[data-experience=unified] .document-location{color:#6d6d6d;font-size:.75rem}
-body.intent-first[data-experience=unified] .document-location svg{display:none}
 body.intent-first[data-experience=unified] .document-actions{display:flex;gap:8px;align-items:center}
 .page-nav{width:30px;height:30px;padding:0;display:grid;place-items:center;border:0;border-radius:50%;font-size:18px;color:#585858}.page-nav:hover{background:#ededed}#page-position{color:#6d6d6d;font-size:11px;min-width:38px}
 body.intent-first[data-experience=unified] #submitted-request{display:none!important}
@@ -200,7 +199,6 @@ body.intent-first[data-experience=unified].page-open:not(.composer-active) .comp
 /* Toolbar: navigation grouped as one pill; secondary actions as quiet text. */
 body.intent-first[data-experience=unified] .document-actions{gap:4px}
 .document-location{font-size:12px;color:#6d6d6d}
-.document-location svg{display:none}
 .page-nav{width:30px;height:30px;font-size:15px;color:#525252}
 #page-back{border-radius:999px 0 0 999px}
 #page-forward{border-radius:0 999px 999px 0}

@@ -1,6 +1,6 @@
 # AI Interaction
 
-Current state as of 19 November 2026. The earlier milestone log (PLAN.md) and the retired SwiftUI app are archived in `~/Documents/CS/ai/projects/localmind-swift-archive-2026-11-19.zip`.
+Current state as of 20 November 2026. The earlier milestone log (PLAN.md) and the retired SwiftUI app are archived in `~/Documents/CS/ai/projects/localmind-swift-archive-2026-11-19.zip`.
 
 ## Product direction
 
@@ -26,7 +26,7 @@ AI Interaction is a web prototype for working with AI while a thought is still t
   - the highlighted option shows the current choice, and clicking it again clears it
 
   The draft gets `phrase (value)`, which stays editable.
-- **Autocomplete** shows as grey text; Tab accepts and Escape dismisses.
+- **Tab prediction:** the user's likely next words, in soft blue inside the field after the caret; Tab accepts and Escape dismisses. It is always the user's words, never a question.
 - **Review intent** opens a card where the inferred goal can be edited.
 
 ## Atlas pages
@@ -37,6 +37,7 @@ AI Interaction is a web prototype for working with AI while a thought is still t
 - **Asking for a change** gives the answer first, then "Review edit", then Apply or Reject. Apply returns focus to the edited passage.
 - **Versions:** Undo reverses direct typing. ← and → step through page versions, and History restores earlier ones. Choosing a step in a diagram, or moving Kepler's sliders, counts as viewing, not editing, so it never invalidates a pending result.
 - **Late results:** a full-page result that arrives after you edited waits in a "new version is ready" box. The box explains why it is waiting and offers Replace page or Keep current page.
+- **Views:** a page can have up to three views (for a trip: a route map, the days, the costs) shown as tabs in the place of the component title. The main view comes first; the others are added in the background a moment later.
 - **Reload** clears the workspace on purpose. Export saves the page data as JSON; there is no import yet.
 
 ## Component libraries
@@ -45,13 +46,13 @@ There are two libraries and one shared visual language (`public/styles/`). In bo
 
 | Library | Inventory | Code | Gallery |
 | --- | --- | --- | --- |
-| Composer controls (text field) | 28 information types in 16 control families, plus the slide format choice with preview sketches | `public/composer/`: `intent.js`, `controls.js`, `controls-extended.js`, `control-kit.js` | `/__dev/controls` |
+| Composer controls (text field) | 24 information types in 14 control families, plus the slide format choice with preview sketches | `public/composer/`: `intent.js`, `controls.js`, `controls-extended.js`, `control-kit.js` | `/__dev/controls` |
 | Page components (Atlas) | 24 block types plus the Kepler and projectile simulations, for 26 slide formats | `public/components/`: `catalog.js`, `renderer.js`, `diagrams.js`, `interactives.js`, `kit.js` | `/__dev/components` |
 
 **Page components:**
 - **Diagrams:** cycle (a ring), process (a track with progress), comparison (cards; four or more items become a criteria list), chart (labelled bars), tree (hierarchy and decision tree), concept map and labelled diagram (the selected idea moves to the centre).
 - **Activities and explorers:** parameter explorer (slider), prediction quiz, before/after, sorting with feedback, function plot, evidence, map (real coastlines framed around the places), linked scenarios, worked example, practice.
-- **Added this round:** proportion, 2×2 matrix, checklist, flashcards, spectrum, key numbers.
+- **Numbers and practice:** proportion, 2×2 matrix, checklist, flashcards, spectrum, key numbers.
 
 **Interface pieces:** explanations, edit review, the "new version" box, toolbar, notes, loading state and Go deeper tabs. They share the same style and are shown at the end of `/__dev/components`.
 
@@ -62,7 +63,7 @@ Every gallery example is checked by a unit test as valid model output, and every
 - **Visuals carry the explanation.** Steps live in component items, and each item's one-sentence detail is shown only when it is selected. Prose is limited to an intro and takeaways that add what the visual cannot show.
 - **Say each idea once.** A second block must offer a different activity. Cycles are only for loops, and one-way steps become a process.
 - **Scrolling is optional depth.** Nothing has to be scrolled to reach the answer. Bigger topics continue through Go deeper, not longer pages.
-- **Zero-shot instructions and a strict schema.** A few-shot experiment produced no gain and made the output copy the examples, so it was not kept ([evaluation](docs/EVALUATION.md)).
+- **Short examples and a strict schema.** The prompts give one-line examples per component and picker on topics unlike the evaluation prompts; an earlier experiment with whole example pages made the output copy them, so it was not kept ([evaluation](docs/EVALUATION.md)).
 - **Change is reversible.** Apply/Reject, Undo, version navigation and History. Proposed edits sit beside what they change.
 - **Local first.** The app runs on loopback. An older hosted preview stays private.
 
@@ -86,10 +87,10 @@ Empty fields are omitted, so a missing field means "not decided". Each phase's p
 - **Stack:** a plain browser UI and a Node loopback server. OpenAI calls go through the server and always use its `.env` key; without one, the app shows labelled demo examples.
 - **Model settings:** Luna uses reasoning `none` for live help, selections, page help and Go deeper. Terra uses `low` reasoning for pages, with a 5,000-token limit (room for up to three views).
 - **Loading:** the build lists every browser module as a `modulepreload` in `index.html`, so they download in parallel; the 65 KB coastline data loads only when a map is first drawn. On a slow connection (150 ms latency, 1.5 Mbit/s) the app is ready in about 2.7 s (was 3.0 s), downloading 356 KB (was 422 KB).
-- **Safety and limits:** every response is checked against a strict schema. Temporary failures are retried once. The server limits each visitor to 200 requests per UTC day and the whole app to 2,000 (`DAILY_LIMIT`, `DAILY_TOTAL_LIMIT`); over the limit, a "Try again tomorrow" card appears. Counts live in server memory, so a hosted deployment needs a shared store.
+- **Safety and limits:** every response is checked against a strict schema. Temporary failures are retried once. The server limits each visitor to 200 requests per UTC day and the whole app to 2,000 (`DAILY_LIMIT`, `DAILY_TOTAL_LIMIT`); over the limit, a "Try again tomorrow" card appears. Counts live in server memory and reset when the server restarts.
 - **Tests:** 114 unit and API tests, and 138 browser tests (69 scenarios at 1280 and 390 px). Every interactive component and both simulations are tested on what they draw: positions, lengths and areas are measured against the data or the physics (`tests/browser/components.spec.mjs`, plus the Kepler and projectile tests). The suite passes repeated runs under eight-worker stress.
 - **Live quality:** `npm run eval:pages` passed 98 % of design-rule checks on ten prompts (median about 10 s to a page). After the intro rule, the three process prompts passed 100 %. The model picks a fitting component on its own: orbit, cycle, process, comparison, proportion, matrix, or plain text for an email.
-- **Version control:** this folder is its own Git repository. Work is committed on `main` through `22ae1c8`, not pushed.
+- **Version control:** this folder is its own Git repository. Work is committed on `main`, not pushed.
 
 Run with `npm run dev` and open [127.0.0.1:4317](http://127.0.0.1:4317/). 
 
@@ -99,6 +100,8 @@ Run with `npm run dev` and open [127.0.0.1:4317](http://127.0.0.1:4317/).
 | `PLAYWRIGHT_CHANNEL=chrome npm run test:browser` | Browser tests at desktop and phone width with installed Chrome |
 | `npm run eval:pages` | Live page quality: ten prompts, screenshots and design-rule scores ([results](docs/EVALUATION.md)) |
 | `npm run eval:followups` | Live follow-up instructions on existing pages, with data checked against reference values |
+| `npm run eval:pickers` | Live check of which picker the live help attaches, on a tuned and an unseen set |
+| `npm run eval:journeys` | Full journeys in 20 domains with 12 checks each and an overview page |
 | `npm run test:luna` | Live Luna answer checks |
 | `npm run build` | Build browser assets and the server bundle |
 
@@ -110,16 +113,7 @@ Run with `npm run dev` and open [127.0.0.1:4317](http://127.0.0.1:4317/).
 
 ## Next milestone
 
-**Test one complete session with real people.** Ask three to five people to type naturally and answer a question while they write. They then press Send, step through the visual, open a Go deeper tab, and ask for one change. Watch for:
+**Launch the demo.**
 
-- how often they repeat a choice
-- whether the live question changed the result
-- time to the first useful output
-- whether anyone scrolls looking for the answer
-- whether the components read without explanation
-
-Then:
-
-1. Keep a selected passage or diagram explicit across Luna's answer and Terra's next Send, so "this" means the same thing.
-2. Restore the draft after a failed Send.
-3. Rerun `npm run eval:pages` after every prompt or component change.
+1. Add a short video of the app to the "Try again tomorrow" card (`#limit-media`).
+2. Deploy, then run `npm run eval:journeys` and a phone check against the live site.

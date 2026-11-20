@@ -1,7 +1,7 @@
 // Prebuilt interactive components: activities and explorers. Same rules as diagrams.js:
 // the model supplies validated content; these renderers own layout, motion and state.
 // Choosing what to look at is view state (no onEdit); only learner writing is a page edit.
-import {SVG, el, svgEl, pct, frame} from './kit.js';
+import {el, svgEl, pct, frame} from './kit.js';
 import {paintLand} from './maps.js';
 
 const fmt = new Intl.NumberFormat(undefined, {maximumFractionDigits: 2});
@@ -563,7 +563,7 @@ function renderPractice(content, block, saved, onEdit, detail, ctx) {
   paint();
 }
 
-/* ── New: proportion – parts of a whole ───────────────────────────────────── */
+/* ── proportion – parts of a whole ───────────────────────────────────── */
 const share = p => (p >= 10 ? Math.round(p) : p >= 1 ? p.toFixed(1) : p >= 0.1 ? p.toFixed(1) : p.toFixed(2)) + '%';
 // Parts of one whole in the visual accent (blue), darkest first, then two neutral greys.
 const RAMP = ['#2f5d8a', '#5b82ab', '#8fadcc', '#c3d4e6', '#8e8e93', '#c7c7cc'];
@@ -595,7 +595,7 @@ function renderProportion(content, block, saved, onEdit, detail) {
   f.paint();
 }
 
-/* ── New: 2×2 matrix – four quadrants on two dimensions ───────────────────── */
+/* ── 2×2 matrix – four quadrants on two dimensions ───────────────────── */
 function renderMatrix(content, block, saved, onEdit, detail) {
   const {items, prompt} = block;
   const [xAxis, yAxis] = parts(prompt);
@@ -615,7 +615,7 @@ function renderMatrix(content, block, saved, onEdit, detail) {
   f.paint();
 }
 
-/* ── New: checklist – work through steps and track progress ───────────────── */
+/* ── checklist – work through steps and track progress ───────────────── */
 function renderChecklist(content, block, saved, onEdit, detail) {
   const {items} = block;
   saved.done ??= {};
@@ -650,7 +650,7 @@ function renderChecklist(content, block, saved, onEdit, detail) {
   f.paint();
 }
 
-/* ── New: flashcards – recall, then flip to check ─────────────────────────── */
+/* ── flashcards – recall, then flip to check ─────────────────────────── */
 function renderFlashcards(content, block, saved) {
   const {items} = block;
   const card = button('dg-flashcard', '', () => { saved.flipped = !saved.flipped; paint(); });
@@ -676,7 +676,7 @@ function renderFlashcards(content, block, saved) {
   paint();
 }
 
-/* ── New: spectrum – where each item sits on a scale ──────────────────────── */
+/* ── spectrum – where each item sits on a scale ──────────────────────── */
 function renderSpectrum(content, block, saved, onEdit, detail) {
   const {prompt} = block;
   const [low, high] = parts(prompt);
@@ -727,7 +727,7 @@ function renderSpectrum(content, block, saved, onEdit, detail) {
   f.paint();
 }
 
-/* ── New: key numbers – a few figures that tell the story ─────────────────── */
+/* ── key numbers – a few figures that tell the story ─────────────────── */
 function renderStats(content, block, saved, onEdit, detail) {
   const {items, prompt} = block;
   const f = frame(content, detail, block, saved, onEdit, {stepper: false});

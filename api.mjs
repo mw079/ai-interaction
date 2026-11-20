@@ -29,8 +29,7 @@ const json=(value,status=200)=>new Response(JSON.stringify(value),{status,header
 const eventStream=body=>new Response(body,{headers:{'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-store','X-Accel-Buffering':'no','X-Content-Type-Options':'nosniff'}});
 // Daily request limits, enforced here on the server: each visitor (by IP) may make DAILY_LIMIT
 // model requests per UTC day, and the whole app DAILY_TOTAL_LIMIT, a cap on the day's spending.
-// Counts live in memory: they reset when the server restarts, and each Worker isolate keeps its
-// own, so a public deployment should move them to a shared store (KV or a Durable Object).
+// Counts live in server memory and reset when the server restarts, which is fine for this demo.
 export function createDailyLimiter({perVisitor=200,total=2000,now=()=>Date.now()}={}){
   let day='',visitors=new Map(),used=0;
   const today=()=>{const d=new Date(now()).toISOString().slice(0,10);if(d!==day){day=d;visitors=new Map();used=0;}};
@@ -171,7 +170,7 @@ function liveStreamResponse(upstream,resultOptions,signal,abort){
     }else if(['response.failed','response.incomplete','error','response.refusal.done'].includes(event.type)){const code=event.response?.error?.code||event.error?.code||event.code;const retryable=['server_error','internal_server_error','timeout'].includes(code);throw Object.assign(new Error('Incomplete preview'),{retryable});}
    }
    if(!completed)throw new Error('Interrupted preview');
-  }catch(error){if(!cancelled)send({type:'error',error:'The live preview was interrupted. Keep typing or try again.',retryable:error.retryable??(!signal.aborted||signal.reason?.name==='TimeoutError')});}
+  }catch(error){if(!cancelled)send({type:'error',error:resultOptions.page?'The page was interrupted. Try again.':resultOptions.pageHelp?'The answer was interrupted. Try again.':'The live preview was interrupted. Keep typing or try again.',retryable:error.retryable??(!signal.aborted||signal.reason?.name==='TimeoutError')});}
   finally{if(!cancelled)controller.close();abort();}
  },cancel(){cancelled=true;abort();}});
  return eventStream(body);

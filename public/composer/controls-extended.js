@@ -124,7 +124,7 @@ export function renderFollowUpScope(target,scopes,active,choose){
 }
 
 export function followUpScopes(component,activeField,selection){
-  const scopes=[{id:'whole',label:'Whole slide'}];
+  const scopes=[{id:'whole',label:'Whole page'}];
   if(!component)return scopes;
   component.body.forEach((text,index)=>{
     const value=index===0?component.edits?.explanation??text:component.edits?.paragraphs?.[index-1]??text;

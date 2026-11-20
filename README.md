@@ -15,7 +15,7 @@ npm run dev
 Open **http://127.0.0.1:4317**. Set `PORT` to use another port. The server builds the assets at startup, so restart it after changing source files.
 
 - **Live mode:** put `OPENAI_API_KEY=…` in `.env`, a file Git ignores. Visitors never enter a key: every request uses the server's key.
-- **Daily limit:** each visitor (by IP address) gets `DAILY_LIMIT` requests per UTC day (default 200), counting typing help, pages, questions and Go deeper alike, and the whole app gets `DAILY_TOTAL_LIMIT` (default 2,000) as a cap on spending. Both can be set in `.env`. Over the limit, the server refuses the request and the app shows a "Try again tomorrow" card, with a slot for a short video. Counts are kept in server memory, so they reset on restart; a hosted deployment needs a shared store (KV or a Durable Object) for them.
+- **Daily limit:** each visitor (by IP address) gets `DAILY_LIMIT` requests per UTC day (default 200), counting typing help, pages, questions and Go deeper alike, and the whole app gets `DAILY_TOTAL_LIMIT` (default 2,000) as a cap on spending. Both can be set in `.env`. Over the limit, the server refuses the request and the app shows a "Try again tomorrow" card, with a slot for a short video. Counts are kept in server memory, so they reset when the server restarts.
 - **Demo mode:** without a key the app gives labelled sample answers for a few built-in examples. Send needs live mode.
 
 ## Develop and test
@@ -27,7 +27,8 @@ Install the development dependency (Playwright) with `npm ci`.
 | `npm test` | Unit and API tests with mocked model responses |
 | `PLAYWRIGHT_CHANNEL=chrome npm run test:browser` | Browser tests at 1280 and 390 px against a fixture server with fixed responses and controlled timers. They include measuring tests that check each interactive component and simulation draws what its data or physics says |
 | `npm run eval:journeys` | Full user journeys in 20 domains (typing, live help, a picker, Send, views, a follow-up, Go deeper) with 12 automatic checks each and `overview.html` showing every stage; set `EVAL_WIDTHS=1280,390` for phones. Run the app with a higher `DAILY_LIMIT`: a journey makes about 10 requests |
-| `npm run eval:pickers` | Live picker check: 2 × 28 drafts, one per picker type; scores which picker the live-help model attaches, on a set used while tuning the prompt and an unseen set |
+| `npm run eval:followups` | Live follow-up instructions on existing pages (13 short journeys, 26 steps), with data checked against reference values |
+| `npm run eval:pickers` | Live picker check: 2 × 28 drafts covering all 24 picker types; scores which picker the live-help model attaches, on a set used while tuning the prompt and an unseen set |
 | `npm run eval:pages` | Live page quality: ten fixed prompts through the running app, screenshots and design-rule scores ([results](docs/EVALUATION.md)) |
 | `npm run test:luna` | Live checks of three Luna answers, with time to first text |
 | `npm run build` | Builds the dependency-free Worker in `dist/server/index.js` |
