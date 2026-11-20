@@ -169,3 +169,10 @@ test('go deeper answers every follow-up once with at most one valid component',a
   body:JSON.stringify({text:'x',audience:'',format:'Auto',phase:'deeper',followUps:['a','b','c','d']})}),async()=>{throw new Error('must not call the model');});
  assert.equal(bad.status,400);
 });
+
+test('data that grows by one item fits: up to 8 for chart, spectrum, map and timeline, 6 elsewhere',()=>{
+  const items=n=>Array.from({length:n},(_,i)=>({label:'Item '+i,detail:'Detail.',value:i*10,latitude:null,longitude:null}));
+  assert.equal(validComponents([{id:'ph',type:'spectrum',title:'pH',prompt:'Acidic | Alkaline',items:items(8),edges:[]}]),true);
+  assert.equal(validComponents([{id:'ph',type:'spectrum',title:'pH',prompt:'Acidic | Alkaline',items:items(9),edges:[]}]),false);
+  assert.equal(validComponents([{...cycle,items:items(7)}]),false);
+});

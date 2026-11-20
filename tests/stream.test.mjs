@@ -43,6 +43,9 @@ test('audience refinements become visible questions without replacing their choi
 test('live answer display keeps one short sentence with a hard length bound',()=>{
  assert.equal(compactLiveAnswer({body:[],interpretation:'A restatement of the request'}),'');
  assert.equal(compactLiveAnswer({body:['First sentence. Second sentence.']}),'First sentence.');assert.ok(compactLiveAnswer({body:['long '.repeat(100)]}).length<=160);
+ // An over-long answer ends at its last clause break as a whole sentence, not mid-phrase.
+ assert.equal(compactLiveAnswer({body:['Inflation can come from demand outpacing supply, rising production costs, or expectations of future price increases; central banks mainly raise interest rates to cool spending.']}),
+  'Inflation can come from demand outpacing supply, rising production costs, or expectations of future price increases.');
 });
 
 test('one question prioritizes clarification and keeps exploration choices as background preferences',()=>{

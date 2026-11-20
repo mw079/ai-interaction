@@ -108,7 +108,12 @@ export function compactLiveAnswer(data){
   const text=(data.body?.join(' ')||'').replace(/\s+/g,' ').trim();
   const first=text.match(/^.*?[.!?](?:\s|$)/)?.[0]?.trim();
   if(first&&first.length<=160)return first;
-  return text.length<=160?text:text.slice(0,157).replace(/\s+\S*$/,'')+'…';
+  if(text.length<=160)return text;
+  // Too long: end at the last clause break (; : or a dash) so the answer still reads as a whole
+  // sentence; cut at a word with an ellipsis only when no break keeps most of it.
+  const clause=text.slice(0,160).match(/^(.{80,}?)\s*(?:;|:|\s[—–-])\s(?!.*(?:;|:|\s[—–-])\s)/)?.[1];
+  if(clause)return clause.replace(/[,\s]+$/,'')+'.';
+  return text.slice(0,157).replace(/\s+\S*$/,'')+'…';
 }
 export function isCurrentPreview(requestRevision, currentRevision, signal) {
   return requestRevision===currentRevision&&!signal?.aborted;

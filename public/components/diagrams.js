@@ -230,10 +230,8 @@ function renderTree(content, block, saved, onEdit, detail) {
 /* ── Concept map: relationships, revealed one node at a time ───────────────── */
 function renderConceptMap(content, block, saved, onEdit, detail) {
   const {items, edges} = block;
-  const n = items.length;
-  const W = 600, H = 380, cx = 300, cy = 190, rx = 240, ry = 150;
   const f = frame(content, detail, block, saved, onEdit);
-  const svg = canvas(f.stage, W, H, 'dg-map-graph');
+  const svg = canvas(f.stage, 600, 380, 'dg-map-graph');
   const id = nextMarkerId();
   arrowMarker(svg, id);
   // Focus layout: the selected idea sits in the centre and its relationships radiate
@@ -241,32 +239,65 @@ function renderConceptMap(content, block, saved, onEdit, detail) {
   const valid = edges.filter(e => items[e.from] && items[e.to] && e.from !== e.to);
   const layer = svgEl('g');
   svg.append(layer);
-  // Distance from a pill-shaped node's centre to its outline in direction (dx, dy).
-  const reach = (dx, dy) => {
-    const a = 60, b = 22, len = Math.hypot(dx, dy) || 1, c = dx / len, s = dy / len;
-    return a * b / Math.hypot(b * c, a * s);
-  };
   const nodes = items.map((item, i) => {
-    const b = nodeButton(item.label, cx, cy, W, H, () => f.select(i));
+    const b = nodeButton(item.label, 300, 190, 600, 380, () => f.select(i));
     b.classList.add('dg-moving');
     f.stage.append(b);
     return b;
   });
+  // The drawing uses the stage's real pixels, so labels keep their size and the arrows can stop
+  // at each node's real outline. A narrow stage is taller and keeps its spokes away from the
+  // horizontal, where two pills side by side would leave no room for the arrow and its label.
+  let size = '';
+  const geometry = () => {
+    const W = Math.round(f.stage.clientWidth) || 600, narrow = W < 520;
+    const H = Math.min(420, Math.round(narrow ? W * 1.18 : W * 380 / 600));   // .dg-canvas max-height
+    if (size !== W + 'x' + H) {
+      size = W + 'x' + H;
+      f.stage.classList.toggle('dg-narrow', narrow);
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      f.stage.style.aspectRatio = `${W} / ${H}`;
+    }
+    return {W, H, narrow, cx: W / 2, cy: H / 2, rx: W * (narrow ? 0.36 : 0.4), ry: H * (narrow ? 0.43 : 0.395)};
+  };
+  const angles = (k, narrow) => {
+    if (!narrow) return Array.from({length: k}, (_, j) => -Math.PI / 2 + j * 2 * Math.PI / k);
+    const spread = (count, mid) => Array.from({length: count}, (_, j) => mid + (count < 2 ? 0 : (j / (count - 1) - 0.5) * 2 * 0.75));
+    const top = Math.ceil(k / 2);
+    return [...spread(top, -Math.PI / 2), ...spread(k - top, Math.PI / 2)];
+  };
+  // Distance from a node's centre to its outline in direction (dx, dy), with a little air.
+  const reach = (b, dx, dy) => {
+    const len = Math.hypot(dx, dy) || 1, c = Math.abs(dx / len), s = Math.abs(dy / len);
+    const w = (b.offsetWidth || 120) * 0.53, h = (b.offsetHeight || 44) * 0.53;
+    return Math.min(c ? w / c : Infinity, s ? h / s : Infinity);
+  };
   f.onPaint(i => {
+    const {W, H, narrow, cx, cy, rx, ry} = geometry();
     const others = items.map((_, j) => j).filter(j => j !== i);
     const pos = new Map([[i, [cx, cy]]]);
-    others.forEach((j, k) => {
-      const a = -Math.PI / 2 + k * 2 * Math.PI / others.length;
-      pos.set(j, [cx + rx * Math.cos(a), cy + ry * Math.sin(a)]);
+    const ring = angles(others.length, narrow);
+    others.forEach((j, k) => pos.set(j, [cx + rx * Math.cos(ring[k]), cy + ry * Math.sin(ring[k])]));
+    nodes.forEach((b, j) => {
+      const [x, y] = pos.get(j);
+      b.style.left = pct(x, W);
+      b.style.top = pct(y, H);
     });
     const near = new Set([i]);
     layer.replaceChildren();
+    // Node outlines in drawing units, to keep edge labels off the nodes and off each other.
+    const box = svg.getBoundingClientRect(), unit = W / (box.width || W);
+    const blocked = nodes.map((b, j) => {
+      const [x, y] = pos.get(j), w = (b.offsetWidth || 120) / 2 * unit + 3, h = (b.offsetHeight || 44) / 2 * unit + 3;
+      return {left: x - w, right: x + w, top: y - h, bottom: y + h};
+    });
+    const overlaps = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
     valid.filter(e => e.from === i || e.to === i).forEach(e => {
       near.add(e.from);
       near.add(e.to);
       const [x0, y0] = pos.get(e.from), [x1, y1] = pos.get(e.to);
       const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy) || 1;
-      const r0 = reach(dx, dy) + 6, r1 = reach(dx, dy) + 10;
+      const r0 = reach(nodes[e.from], dx, dy) + 4, r1 = reach(nodes[e.to], dx, dy) + 8;
       // A two-way relationship (A→B and B→A) gets two parallel arrows, one on each side, and each
       // label sits beside its own arrow; drawn on one line, the two labels would overlap.
       const twoWay = valid.some(o => o.from === e.to && o.to === e.from);
@@ -291,16 +322,66 @@ function renderConceptMap(content, block, saved, onEdit, detail) {
         const text = svgEl('text', attrs);
         text.textContent = e.label;
         layer.append(text);
+        // A label wider than about 40% of the map wraps onto two lines at the space nearest its middle.
+        let lines = [];
+        const words = e.label.split(' ');
+        if (words.length > 1 && text.getComputedTextLength?.() > W * 0.4) {
+          const half = e.label.length / 2;
+          let cut = 1;
+          for (let k = 1, at = words[0].length; k < words.length; at += words[k].length + 1, k++)
+            if (Math.abs(at - half) < Math.abs(words.slice(0, cut).join(' ').length - half)) cut = k;
+          text.textContent = '';
+          lines = [words.slice(0, cut).join(' '), words.slice(cut).join(' ')].map((line, k) => {
+            const span = svgEl('tspan', k ? {x: attrs.x, dy: '1.15em'} : {});
+            span.textContent = line;
+            text.append(span);
+            return span;
+          });
+          text.setAttribute('y', +attrs.y - 8);
+          attrs.y = +attrs.y - 8;
+        }
+        const moveTo = (x, y) => { text.setAttribute('x', x); text.setAttribute('y', y); lines[1]?.setAttribute('x', x); };
+        // Try spots until the label is clear of every node and every label already placed: on the
+        // arrow, then beside it on the side of the outer idea (an idea on the left gets its label to
+        // the left), nearer that idea, then above or below. A label is slid back inside the map
+        // rather than cut off; if no spot is clear, the one with the least overlap is kept.
+        const base = {x: +attrs.x, y: +attrs.y};
+        const [ox0, oy0] = pos.get(e.from === i ? e.to : e.from);
+        const outward = Math.abs(ox0 - cx) > 8 ? Math.sign(ox0 - cx) : 1;
+        const toward = u => [(ox0 - cx) * u, (oy0 - cy) * u];
+        const spots = side ? [[0, 0, 0, '']] : [[0, 0, 0, ''],
+          ...[0, 0.12, 0.24].flatMap(u => [[...toward(u), 8 * outward, 'out'], [...toward(u), -8 * outward, 'in']]),
+          ...[-16, 16].map(dy => [0, dy, 0, ''])];
+        const anchor = text.style.textAnchor;
+        let best = null;
+        for (const [ax, ay, ox, where] of spots) {
+          text.style.textAnchor = where ? ((where === 'out') === (outward > 0) ? 'start' : 'end') : anchor;
+          moveTo(base.x + ax + ox, base.y + ay);
+          let r;
+          try { r = text.getBBox(); } catch { r = {x: 0, y: 0, width: 0, height: 0}; }
+          const slide = r.x < 2 ? 2 - r.x : r.x + r.width > W - 2 ? W - 2 - r.x - r.width : 0;
+          if (slide) moveTo(base.x + ax + ox + slide, base.y + ay);
+          const rect = {left: r.x + slide - 2, right: r.x + slide + r.width + 2, top: r.y - 1, bottom: r.y + r.height + 1};
+          const hits = blocked.filter(n => overlaps(rect, n)).length;
+          if (!best || hits < best.hits) best = {hits, x: text.getAttribute('x'), y: text.getAttribute('y'), anchor: text.style.textAnchor, rect};
+          if (!hits) break;
+        }
+        moveTo(best.x, best.y);
+        text.style.textAnchor = best.anchor;
+        blocked.push(best.rect);
       }
     });
     nodes.forEach((b, j) => {
-      const [x, y] = pos.get(j);
-      b.style.left = pct(x, W);
-      b.style.top = pct(y, H);
       b.setAttribute('aria-pressed', String(i === j));
       b.classList.toggle('dg-dim', !near.has(j));
     });
   });
+  // Redraw when the stage changes width (window resize, rotation, the page card narrowing).
+  let width = 0;
+  new ResizeObserver(() => {
+    const w = Math.round(f.stage.clientWidth);
+    if (w && w !== width) { width = w; f.paint(); }
+  }).observe(f.stage);
   f.paint();
 }
 

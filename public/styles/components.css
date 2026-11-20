@@ -25,7 +25,7 @@
 .dg-arrow-on{stroke:var(--dg-accent)}
 .dg-edge-label{font-size:15px;fill:var(--dg-muted);text-anchor:middle;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round;transition:opacity .25s,fill .25s}
 .dg-edge-label.dg-on{fill:var(--dg-accent);font-weight:600}
-.dg-map-graph .dg-edge-label{opacity:0}
+.dg-map-graph .dg-edge-label{opacity:0;font-size:13px}
 .dg-map-graph .dg-edge-label.dg-on{opacity:1}
 .dg-hub{position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;gap:2px;color:var(--dg-muted);pointer-events:none}
 .dg-hub-icon{font-size:26px;line-height:1;color:#a8bed5}
@@ -293,6 +293,7 @@
 .dg-node.dg-mark.dg-below{flex-direction:column;transform:translate(-50%,-7px)}
 .dg-spectrum{padding:44px 0 8px}
 .dg-spectrum-track{margin:40px 8px 44px}
+.dg-mark .dg-label{margin-bottom:var(--lift,0)}.dg-mark.dg-below .dg-label{margin:var(--lift,0) 0 0}
 /* Map: only the selected place shows its name. */
 .dg-pin:not([aria-pressed=true]) .dg-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .dg-canvas>.dg-node.dg-pin,.dg-canvas>.dg-node.dg-pin[aria-pressed=true]{transform:translate(-50%,-7px)}
@@ -326,3 +327,6 @@
 .dg-process.dg-vertical .dg-track-list li{justify-content:flex-start}
 .dg-process.dg-vertical .dg-node.dg-stop{flex-direction:row;gap:12px;margin-left:-24px;text-align:left}
 .dg-process.dg-vertical .dg-stop .dg-dot{width:30px;height:30px;font-size:12px}
+.dg-mark .dg-label{position:relative;translate:var(--shift,0) 0}.dg-mark .dg-label::after{content:'';position:absolute;left:calc(50% - var(--shift,0px));top:100%;width:1px;height:var(--lift,0);background:var(--dg-line)}.dg-mark.dg-below .dg-label::after{top:auto;bottom:100%}
+/* A narrow concept map (a phone, or a narrow column on a wide screen) uses compact ideas. */
+.dg-canvas.dg-narrow>.dg-node{font-size:11.5px;padding:6px 9px;max-width:34%}

@@ -56,6 +56,14 @@ function previewFor({phase,text}){
         {label:'Target shown',detail:'The vaccine shows an antigen.',value:0,latitude:null,longitude:null},
         {label:'Memory forms',detail:'Memory cells remain afterwards.',value:0,latitude:null,longitude:null}]}],
       followUps:vaccineFollowUps};
+    if(text==='Add a quiz about vaccines.')return {...preview,title:vaccineTitle,body:['Vaccines teach the immune system to recognise a germ.','Safety: They train immunity without causing the disease.'],
+      components:[{id:'vaccine-steps',type:'timeline',title:'From vaccine to memory',prompt:'',edges:[],items:[
+        {label:'Target shown',detail:'The vaccine shows an antigen.',value:0,latitude:null,longitude:null},
+        {label:'Memory forms',detail:'Memory cells remain afterwards.',value:0,latitude:null,longitude:null}]},
+        {id:'vaccine-quiz',type:'flashcards',title:'Check yourself',prompt:'',edges:[],items:[
+        {label:'What does a vaccine show?',detail:'An antigen.',value:0,latitude:null,longitude:null},
+        {label:'What stays afterwards?',detail:'Memory cells.',value:0,latitude:null,longitude:null}]}],
+      followUps:vaccineFollowUps};
     if(text==='Explain the water cycle with one long label.')return {...preview,title:'The water cycle',body:['Water keeps moving between land, sea and sky.',
       'Energy: The Sun drives evaporation.','Not all water follows the same path: Some stays underground for centuries.','Gravity: It pulls rain back down.'],
       components:[{id:'cycle',type:'cycle',title:'The cycle',prompt:'',edges:[],items:['Evaporation','Condensation','Precipitation'].map(label=>({label,detail:label+'.',value:0,latitude:null,longitude:null}))}]};

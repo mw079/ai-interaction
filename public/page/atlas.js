@@ -130,11 +130,12 @@ export function renderAtlas(target,p,{titleField,onEdit}){
    const button=make('button','atlas-next-button',question);
    button.type='button';
    button.setAttribute('role','tab');
-   button.onclick=()=>{open=open===i?null:i;paint();};
+   button.onclick=()=>{open=open===i?null:i;paint(true);};
    tabs.append(button);
    return button;
   });
-  function paint(){
+  // reveal: an answer the user opened (or that arrives while open) is scrolled into view in the page card.
+  function paint(reveal=false){
    buttons.forEach((button,i)=>button.setAttribute('aria-selected',String(open===i)));
    panel.hidden=open===null;
    if(open===null)return;
@@ -155,6 +156,7 @@ export function renderAtlas(target,p,{titleField,onEdit}){
     const waiting=p.deeper==='error'?'This answer is not available right now.':'Preparing an answer…';
     panel.replaceChildren(make('p','atlas-next-status',waiting),promote);
    }
+   if(reveal&&panel.isConnected)requestAnimationFrame(()=>panel.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}));
   }
   deeperPainters.set(p,paint);
   next.append(tabs,panel);
@@ -166,4 +168,4 @@ export function renderAtlas(target,p,{titleField,onEdit}){
 
 // Repaint the Go deeper panel when prefetched answers arrive, without re-rendering the page.
 const deeperPainters=new WeakMap();
-export function refreshDeeper(page){deeperPainters.get(page)?.();}
+export function refreshDeeper(page){deeperPainters.get(page)?.(true);}

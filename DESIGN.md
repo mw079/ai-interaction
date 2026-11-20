@@ -46,7 +46,7 @@ These rules describe how AI Interaction should look and behave today. The histor
   - a quiet "2 / 5 ‹ ›" stepper that also responds to the arrow keys
 - **Text is short and adds something.** Prose is limited to the intro and up to three "Label: one sentence" takeaways that say what the visual cannot, such as why it matters or a common misconception. The server enforces these limits. Text-first deliverables such as an email are the exception.
 - **Say each idea once.** A second component must offer a different activity. Use a cycle only for real loops; one-way steps are a process.
-- **Scrolling is optional depth.** Bigger topics continue through Go deeper, not longer pages. Go deeper answers are fetched ahead, open in place one at a time, and can be promoted to a full slide.
+- **Scrolling is optional depth.** Bigger topics continue through Go deeper, not longer pages. Go deeper answers are fetched ahead, open in place one at a time (scrolled into view inside the page card), and can be promoted to a full slide. A follow-up that adds a part below the first visual, such as a quiz, scrolls to that part and briefly highlights it, so the change is never off-screen.
 - **An interactive visual must be truthful.** When a control changes a quantity, the drawing changes in proportion, on a fixed scale that keeps the comparison readable. A visual must never redraw itself to fit, which hides the change, and only the numbers moving is not enough. Every interactive simulation has a browser test that measures the drawing itself, not just the readout.
 - **Explanations sit next to what they explain.** Highlighting text shows an explanation that adds something new. It closes with ×, Escape or by clearing the highlight.
 
@@ -73,7 +73,7 @@ These rules describe how AI Interaction should look and behave today. The histor
   - radio dots for single choices, checkboxes for multiple
 - **One primary action at a time.** It's a solid near-black pill. Secondary actions are outlined or plain text.
 - **Calm motion.** Short fades and slides (around 200–450 ms), all turned off when the system asks for reduced motion.
-- **Readable at every size.** Components adapt to their container (visual column, full width or phone).
+- **Readable at every size.** Components adapt to their container (visual column, full width or phone), not just to the window. Labels never overlap each other, their nodes or the edge of the visual: a concept map lays itself out in the stage's real pixels (taller on a narrow stage, long relationship labels wrap onto two lines), and a scale stacks crowded labels in a second row with a thin stem to their dot.
 - **Text meets WCAG AA:** at least 4.5:1 on white and on the grey panels; the blue accent is 6.9:1 on white. Disabled controls, decorative icons and placeholders are the only exceptions.
 - **Accessible names stay clean.** Decorative arrows are hidden from screen readers. Never add text to a control's name through CSS.
 

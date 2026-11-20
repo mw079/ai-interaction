@@ -255,3 +255,121 @@ test('map: the coastline data loads on demand and every map draws its land',asyn
   await expect(page.locator('.control-map .dg-land').first()).toBeAttached();
   await expect.poll(()=>shortest('.control-map .dg-land')).toBeGreaterThan(10000);     // the place picker
 });
+
+// The map is drawn in the stage's real pixels: at any width, every arrow runs between node outlines
+// and every label stays clear of the nodes, of the other labels and of the map's edges.
+test('concept map and labelled diagram: arrows and labels never overlap the ideas, at this width',async({page})=>{
+  for(const name of ['Concept map','Labelled diagram']){
+    const c=card(page,name),count=data(name).items.length;
+    for(let i=0;i<count;i++){
+      await c.locator('.dg-node').nth(i).click();
+      const problems=await c.locator('.dg-stage').evaluate(stage=>{
+        const svg=stage.querySelector('svg'),frame=svg.getBoundingClientRect(),k=frame.width/svg.viewBox.baseVal.width;
+        const nodes=[...stage.querySelectorAll('.dg-node')].map(n=>n.getBoundingClientRect());
+        const hit=(a,b)=>a.left<b.right-1&&b.left<a.right-1&&a.top<b.bottom-1&&b.top<a.bottom-1;
+        const inside=(x,y)=>nodes.some(r=>x>r.left+1&&x<r.right-1&&y>r.top+1&&y<r.bottom-1);
+        const out=[];
+        for(const p of stage.querySelectorAll('.dg-link')){
+          const a=p.getPointAtLength(0),b=p.getPointAtLength(p.getTotalLength());
+          if(inside(frame.left+a.x*k,frame.top+a.y*k)||inside(frame.left+b.x*k,frame.top+b.y*k))out.push('arrow end under a node');
+          if(p.getTotalLength()*k<16)out.push('arrow too short to read');
+        }
+        const labels=[...stage.querySelectorAll('.dg-edge-label.dg-on')];
+        labels.forEach((t,j)=>{
+          const r=t.getBoundingClientRect();
+          if(nodes.some(n=>hit(r,n)))out.push(t.textContent+' covers a node');
+          if(labels.some((o,m)=>m!==j&&hit(r,o.getBoundingClientRect())))out.push(t.textContent+' covers a label');
+          if(r.left<frame.left-1||r.right>frame.right+1)out.push(t.textContent+' leaves the map');
+          if(r.height<12)out.push(t.textContent+' is too small');
+        });
+        return out;
+      });
+      expect(problems,`${name}, idea ${i+1}`).toEqual([]);
+    }
+  }
+});
+
+test('spectrum: eight crowded markers keep their positions and their labels never overlap',async({page})=>{
+  for(const width of [600,340]){
+    const result=await page.evaluate(async width=>{
+      const {renderComponent}=await import('/components/renderer.js');
+      const host=document.createElement('div');host.style.width=width+'px';document.body.prepend(host);
+      const values=[0,14,21,46,50,57,59,89];
+      renderComponent(host,{id:'ph',type:'spectrum',title:'pH',prompt:'Acidic | Alkaline',
+        items:values.map((value,i)=>({label:['Battery acid','Lemon juice','Vinegar','Milk','Pure water','Seawater','Baking soda solution','Household bleach'][i],detail:'x',value}))},{edits:{}},{onEdit(){},ask(){}});
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+      const stage=host.querySelector('.dg-stage').getBoundingClientRect(),track=host.querySelector('.dg-spectrum-track').getBoundingClientRect();
+      const labels=[...host.querySelectorAll('.dg-mark .dg-label')].map(l=>l.getBoundingClientRect());
+      const dots=[...host.querySelectorAll('.dg-mark-dot')].map(d=>{const r=d.getBoundingClientRect();return (r.x+r.width/2-track.x)/track.width*100;});
+      const hit=(a,b)=>a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom;
+      host.remove();
+      return {overlaps:labels.filter((a,i)=>labels.some((b,j)=>j!==i&&hit(a,b))).length,
+        outside:labels.filter(l=>l.left<stage.left-1||l.right>stage.right+1).length,
+        offset:Math.max(...dots.map((d,i)=>Math.abs(d-values[i])))};
+    },width);
+    expect(result.overlaps,`labels overlap at ${width}px`).toBe(0);
+    expect(result.outside,`labels leave the scale at ${width}px`).toBe(0);
+    expect(result.offset).toBeLessThan(1);
+  }
+});
+
+
+test('concept map: at any width, arrows reach their ideas and long labels stay apart and inside the map',async({page})=>{
+  for(const width of [860,600,300]){
+    const problems=await page.evaluate(async width=>{
+      const {renderComponent}=await import('/components/renderer.js');
+      const host=document.createElement('div');host.style.width=width+'px';document.body.prepend(host);
+      renderComponent(host,{id:'inflation',type:'graph',title:'How the forces connect',prompt:'',
+        items:['Strong demand','Supply shocks','Expectations','Inflation','Higher rates'].map(label=>({label,detail:'x',value:0})),
+        edges:[{from:0,to:3,label:'pushes prices up'},{from:4,to:0,label:'restrains spending'},{from:1,to:3,label:'raises costs'},{from:2,to:3,label:'feed wage demands'}]},{edits:{}},{onEdit(){},ask(){}});
+      const out=[];
+      for(let i=0;i<5;i++){
+        host.querySelectorAll('.dg-node')[i].click();
+        await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+        const frame=host.querySelector('svg').getBoundingClientRect();
+        const nodes=[...host.querySelectorAll('.dg-node')].map(n=>n.getBoundingClientRect());
+        const labels=[...host.querySelectorAll('.dg-edge-label.dg-on')].map(t=>t.getBoundingClientRect());
+        const hit=(a,b)=>a.left<b.right-1&&b.left<a.right-1&&a.top<b.bottom-1&&b.top<a.bottom-1;
+        // Each arrow end lies just outside a node: drawing and nodes share one coordinate system.
+        const svg=host.querySelector('svg'),m=svg.getScreenCTM();
+        const gap=(x,y)=>Math.min(...nodes.map(r=>Math.hypot(Math.max(r.left-x,0,x-r.right),Math.max(r.top-y,0,y-r.bottom))));
+        for(const p of host.querySelectorAll('.dg-link')){
+          for(const at of [0,p.getTotalLength()]){
+            const q=p.getPointAtLength(at).matrixTransform(m);
+            if(gap(q.x,q.y)>16)out.push(`idea ${i+1}: an arrow ends ${Math.round(gap(q.x,q.y))}px from any idea`);
+          }
+        }
+        labels.forEach((r,j)=>{
+          if(nodes.some(n=>hit(r,n)))out.push(`idea ${i+1}: label covers a node`);
+          if(labels.some((o,m)=>m!==j&&hit(r,o)))out.push(`idea ${i+1}: labels overlap`);
+          if(r.left<frame.left-1||r.right>frame.right+1)out.push(`idea ${i+1}: label leaves the map`);
+        });
+      }
+      host.remove();
+      return out;
+    },width);
+    expect(problems,`${width}px`).toEqual([]);
+  }
+});
+
+test('concept map: ideas on the ring never overlap each other',async({page})=>{
+  for(const width of [860,600,300]){
+    const overlaps=await page.evaluate(async width=>{
+      const {renderComponent}=await import('/components/renderer.js');
+      const host=document.createElement('div');host.style.width=width+'px';document.body.prepend(host);
+      renderComponent(host,{id:'forces',type:'graph',title:'Forces',prompt:'',
+        items:['Strong demand','Supply shocks','Expectations','Inflation','Higher rates','Slower spending'].map(label=>({label,detail:'x',value:0})),
+        edges:[{from:0,to:3,label:'pushes'},{from:5,to:0,label:'eases'}]},{edits:{}},{onEdit(){},ask(){}});
+      let count=0;
+      for(let i=0;i<6;i++){
+        host.querySelectorAll('.dg-node')[i].click();
+        await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+        const nodes=[...host.querySelectorAll('.dg-node')].map(n=>n.getBoundingClientRect());
+        count+=nodes.filter((a,j)=>nodes.some((b,k)=>k>j&&a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom)).length;
+      }
+      host.remove();
+      return count;
+    },width);
+    expect(overlaps,`${width}px`).toBe(0);
+  }
+});

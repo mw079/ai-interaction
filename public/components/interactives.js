@@ -560,7 +560,7 @@ function renderSpectrum(content, block, saved, onEdit, detail) {
   const track = el('div', 'dg-spectrum-track');
   const marks = order.map((orig, k) => {
     const item = block.items[orig];
-    const m = button('dg-node dg-mark' + (k % 2 ? ' dg-below' : ''), '', () => f.select(k));
+    const m = button('dg-node dg-mark', '', () => f.select(k));
     m.append(el('span', 'dg-mark-dot'), el('span', 'dg-label', item.label));
     m.style.left = clamp(item.value, 0, 100) + '%';
     track.append(m);
@@ -569,6 +569,34 @@ function renderSpectrum(content, block, saved, onEdit, detail) {
   const ends = el('div', 'dg-spectrum-ends');
   ends.append(el('span', '', low), el('span', '', high));
   f.stage.append(track, ends);
+  // Labels never overlap: each goes in the first free row (above the track, then below, then a
+  // second row further out on each side, joined to its dot by a thin stem).
+  const place = () => {
+    const width = track.clientWidth;
+    if (!width) return;
+    const rows = [-Infinity, -Infinity, -Infinity, -Infinity];
+    let lift = 0;
+    const tiers = marks.map(m => {
+      const label = m.querySelector('.dg-label'), half = label.offsetWidth / 2;
+      // A label near either end shifts inward to stay over the scale; its dot stays where it is.
+      const dot = parseFloat(m.style.left) / 100 * width, x = Math.min(Math.max(dot, half - 8), width + 8 - half);
+      label.style.setProperty('--shift', (x - dot) + 'px');
+      lift = Math.max(lift, label.offsetHeight + 6);
+      const free = rows.findIndex(end => x - half >= end + 6);
+      const tier = free >= 0 ? free : rows.indexOf(Math.min(...rows));
+      rows[tier] = x + half;
+      return tier;
+    });
+    marks.forEach((m, k) => {
+      m.classList.toggle('dg-below', tiers[k] % 2 === 1);
+      m.querySelector('.dg-label').style.setProperty('--lift', (tiers[k] > 1 ? lift : 0) + 'px');
+    });
+    // Room only where labels are: no empty band below the scale when every label fits above it.
+    track.style.marginBottom = (tiers.includes(1) ? 44 : 16) + (tiers.includes(3) ? lift : 0) + 'px';
+    track.style.marginTop = 40 + (tiers.includes(2) ? lift : 0) + 'px';
+  };
+  let width = 0;
+  new ResizeObserver(() => { if (track.clientWidth !== width) { width = track.clientWidth; place(); } }).observe(track);
   f.onPaint(i => marks.forEach((m, j) => m.setAttribute('aria-pressed', String(i === j))));
   f.paint();
 }

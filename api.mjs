@@ -136,7 +136,7 @@ if(data.status!=='completed')return json({retryable:false,error:'The preview was
       preview={kind:'outline',title:'Local help',interpretation:'',audience:'',question:'',phrase:'',options:[],body:[preview.answer],nodes:[],rows:[],information:[],completion:'',replacement:''};
     }
     if(tidy)preview=tidyPage(preview);
-    if(!validPreview(preview))return json({retryable:false,error:'The generated preview exceeded supported limits. Try a simpler request.'},502);
+    if(!validPreview(preview))return json({retryable:false,error:'The answer did not fit the page format. Your page is unchanged; try again or rephrase.'},502);
     if(recipe&&!matchesSlideRecipe(preview,recipe))return json({retryable:true,error:'The model missed the selected slide format. Try again.'},502);
     return json({preview,model,elapsedMs:Date.now()-start,usage:{input_tokens:data.usage?.input_tokens,output_tokens:data.usage?.output_tokens,total_tokens:data.usage?.total_tokens}});
 }

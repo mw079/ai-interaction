@@ -429,6 +429,7 @@ test('go deeper tabs show prefetched answers in place and can still open a full 
   await expect(page.getByText(deeperAnswer(vaccineFollowUps[1]))).toBeVisible();
   await page.getByRole('tab',{name:vaccineFollowUps[0]}).click();
   await expect(page.getByText(deeperAnswer(vaccineFollowUps[0]))).toBeVisible();
+  await expect(page.getByText(deeperAnswer(vaccineFollowUps[0]))).toBeInViewport({ratio:1}); // scrolled into view in the page card
   await expect(page.getByText(deeperAnswer(vaccineFollowUps[1]))).toBeHidden();
   await page.getByRole('tab',{name:vaccineFollowUps[0]}).click();
   await expect(page.getByText(deeperAnswer(vaccineFollowUps[0]))).toBeHidden();
@@ -486,3 +487,13 @@ test('the Kepler orbit is drawn to the physics: shape, focus, timing, equal area
   expect(areas).toHaveLength(2);
   near(areas[0]/areas[1],1,0.02);                     // second law: equal areas in equal times
 });
+
+test('a follow-up that adds a part below the first visual scrolls to it and announces it',async({page})=>{
+  await send(page,'Explain how vaccines work.',vaccineTitle);
+  await send(page,'Add a quiz about vaccines.',vaccineTitle);
+  const quiz=page.locator('[data-component-id="vaccine-quiz"]');
+  await expect(quiz).toBeVisible();
+  await expect.poll(()=>quiz.evaluate(el=>{const r=el.getBoundingClientRect(),f=document.querySelector('.paper').getBoundingClientRect();return r.top>=f.top-1&&r.top<f.bottom-40;})).toBe(true);
+  await expect(page.locator('#page-update')).toHaveText('Check yourself added');
+});
+

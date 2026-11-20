@@ -14,7 +14,7 @@ import {renderControl,formatPreview} from './composer/controls.js';
 import {positionPopover} from './composer/popover.js';
 import {demoPreview, clarificationFor, quickAnswer, compactLiveAnswer, liveClarificationFor, isIncompleteComparison, draftWordCount, completedDraft, PREVIEW_WORD_STEP, extendsPreview, workingDraftPreview, draftAnswersQuestion, projectileLaunch} from './shared/model.js';
 const $ = id => document.getElementById(id);
-const state = {live:false, limited:false, composing:false, revision:0, format:'Auto', audience:'', controller:null, timer:null, proposal:null, component:null, history:[], uncertainty:null, popoverTimer:null, clarification:null, openClarification:null, popoverOrigin:null, suppressed:null, customDrafts:new Map(), serverKey:false, pendingSend:false, pageController:null, pageRequest:0, taskGoal:'', pageVersion:0, information:[], previousDraft:'', activeInformation:null,confirmedChoices:[],answers:[],intentOverride:'',slideChoice:undefined};
+const state = {live:false, limited:false, composing:false, revision:0, format:'Auto', audience:'', controller:null, timer:null, proposal:null, component:null, history:[], uncertainty:null, popoverTimer:null, clarification:null, openClarification:null, popoverOrigin:null, suppressed:null, customDrafts:new Map(), pendingSend:false, pageController:null, pageRequest:0, taskGoal:'', pageVersion:0, information:[], previousDraft:'', activeInformation:null,confirmedChoices:[],answers:[],intentOverride:'',slideChoice:undefined};
 const node=element;
 const {modelPayload,callPreview}=createApiClient({state,pageContext:()=>pageContext(),status:(text,error)=>status(text,error),onLimit:message=>showLimit(message)});
 let composerExperience,workspace;
@@ -216,7 +216,8 @@ function openIntentPopover(origin='click',sourceAnchor=null){
         closeIntentPopover({suppress:true});
         renderUncertainty();
         composerExperience?.onMirrorRendered();
-        $('live-question').querySelector('button').focus();
+        // The question row goes away once the format is decided, so focus returns to the draft.
+        $('intent-input').focus();
       };
       target.append(button);
     };
@@ -334,6 +335,9 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
     if(scope)draft.title=$('document-title').value;
     const p={...structuredClone(draft),revision:state.revision,baseVersion:version,source:data.model,physics:scope?draft.physics:projectileLaunch(draft.launch),edits:scope?draft.edits:{},selected:scope?draft.selected:0};
     if(!state.component||version===state.pageVersion){
+      // A follow-up that adds a part below the first visual (a quiz, a second chart) scrolls to it.
+      const earlier=state.component&&new Set((state.component.components||[]).map(c=>c.id));
+      const added=!scope&&earlier?(p.components||[]).slice(1).find(c=>!earlier.has(c.id)):null;
       if(state.component){timeline.save(capturePage());snapshot(scope?'Before focused change':'Before new page');}
       state.component=p;$('document-title').value=p.title;
       if(!scope)directEdits=new DirectEditUndo();
@@ -341,7 +345,8 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
       else if(scope.id.startsWith('block:'))directEdits.forget('practice:'+scope.id.slice(6));
       state.proposal=null;state.pageVersion++;
       renderActive();renderProposal();appendPage();renderPageNavigation();workspace?.reading();
-      showUpdatedPart(scope?.id,scope?.label);
+      if(added)showUpdatedPart('block:'+added.id,added.title,false,'added');
+      else showUpdatedPart(scope?.id,scope?.label);
     }
     else{p.baseVersion=state.pageVersion;state.proposal=p;renderProposal();}
     status(state.proposal?'Updated page ready to review. Your existing page is preserved.':'Your page is ready. Edit it directly or ask for a change below.');
@@ -396,7 +401,7 @@ function appendPage(){
  if(!$('history-panel').hidden)renderHistory();
 }
 function renderPageNavigation(){const b=$('page-back'),f=$('page-forward');if(!b)return;b.disabled=!timeline.canBack;f.disabled=!timeline.canForward;$('page-position').textContent=timeline.index<0?'':`${timeline.index+1} / ${timeline.pages.length}`;updateUndoButton();}
-function showUpdatedPart(id,label,restoreFocus=false){
+function showUpdatedPart(id,label,restoreFocus=false,change='updated'){
  const version=state.pageVersion;
  requestAnimationFrame(()=>{
   if(version!==state.pageVersion)return;
@@ -421,7 +426,7 @@ function showUpdatedPart(id,label,restoreFocus=false){
   }
   section.classList.add('page-updated');
   setTimeout(()=>section.classList.remove('page-updated'),1800);
-  $('page-update').textContent=label?label+' updated':'Passage updated';
+  $('page-update').textContent=label?label+' '+change:'Passage updated';
  });
 }
 function restorePage(page){
@@ -578,7 +583,7 @@ $('dismiss-button').onclick=()=>{state.proposal=null;renderProposal();};
 // History opens directly under the toolbar that holds its button, so it is always in view.
 function setHistoryOpen(open){$('history-panel').hidden=!open;$('history-button').setAttribute('aria-expanded',String(open));if(open){renderHistory();$('close-history').focus({preventScroll:true});}}
 $('history-button').onclick=()=>setHistoryOpen($('history-panel').hidden);$('close-history').onclick=()=>{setHistoryOpen(false);$('history-button').focus();};
-$('download-button').onclick=()=>{const data={version:1,title:$('document-title').value,notes:$('document-input').value,component:state.component};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=node('a');a.href=url;a.download='ai-interaction-page.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status('Exported page data as JSON. API keys are never included.');};
+$('download-button').onclick=()=>{const data={version:1,title:$('document-title').value,notes:$('document-input').value,component:state.component};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=node('a');a.href=url;a.download='ai-interaction-page.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status('Exported page data as JSON.');};
 $('about-button').onclick=$('page-about-button').onclick=()=>{closeIntentPopover();$('about-dialog').showModal();};
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());
 $('active-component').addEventListener('input',event=>{if(event.target.closest('.page-assistant'))return;state.pageVersion++;if(state.proposal?.baseVersion!==undefined)renderProposal();});

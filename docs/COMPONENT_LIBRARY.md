@@ -1,6 +1,6 @@
 # Atlas component library
 
-The model selects up to two visual blocks per page. A block has a stable `id`, a supported `type`, a title, a `prompt`, 2–6 items (`label`, `detail`, numeric `value`, and `latitude`/`longitude`, which are null except for maps), and up to eight indexed connections (`from`, `to`, `label`). The server validates this contract; the browser maps it to trusted renderers. No generated HTML, event handlers or model-supplied code is executed.
+The model selects up to two visual blocks per page. A block has a stable `id`, a supported `type`, a title, a `prompt`, 2–6 items (up to 8 for chart, spectrum, map and timeline, where data often grows by one) (`label`, `detail`, numeric `value`, and `latitude`/`longitude`, which are null except for maps), and up to eight indexed connections (`from`, `to`, `label`). The server validates this contract; the browser maps it to trusted renderers. No generated HTML, event handlers or model-supplied code is executed.
 
 There are 24 block types:
 

@@ -371,6 +371,7 @@ test('a chosen way to explore it is listed under What I understand and can be ch
   await page.locator('#popover-options').getByRole('button',{name:/See the steps/}).click();
   await expect(question).toBeHidden();                                   // decided: not asked again
   await expect(page.locator('#live-question')).toBeHidden();             // and the row does not echo the answer
+  await expect(draft(page)).toBeFocused();                                // typing can go on without a click
   await page.getByRole('button',{name:'Review intent'}).click();
   const details=page.getByRole('dialog',{name:'Your intent and editable details'});
   const choice=details.getByRole('button',{name:'How would you like to explore this?: See the steps'});

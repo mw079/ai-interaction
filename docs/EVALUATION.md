@@ -76,3 +76,21 @@ Twelve drafts typed live (real model), counting whether a live question appeared
 | Three-question quiz about the third law | none | asked | none |
 
 Questions came with three options each, e.g. "How many quiz questions?" 3, 6 or 10.
+
+## Full review and manual testing, 2026-11-20
+
+New prompts typed by hand in the browser at 820 px and on a phone (375 px): a heat pump in winter (loop, then "Add a comparison with another heating system" → live question "Which heating system?" → electric resistance), inflation and central banks (concept map), the immune system (concept map, then "Add a short quiz" → "How many questions?" → 3), and the pH scale. Highlighting, Undo, Back, History and Go deeper were exercised on the live pages. Found and fixed:
+
+| Found | Fix |
+| --- | --- |
+| Choosing "How would you like to explore this?" left keyboard focus nowhere, so typing went nowhere until a click | Focus returns to the draft |
+| A Go deeper answer opened below the fold of the page card | It scrolls into view |
+| A follow-up that added a quiz below the visual left the page at the top, so the change was off-screen | The page scrolls to the added part, highlights it and announces "… added" |
+| An over-long live answer was cut mid-phrase ("…raise interest…") | It ends at the last clause break as a whole sentence |
+| Concept maps were drawn at a fixed 600-unit size: on a phone, labels shrank to ~8 px and arrows disappeared under the pills; on a stage wider than ~660 px the drawing and the ideas no longer lined up | The map is laid out in real pixels (taller on narrow stages, compact ideas), arrows stop at each idea's outline, and each label takes the first spot clear of ideas, other labels and the map's edge, wrapping long ones onto two lines |
+| "Add seawater" to a six-item pH scale failed validation (6 items maximum), so the whole request was refused | Chart, spectrum, map and timeline may grow to 8 when the user adds to them; new components still start at 6 or fewer, and the model is told to merge rather than exceed a limit |
+| Crowded scale labels could overlap (water 50, seawater 57, baking soda 59) | Labels take the first free row, with a second row and a thin stem when crowded; end labels stay over the scale |
+
+Every fix has a browser test that measures the result, and the new tests fail on the previous code (the Go deeper scroll check passes either way at the test window size). Live: page quality 10 prompts, follow-ups 26 steps and `test:luna` were re-run on the final code (results below).
+
+Final re-run on the fixed code: follow-ups **48/48 checks across 26 steps** (pH "Add seawater" now passes; before the fixes 45/48 and 43/46), pages 98 % (69/70; the air page repeated one fact between intro and visual, model variance seen before), and `test:luna` answered all three prompts in under 2.1 s. Stating "up to 8" in the catalog made the model fill new components to 7–8 items, so it now says new components start at 6 or fewer: four pH and three WWI pages then all came back with 6 items.
