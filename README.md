@@ -44,32 +44,15 @@ flowchart LR
 
 The model returns data that must pass a strict schema, never HTML or code. The app draws it with its own 24 page components (maps, timelines, charts, quizzes and more) and 24 picker types for the highlighted details.
 
-## Develop and test
+## Test
 
-`npm ci` installs Playwright for the tests.
-
-| Command | What it does |
-| --- | --- |
-| `npm test` | Unit and API tests with mocked model responses |
-| `PLAYWRIGHT_CHANNEL=chrome npm run test:browser` | Browser tests at desktop and phone width |
-| `npm run eval:journeys` | Live end-to-end journeys in 20 domains, with screenshots |
-| `npm run eval:pages` | Live page quality on 15 prompts |
-| `npm run eval:followups` | Live follow-up changes, checked against reference data |
-| `npm run eval:pickers` | Live check of which picker each detail gets |
-| `npm run test:luna` | Live checks of three Luna answers |
-
-The `eval` and `test:luna` commands need the app running with a key. With the server running, `/__dev/components` and `/__dev/controls` show every building block.
-
-## Project layout
-
+```sh
+npm ci                                            # installs Playwright
+npm test                                          # unit and API tests
+PLAYWRIGHT_CHANNEL=chrome npm run test:browser    # browser tests at desktop and phone width
 ```
-public/          the browser app: composer/, page/, components/, shared/, styles/, fonts/
-api.mjs          /api endpoint: checks, daily limit, OpenAI calls, validation
-prompts.mjs      model input and instructions for each step
-server.mjs       local server (build.mjs bundles the app at startup)
-dev/             component galleries and live evaluations
-tests/           unit tests; tests/browser/ for Playwright
-```
+
+Live evaluations (`npm run eval:*`, in `dev/`) need the app running with a key.
 
 ## Privacy
 
