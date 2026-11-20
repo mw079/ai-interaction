@@ -51,8 +51,12 @@ export function setupComposerExperience({state,changed,request,openDetail,closeD
   accept.setAttribute('aria-label','Accept suggestion: '+completion);ghostText.textContent=' '+completion;ghostText.hidden=ghost.hidden;
   document.querySelector('.input-mirror-layer').style.height=input.clientHeight+'px';const mirror=$('input-mirror');if(!mirror.contains(ghostText))mirror.append(ghostText);
   const wrapsOutsideField=!ghost.hidden&&mirror.scrollHeight>input.scrollTop+input.clientHeight+1;
+  // With a page open, a completion that does not fit in the field is skipped (Tab hint included, so
+  // Tab cannot insert unseen text): a separate line for it would push the page card.
+  const skipWrapped=wrapsOutsideField&&document.body.classList.contains('page-open');
+  if(skipWrapped){ghost.hidden=true;ghostText.hidden=true;}
   if(wrapsOutsideField)ghostText.hidden=true;
-  wrappedCompletion.hidden=!wrapsOutsideField;
+  wrappedCompletion.hidden=!wrapsOutsideField||skipWrapped;
   wrappedCompletion.textContent=wrapsOutsideField?completion:'';
   trigger.hidden=false;trigger.style.visibility=summary?'visible':'hidden';
   // A decided format is listed under What I understand; the question row only ever holds an open question.

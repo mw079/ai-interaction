@@ -423,3 +423,24 @@ test('with a page open, the page card is a rounded box that scrolls inside and s
     return {radius:s.borderBottomLeftRadius,scrolls:s.overflowY==='auto'&&p.scrollHeight>p.clientHeight,aboveField:p.getBoundingClientRect().bottom<=c.top,line:getComputedStyle(document.querySelector('.intent-panel')).borderTopWidth,windowScroll:document.documentElement.scrollHeight-innerHeight};});
   expect(look).toEqual({radius:'18px',scrolls:true,aboveField:true,line:'0px',windowScroll:0});
 });
+
+test('with a page open, a live question appearing or going away does not move the page card',async({page})=>{
+  await draft(page).fill('Explain all three Kepler laws.');
+  await page.getByRole('button',{name:'Explore interactively',exact:true}).click();
+  await expect(page.getByRole('textbox',{name:'Document title'})).not.toHaveValue('');
+  await draft(page).click();
+  await page.evaluate(()=>Promise.all(document.getAnimations().map(a=>a.finished)));
+  const card=page.locator('.paper');
+  const before=await card.boundingBox();
+  await draft(page).pressSequentially(japanCheckpoint+' ');
+  await advancePreview(page);
+  const question=page.getByRole('button',{name:'Clarifying question: '+japanQuestion});
+  await expect(question).toBeInViewport();
+  await expectSameGeometry(card,before);                          // the question used reserved space
+  await draft(page).fill('');
+  await draft(page).pressSequentially('Add a worked example.');
+  await advancePreview(page);
+  await expect(question).toBeHidden();
+  await expect(page.getByRole('button',{name:/^Clarifying question/})).toHaveCount(0);   // the empty row is not announced
+  await expectSameGeometry(card,before);
+});

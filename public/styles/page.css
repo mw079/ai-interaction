@@ -320,3 +320,11 @@ body.intent-first[data-experience=unified].page-open .paper,
 body.intent-first[data-experience=unified].page-open.composer-active .paper{flex:0 1 auto;min-height:0;max-height:none;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 body.intent-first[data-experience=unified].page-open .intent-panel,
 body.intent-first[data-experience=unified].page-open.composer-active .intent-panel{border-top:0;padding-top:12px}
+/* The question row is reserved too while typing (two lines, the question sitting just above the
+   field), so a question appearing or going away never moves the page card. With no question the
+   row is an empty, invisible space; visibility:hidden also keeps it out of the accessibility tree. */
+body.intent-first[data-experience=unified].page-open.composer-active .intent-panel>.live-question{display:flex!important;flex-direction:column;justify-content:flex-end;min-height:58px;box-sizing:border-box}
+body.intent-first[data-experience=unified].page-open.composer-active .intent-panel>.live-question[hidden]{visibility:hidden}
+/* With a page open, typing already cancels a running preview, so "Pause preview" would only add a
+   control that appears and disappears in the dock and moves the card. It stays on the start screen. */
+body.intent-first[data-experience=unified].page-open #cancel-button{display:none!important}
