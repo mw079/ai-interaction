@@ -17,3 +17,6 @@ artifacts/
 
 # Local editor and assistant settings
 .claude/
+
+# Stray screenshots from manual checks
+/*.png
