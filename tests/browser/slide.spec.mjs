@@ -115,7 +115,7 @@ test('an answer opening under the intro does not move the intro',async({page})=>
   expect(Math.abs(await top()-before)).toBeLessThanOrEqual(1);
 });
 
-test('over the daily limit, the try-tomorrow card appears and the current page stays',async({page})=>{
+test('over the daily limit, only the demo video and one sentence are shown; nothing can be typed or sent',async({page})=>{
   await send(page,'Create an evaporation slide.',evaporationTitle);
   server.setDailyLimit(0);                                              // today's allowance is used up
   try{
@@ -128,13 +128,15 @@ test('over the daily limit, the try-tomorrow card appears and the current page s
     await expect(button(page,'Explore interactively')).toBeDisabled();  // ...and Send is off
     await expect(card).toHaveText('Today’s limit has been reached. Try again tomorrow.');
     await expect.poll(()=>page.locator('#limit-video').evaluate(video=>!video.paused&&video.currentTime>0)).toBe(true);   // the demo video plays
-    await expect(title(page)).toHaveValue(evaporationTitle);            // the page is kept
+    const cover=await card.boundingBox(),view=page.viewportSize();
+    expect([cover.width,cover.height]).toEqual([view.width,view.height]);   // it covers the screen: nothing else shows
+    await expect(page.getByRole('textbox',{name:'Your next instruction'})).toBeDisabled();
     await expect(page.locator('#status')).not.toContainText('limit');   // no second, duplicate message
     await page.reload();                                                 // the server remembers the count
     await expect(card).toBeVisible();
     await expect(page.locator('body')).not.toHaveClass(/\blive\b/);
-    await page.getByRole('textbox',{name:'Your next instruction'}).fill('Create a triangle slide.');
-    await expect(button(page,'Explore interactively')).toBeDisabled();  // typing does not turn Send back on
+    await expect(page.getByRole('textbox',{name:'Your next instruction'})).toBeDisabled();   // also after a reload
+    await expect(button(page,'Explore interactively')).toBeDisabled();
   }finally{server.setDailyLimit(Infinity);}
 });
 
