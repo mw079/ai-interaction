@@ -689,10 +689,12 @@ window.addEventListener('pagehide',()=>{stop();state.pageController?.abort();});
 // How it works: the demo video in a dialog, with sound. It closes with ×, Escape or a click
 // outside the video, and focus returns to the button.
 const demoDialog=$('demo-dialog'),demoVideo=$('demo-video');
-$('how-it-works').onclick=()=>{demoDialog.showModal();demoVideo.currentTime=0;demoVideo.play().catch(()=>{});};
+let demoOpener=null;
+const openDemo=event=>{demoOpener=event.currentTarget;demoDialog.showModal();demoVideo.currentTime=0;demoVideo.play().catch(()=>{});};
+$('how-it-works').onclick=openDemo;$('start-demo').onclick=openDemo;   // in the page's top bar, and on the empty start screen
 $('close-demo').onclick=()=>demoDialog.close();
 demoDialog.addEventListener('click',event=>{if(event.target===demoDialog)demoDialog.close();});
-demoDialog.addEventListener('close',()=>{demoVideo.pause();$('how-it-works').focus();});
+demoDialog.addEventListener('close',()=>{demoVideo.pause();demoOpener?.focus();});
 // Live help needs the server's key; a visitor over today's limit sees the try-tomorrow card instead.
 function showLimit(message){
   state.live=false;state.limited=true;stop();composerExperience?.stop();state.pageController?.abort();hidePageProgress();
