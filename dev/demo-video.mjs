@@ -9,7 +9,7 @@
 //
 // How: Playwright opens a wrapper page on the app's own origin (so the app's frame-ancestors rule
 // allows it) that draws the look (gradient, a window around the real app, a cursor with click
-// rings, a title card with the name at the start and end, gentle zoom; no text during the video) and drives the app inside it. Chrome streams frames;
+// rings, gentle zoom, a short end card with the name; no text during the video) and drives the app inside it. Chrome streams frames;
 // waits for a page are compressed to a few seconds, live help is shown at its real speed. ffmpeg
 // turns the frames into video and adds music from demo-music.mjs.
 import {execFileSync} from 'node:child_process';
@@ -23,14 +23,14 @@ import {demoMusic} from './demo-music.mjs';
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const BASE = (process.env.DEMO_URL || 'http://127.0.0.1:4317').replace(/\/$/, '');
 const W = 1920, H = 1080, WIN = {x: 160, y: 60, w: 1600, h: 900}, BAR = 40;
-const SPEED = Number(process.env.DEMO_SPEED || 1.25);
+const SPEED = Number(process.env.DEMO_SPEED || 1.3);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 const WRAPPER = `<!doctype html><html><head><meta charset="utf-8"><style>
 html,body{margin:0;width:${W}px;height:${H}px;overflow:hidden;background:#13283d;font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif}
 #bg{position:absolute;inset:0;background:radial-gradient(120% 95% at 14% 16%,#a9c4e2 0%,#5f8bb8 30%,#2f5d8a 60%,#0f2135 100%)}
 #grain{position:absolute;inset:0;opacity:.22;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
-#stage{position:absolute;inset:0;transition:transform 1.1s cubic-bezier(.22,1,.36,1),opacity .9s ease}
+#stage{position:absolute;inset:0;transition:transform .85s cubic-bezier(.22,1,.36,1),opacity .9s ease}
 #win{position:absolute;left:${WIN.x}px;top:${WIN.y}px;width:${WIN.w}px;height:${WIN.h}px;border-radius:14px;overflow:hidden;background:#f6f6f6;box-shadow:0 40px 90px rgba(5,15,30,.55),0 0 0 1px rgba(255,255,255,.14)}
 #bar{height:${BAR}px;display:flex;align-items:center;gap:8px;padding:0 16px;background:#f2f2f2;border-bottom:1px solid #e2e2e2;font-size:14px;font-weight:600;color:#3a3a3a}
 .dot{width:12px;height:12px;border-radius:50%}.r{background:#ff5f57}.y{background:#febc2e}.g{background:#28c840}
@@ -44,13 +44,12 @@ body.titles #cursor{opacity:0}
 .card.on{opacity:1}
 .card h1{margin:0;font-size:92px;font-weight:800;letter-spacing:-.035em}
 body.titles #stage{opacity:0;transform:scale(.97)}
-</style></head><body class="titles">
+</style></head><body>
 <div id="bg"></div><div id="grain"></div>
 <div id="stage"><div id="win">
   <div id="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">AI Interaction</span><span class="url">live demo</span></div>
   <iframe id="app"></iframe>
 </div></div>
-<div id="intro" class="card on"><h1>AI Interaction</h1></div>
 <div id="outro" class="card"><h1>AI Interaction</h1></div>
 <svg id="cursor" width="30" height="34" viewBox="0 0 30 34"><path d="M3 2 L3 26 L9.5 20 L14 31 L18.5 29 L14 18.5 L23 18.5 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
 </body></html>`;
@@ -103,7 +102,7 @@ async function main() {
   // ---- Wrapper helpers.
   const js = fn => page.evaluate(fn);
   // No on-screen text during the video: a short pause where a step begins.
-  const beat = () => sleep(700);
+  const beat = () => sleep(400);
   let cursor = {x: W / 2, y: H / 2};
   const moveTo = async (x, y) => {
     const d = Math.hypot(x - cursor.x, y - cursor.y);
@@ -133,7 +132,7 @@ async function main() {
   const zoom = async (scale, at) => {
     const o = at || {x: W / 2, y: H / 2};
     await js(`(()=>{const s=document.getElementById('stage');s.style.transformOrigin='${o.x}px ${o.y}px';s.style.transform='scale(${scale})';document.body.classList.toggle('zoomed',${scale > 1});})()`);
-    await sleep(1200);
+    await sleep(900);
   };
   const visible = l => l.isVisible().catch(() => false);
   const until = async (test, ms, what) => {
@@ -163,7 +162,7 @@ async function main() {
   const ghost = app.locator('#completion-line');
   const pageReady = () => app.locator('.document-panel.has-slide:not([data-generating])').count().then(n => n > 0);
   const tabs = app.locator('[role=tablist][aria-label=Views] [role=tab]');
-  const typeSlowly = async text => {for (const ch of text) {await page.keyboard.type(ch);await sleep(45 + Math.random() * 70);}};
+  const typeSlowly = async text => {for (const ch of text) {await page.keyboard.type(ch);await sleep(35 + Math.random() * 45);}};
   const liveHelpShown = async () => (await visible(answer)) && (await answer.textContent()).trim().length > 0 &&
     (await visible(question)) && !(await question.isDisabled().catch(() => true));
 
@@ -171,67 +170,63 @@ async function main() {
   await js(`document.getElementById('app').src=${JSON.stringify(`${BASE}/`)}`);
   await box.waitFor({timeout: 30_000});
   await sleep(1500);
-  await cast(1);
-  await sleep(3400); // title card
-  await js(`document.getElementById('intro').classList.remove('on');document.body.classList.remove('titles')`);
-  await sleep(1600);
-
-  // 1. A rough thought.
-  await beat();
+  // The video opens on the app, already close on the empty field.
   const composer = await centre(app.locator('.composer'));
   await zoom(1.3, {x: composer.x, y: composer.y - 60});
-  await click(box, 300);
+  await sleep(600);
+  await cast(1);
+  await sleep(500);
+
+  // 1. A rough thought.
+  await click(box, 200);
   await typeSlowly('Plan a trip to Portugal');
   await until(liveHelpShown, 15_000, 'live help');
-  await sleep(600);
-  await beat();
-  await sleep(4200);
+  await sleep(2500);
 
   // 2. Answer the question with one click.
   await beat();
-  await click(question, 900);
-  if (await until(() => visible(options.first()), 4000, 'question options')) await click(options.first(), 1400);
+  await click(question, 700);
+  if (await until(() => visible(options.first()), 4000, 'question options')) await click(options.first(), 1000);
   else await page.keyboard.press('Escape');
   await until(liveHelpShown, 12_000, 'refreshed live help');
-  await sleep(1200);
+  await sleep(700);
 
   // 3. A highlight opens a picker.
   await beat();
   const marks = app.locator('#input-mirror mark:not(.confirmed)');
   let picked = false;
   for (let i = 0; i < Math.min(3, await marks.count()) && !picked; i++) {
-    await clickAt(await centre(marks.nth(i)), 900);
+    await clickAt(await centre(marks.nth(i)), 700);
     const choice = app.locator('#intent-popover:not([hidden]) #popover-options button.control-option');
     if (await until(() => visible(choice.first()), 2500, 'picker options')) {
-      await click(choice.nth(Math.min(1, (await choice.count()) - 1)), 1400);
+      await click(choice.nth(Math.min(1, (await choice.count()) - 1)), 1000);
       picked = true;
     } else await page.keyboard.press('Escape');
   }
   await until(liveHelpShown, 12_000, 'refreshed live help');
-  await sleep(1000);
+  await sleep(500);
 
   // 4. Tab accepts the predicted words.
   await click(box, 200);
   await page.keyboard.press('End');
   await page.keyboard.press('Meta+ArrowDown');
   if (await until(() => visible(ghost), 9000, 'Tab prediction')) {
-    await beat();
-    await sleep(2600);
+    await sleep(1600);
     await page.keyboard.press('Tab');
-    await sleep(2400);
+    await sleep(1400);
   }
   await zoom(1);
 
   // 5. Send builds a page.
   await beat();
   await click(app.locator('#build-page'), 300);
-  await compressed('Building the page: title and introduction first, then the visual', pageReady, 3.5);
-  await compressed('More views join as tabs in the background', async () => (await tabs.count()) >= 2, 2, 20_000).catch(() => {});
+  await compressed('Building the page: title and introduction first, then the visual', pageReady, 2.5);
+  await compressed('More views join as tabs in the background', async () => (await tabs.count()) >= 2, 1, 20_000).catch(() => {});
   await beat();
   await zoom(1.22, await centre(app.locator('.atlas-visual')));
   const next = app.locator('.atlas-visual [role=tabpanel]:not([hidden]) .dg-step[aria-label=Next], .atlas-visual > .component-block .dg-step[aria-label=Next]').first();
-  for (let i = 0; i < 2 && (await visible(next)); i++) await click(next, 1300);
-  if ((await tabs.count()) >= 2) {await click(tabs.nth(1), 2200);await click(tabs.nth(0), 1200);}
+  if (await visible(next)) await click(next, 1100);
+  if ((await tabs.count()) >= 2) await click(tabs.nth(1), 1700);
   await zoom(1);
 
   // 6. A change, previewed before Send.
@@ -241,11 +236,11 @@ async function main() {
   await click(box, 300);
   await typeSlowly('Add a rainy day option');
   await until(async () => /^Will\b/.test(((await answer.textContent().catch(() => '')) || '').trim()), 15_000, 'change preview');
-  await sleep(2600);
+  await sleep(1800);
   await click(app.locator('#build-page'), 300);
   await zoom(1);
-  await compressed('Changing only what you asked for', pageReady, 3);
-  await sleep(2200);
+  await compressed('Changing only what you asked for', pageReady, 2);
+  await sleep(1200);
 
   // 7. Go deeper.
   const deeper = app.locator('.atlas-next-button').first();
@@ -253,15 +248,14 @@ async function main() {
     await beat();
     await click(deeper, 400);
     await until(() => visible(app.locator('.atlas-next-answer')), 15_000, 'Go deeper answer');
-    await sleep(600);
+    await sleep(300);
     await zoom(1.2, await centre(app.locator('.atlas-next-panel')));
-    await sleep(3600);
+    await sleep(2400);
     await zoom(1);
   }
 
-  await beat();
   await js(`document.getElementById('outro').classList.add('on');document.body.classList.add('titles')`);
-  await sleep(4400);
+  await sleep(2600);
   await cdp.send('Page.stopScreencast');
   await browser.close();
 
