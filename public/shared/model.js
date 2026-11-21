@@ -211,7 +211,11 @@ export function tidyPage(page){
  if(!page||!Array.isArray(page.body)||!page.components?.length)return page;
  const [intro='',...rest]=page.body;
  const extra=rest.slice(3),message=extra.some(text=>!TAKEAWAY.test(text.trim()))?extra.filter(text=>text.trim()):[];
- return {...page,body:[firstSentences(intro),...rest.slice(0,3).map(text=>firstSentences(text)),...message].filter((text,i)=>i===0||text)};
+ const body=[firstSentences(intro),...rest.slice(0,3).map(text=>firstSentences(text)),...message].filter((text,i)=>i===0||text);
+ // A message written as many short lines is folded into the last passage, so the page stays
+ // within its 12 passages (each passage holds up to 700 characters).
+ while(body.length>12&&(body.at(-2)+'\n'+body.at(-1)).length<=700)body.splice(-2,2,body.at(-2)+'\n'+body.at(-1));
+ return {...page,body};
 }
 
 // While a follow-up is being made, its preview ("Will add a quiz on tilt.") becomes the status

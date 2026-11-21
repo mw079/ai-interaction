@@ -151,6 +151,10 @@ test('pages with a visual keep an introduction and at most three takeaways, cut 
  assert.equal(tidyPage(prose),prose,'text-first pages keep their full deliverable');
  const email={kind:'outline',components:[{id:'a'}],body:[long,'One: short.','Two: short.','Three: short.','Subject: Offer for the Analyst role','Hi Alex,','Thank you for the offer. '.repeat(12),'Best,\nJordan']};
  assert.deepEqual(tidyPage(email).body.slice(4),email.body.slice(4),'a written piece after the takeaways is kept whole');
+ const longEmail={...email,body:[...email.body.slice(0,4),...Array.from({length:14},(_,i)=>'Line '+i+'.')]};
+ const folded=tidyPage(longEmail).body;
+ assert.equal(folded.length,12,'a long message is folded to fit the page');
+ assert.equal(folded.slice(4).join('\n'),longEmail.body.slice(4).join('\n'),'nothing of it is lost');
 });
 
 test('go deeper answers every follow-up once with at most one valid component',async()=>{

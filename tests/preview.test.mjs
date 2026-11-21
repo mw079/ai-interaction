@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {trajectory,demoPreview,validPreview,clarificationFor,quickAnswer,liveClarificationFor} from '../public/shared/model.js';
 import {handleAPI} from './helpers.mjs';
-import {readSSE} from '../public/shared/stream.js';
 const headers={Authorization:'Bearer test-key-not-a-real-secret','Content-Type':'application/json',Origin:'https://example.test'};
 const req=(body,overrides={})=>new Request('https://example.test/api/preview',{method:'POST',headers,...overrides,body:JSON.stringify(body)});
 const payload={text:'Explain projectile motion',audience:'',format:'Interactive page'};
