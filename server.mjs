@@ -13,7 +13,10 @@ const server=http.createServer(async(req,res)=>{
   if(devFile&&req.method==='GET'){res.writeHead(200,{'Content-Type':devFile.endsWith('.js')?'application/javascript':'text/html','Cache-Control':'no-store'});res.end(await readFile(new URL('./dev/'+devFile,import.meta.url)));return;}
   const chunks=[];let bytes=0;for await(const chunk of req){bytes+=chunk.length;if(bytes>40000){res.writeHead(413);res.end('Request too large');return;}chunks.push(chunk);}
   const controller=new AbortController();res.on('close',()=>{if(!res.writableEnded)controller.abort();});
-  const request=new Request(`http://${req.headers.host}${req.url}`,{method:req.method,headers:req.headers,signal:controller.signal,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});
+  // The visitor is identified by the real connection address. A CF-Connecting-IP header is only
+  // trustworthy when Cloudflare sets it; here a visitor could send any value to dodge the daily limit.
+  const headers={...req.headers};delete headers['cf-connecting-ip'];
+  const request=new Request(`http://${req.headers.host}${req.url}`,{method:req.method,headers,signal:controller.signal,...(!['GET','HEAD'].includes(req.method)?{body:Buffer.concat(chunks)}:{})});
   const response=await worker.default.fetch(request,{OPENAI_API_KEY:process.env.OPENAI_API_KEY,DAILY_LIMIT:process.env.DAILY_LIMIT,DAILY_TOTAL_LIMIT:process.env.DAILY_TOTAL_LIMIT,LOCAL_VISITOR:req.socket.remoteAddress});res.writeHead(response.status,Object.fromEntries(response.headers));for await(const chunk of response.body||[]){if(res.destroyed)break;res.write(chunk);}res.end();
  }catch{if(res.destroyed)return;if(!res.headersSent){res.writeHead(500,{'Content-Type':'text/plain'});res.end('The local server could not complete this request.');}else res.end();}
 });
