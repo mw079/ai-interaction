@@ -9,7 +9,7 @@
 //
 // How: Playwright opens a wrapper page on the app's own origin (so the app's frame-ancestors rule
 // allows it) that draws the look (gradient, a window around the real app, a cursor with click
-// rings, captions, title cards, gentle zoom) and drives the app inside it. Chrome streams frames;
+// rings, a title card with the name at the start and end, gentle zoom; no text during the video) and drives the app inside it. Chrome streams frames;
 // waits for a page are compressed to a few seconds, live help is shown at its real speed. ffmpeg
 // turns the frames into video and adds music from demo-music.mjs.
 import {execFileSync} from 'node:child_process';
@@ -23,7 +23,7 @@ import {demoMusic} from './demo-music.mjs';
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const BASE = (process.env.DEMO_URL || 'http://127.0.0.1:4317').replace(/\/$/, '');
 const W = 1920, H = 1080, WIN = {x: 160, y: 60, w: 1600, h: 900}, BAR = 40;
-const SPEED = Number(process.env.DEMO_SPEED || 1.15);
+const SPEED = Number(process.env.DEMO_SPEED || 1.25);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 const WRAPPER = `<!doctype html><html><head><meta charset="utf-8"><style>
@@ -40,19 +40,9 @@ html,body{margin:0;width:${W}px;height:${H}px;overflow:hidden;background:#13283d
 body.titles #cursor{opacity:0}
 .ring{position:absolute;z-index:19;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;border:3px solid rgba(255,255,255,.95);box-shadow:0 0 0 5px rgba(255,255,255,.25);pointer-events:none;animation:ring .6s ease-out forwards}
 @keyframes ring{from{transform:scale(.35);opacity:1}to{transform:scale(1.35);opacity:0}}
-#caption{position:absolute;left:50%;bottom:30px;transform:translate(-50%,8px);z-index:15;padding:11px 22px;border-radius:999px;background:rgba(8,20,36,.66);color:#fff;font-size:22px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;opacity:0;transition:opacity .5s ease,transform .5s cubic-bezier(.22,1,.36,1);backdrop-filter:blur(6px)}
-#caption.on{opacity:1;transform:translate(-50%,0)}
-#caption .busy{display:inline-block;width:14px;height:14px;margin-right:12px;border-radius:50%;vertical-align:-1px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .9s linear infinite}
-#caption kbd{display:inline-block;margin:0 4px;padding:1px 9px;border-radius:6px;background:rgba(255,255,255,.2);font:inherit;font-size:19px}
-@keyframes spin{to{transform:rotate(360deg)}}
-#note{position:absolute;right:34px;bottom:36px;z-index:15;color:rgba(255,255,255,.7);font-size:15px;transition:opacity .6s ease}
-body.zoomed #note{opacity:0}
 .card{position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center;opacity:0;transition:opacity .9s ease;pointer-events:none}
 .card.on{opacity:1}
 .card h1{margin:0;font-size:92px;font-weight:800;letter-spacing:-.035em}
-.card p{margin:20px 0 0;font-size:30px;font-weight:500;opacity:.92;max-width:1200px;line-height:1.35}
-#outro h1{font-size:76px;line-height:1.08}
-.card .mark{margin-bottom:22px;padding:7px 18px;border-radius:999px;background:rgba(255,255,255,.16);font-size:20px;font-weight:700;letter-spacing:.02em}
 body.titles #stage{opacity:0;transform:scale(.97)}
 </style></head><body class="titles">
 <div id="bg"></div><div id="grain"></div>
@@ -60,10 +50,8 @@ body.titles #stage{opacity:0;transform:scale(.97)}
   <div id="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">AI Interaction</span><span class="url">live demo</span></div>
   <iframe id="app"></iframe>
 </div></div>
-<div id="caption"></div>
-<div id="note">Real answers, generated live · page building time shortened</div>
-<div id="intro" class="card on"><h1>AI Interaction</h1><p>Work with AI while a thought is still taking shape.</p></div>
-<div id="outro" class="card"><div class="mark">AI Interaction</div><h1>From a rough thought<br>to an interactive page.</h1><p>Live help while you type. A page you can explore, change and question.</p></div>
+<div id="intro" class="card on"><h1>AI Interaction</h1></div>
+<div id="outro" class="card"><h1>AI Interaction</h1></div>
 <svg id="cursor" width="30" height="34" viewBox="0 0 30 34"><path d="M3 2 L3 26 L9.5 20 L14 31 L18.5 29 L14 18.5 L23 18.5 Z" fill="#111" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>
 </body></html>`;
 
@@ -114,11 +102,8 @@ async function main() {
 
   // ---- Wrapper helpers.
   const js = fn => page.evaluate(fn);
-  const caption = async (html, busy = false) => {
-    await js(`(()=>{const c=document.getElementById('caption');c.classList.remove('on');
-      setTimeout(()=>{c.innerHTML=${JSON.stringify(html ? (busy ? '<span class="busy"></span>' : '') + html : '')};if(${JSON.stringify(!!html)})c.classList.add('on');},260);})()`);
-    await sleep(700);
-  };
+  // No on-screen text during the video: a short pause where a step begins.
+  const beat = () => sleep(700);
   let cursor = {x: W / 2, y: H / 2};
   const moveTo = async (x, y) => {
     const d = Math.hypot(x - cursor.x, y - cursor.y);
@@ -160,7 +145,7 @@ async function main() {
   };
   /** Wait while frames are thinned out; the wait becomes `seconds` long in the video. */
   const compressed = async (text, test, seconds, ms = 90_000) => {
-    await caption(text, true);
+    await beat();
     await cast(10);
     const from = frames.length;
     const ok = await until(test, ms, text);
@@ -192,18 +177,18 @@ async function main() {
   await sleep(1600);
 
   // 1. A rough thought.
-  await caption('1 · Start with a rough thought');
+  await beat();
   const composer = await centre(app.locator('.composer'));
   await zoom(1.3, {x: composer.x, y: composer.y - 60});
   await click(box, 300);
   await typeSlowly('Plan a trip to Portugal');
   await until(liveHelpShown, 15_000, 'live help');
   await sleep(600);
-  await caption('2 · Live help: a short answer, one question, and the details you can adjust');
+  await beat();
   await sleep(4200);
 
   // 2. Answer the question with one click.
-  await caption('3 · Answer the question with one click');
+  await beat();
   await click(question, 900);
   if (await until(() => visible(options.first()), 4000, 'question options')) await click(options.first(), 1400);
   else await page.keyboard.press('Escape');
@@ -211,7 +196,7 @@ async function main() {
   await sleep(1200);
 
   // 3. A highlight opens a picker.
-  await caption('4 · Each highlighted detail opens a picker');
+  await beat();
   const marks = app.locator('#input-mirror mark:not(.confirmed)');
   let picked = false;
   for (let i = 0; i < Math.min(3, await marks.count()) && !picked; i++) {
@@ -230,7 +215,7 @@ async function main() {
   await page.keyboard.press('End');
   await page.keyboard.press('Meta+ArrowDown');
   if (await until(() => visible(ghost), 9000, 'Tab prediction')) {
-    await caption('5 · Your likely next words appear in blue: <kbd>Tab</kbd> accepts them');
+    await beat();
     await sleep(2600);
     await page.keyboard.press('Tab');
     await sleep(2400);
@@ -238,11 +223,11 @@ async function main() {
   await zoom(1);
 
   // 5. Send builds a page.
-  await caption('6 · Send builds an interactive page');
+  await beat();
   await click(app.locator('#build-page'), 300);
   await compressed('Building the page: title and introduction first, then the visual', pageReady, 3.5);
   await compressed('More views join as tabs in the background', async () => (await tabs.count()) >= 2, 2, 20_000).catch(() => {});
-  await caption('7 · Step through the visual; switch between views');
+  await beat();
   await zoom(1.22, await centre(app.locator('.atlas-visual')));
   const next = app.locator('.atlas-visual [role=tabpanel]:not([hidden]) .dg-step[aria-label=Next], .atlas-visual > .component-block .dg-step[aria-label=Next]').first();
   for (let i = 0; i < 2 && (await visible(next)); i++) await click(next, 1300);
@@ -250,7 +235,7 @@ async function main() {
   await zoom(1);
 
   // 6. A change, previewed before Send.
-  await caption('8 · Ask for a change: the preview says what will happen');
+  await beat();
   const dock = await centre(app.locator('.composer'));
   await zoom(1.3, {x: dock.x, y: dock.y - 40});
   await click(box, 300);
@@ -265,7 +250,7 @@ async function main() {
   // 7. Go deeper.
   const deeper = app.locator('.atlas-next-button').first();
   if (await visible(deeper)) {
-    await caption('9 · Go deeper: answers to the next questions, ready in place');
+    await beat();
     await click(deeper, 400);
     await until(() => visible(app.locator('.atlas-next-answer')), 15_000, 'Go deeper answer');
     await sleep(600);
@@ -274,7 +259,7 @@ async function main() {
     await zoom(1);
   }
 
-  await caption('');
+  await beat();
   await js(`document.getElementById('outro').classList.add('on');document.body.classList.add('titles')`);
   await sleep(4400);
   await cdp.send('Page.stopScreencast');
