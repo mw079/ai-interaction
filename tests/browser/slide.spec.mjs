@@ -405,6 +405,20 @@ test('one over-long takeaway label does not turn the other takeaways back into p
   await expect(page.getByRole('textbox',{name:'Page paragraph 2'})).toHaveValue('The Sun drives evaporation.');
 });
 
+test('a first page cancelled by a newer Send leaves no trace: the new page’s extra views are asked for the new request',async({page})=>{
+  const views=[];
+  page.on('request',request=>{if(request.url().endsWith('/api/preview')&&request.postDataJSON().phase==='views')views.push(request.postDataJSON());});
+  const release=server.holdPreview('Explain how vaccines work.');            // the first page is still being made...
+  try{
+    await page.getByRole('textbox',{name:'Your next instruction'}).fill('Explain how vaccines work.');
+    await button(page,'Explore interactively').click();
+    await send(page,'Plan three days in Rome.','Three days in Rome');         // ...when a new request is sent
+    await expect(page.getByRole('tablist',{name:'Views'}).getByRole('tab')).toHaveText(['Your route','Day by day','Costs']);
+    expect(views.map(v=>v.text)).toEqual(['Plan three days in Rome.']);
+    expect(JSON.parse(views[0].context).page.originalRequest).toBe('Plan three days in Rome.');
+  }finally{release();}
+});
+
 test('a written piece after the takeaways is shown whole below them, not cut away',async({page})=>{
   await send(page,'Plan my salary talk with an email.','Negotiate your offer');
   await expect(page.locator('.atlas-body .atlas-law-heading')).toHaveText(['Leverage','Timing','Flexibility']);

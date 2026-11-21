@@ -342,7 +342,9 @@ async function submitPage(text=$('intent-input').value.trim(),slideChoice=text==
   const preferences=new Map(state.confirmedChoices.map(e=>[e.type+':'+e.phrase,e]));
   confirmedChoices([...state.information,...state.answers]).forEach(e=>preferences.set(e.type+':'+e.phrase,e));state.confirmedChoices=[...preferences.values()].slice(-8);
   const controller=state.pageController=new AbortController();
-  if(!state.taskGoal)state.taskGoal=text;
+  // The original request belongs to the page being made: a first Send that is cancelled by a newer
+  // one must not stay the goal (its topic would leak into the new page's extra views).
+  if(!state.component)state.taskGoal=text;
   openPage();$('intent-input').value='';changed();workspace?.reading();
   status('');
   const progressTimer=showPageProgress();
