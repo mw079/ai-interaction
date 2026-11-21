@@ -138,15 +138,20 @@ test('over the daily limit, the try-tomorrow card appears and the current page s
   }finally{server.setDailyLimit(Infinity);}
 });
 
-test('the empty start screen offers How it works; it opens the same video and goes away once you type',async({page})=>{
+test('the start screen offers How it works at the top; it opens the same video and gives way to the page toolbar',async({page})=>{
   const link=page.locator('#start-demo');
   await expect(link).toBeVisible();
   await link.click();
   await expect(page.getByRole('dialog',{name:'How AI Interaction works'})).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(link).toBeFocused();                                                         // focus returns to the link
+  const box=await link.boundingBox();
+  expect(box.y).toBeLessThan(20);                                                          // at the top of the page
   await page.getByRole('textbox',{name:'Your next instruction'}).fill('Plan');
-  await expect(link).toBeHidden();
+  await expect(link).toBeVisible();                                                        // still there while typing
+  await send(page,'Create an evaporation slide.',evaporationTitle);
+  await expect(link).toBeHidden();                                                          // the page's top bar takes over
+  await expect(button(page,'How it works')).toBeVisible();
 });
 
 test('How it works opens the demo video with sound, and Escape or a click outside closes it',async({page})=>{

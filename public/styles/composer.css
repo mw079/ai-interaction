@@ -90,8 +90,8 @@ body.limited #build-page{opacity:.35;pointer-events:none}
 .demo-close{position:absolute;top:-44px;right:0;width:36px;height:36px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;font-size:22px;line-height:1;cursor:pointer}
 .demo-close:hover{background:rgba(255,255,255,.3)}
 
-/* How it works on the empty start screen: a quiet link above the field, gone once you type or a page exists.
-   It floats (the panel is positioned) and takes no space, so the field does not move when it disappears. */
-.start-demo{display:none;align-items:center;gap:7px;margin:0;padding:6px 10px;border:0;border-radius:999px;background:none;color:var(--muted);font:inherit;font-size:.8125rem;cursor:pointer}
+/* How it works on the empty start screen: at the top right of the page, exactly where the page's top bar shows
+   its How it works button once a page exists (the page area is min(1152px, 100vw - 28px) wide, centred). */
+.start-demo{display:none;align-items:center;gap:6px;margin:0;padding:6px 8px;border:0;border-radius:8px;background:none;color:#5f5f5f;font:inherit;font-size:12px;font-weight:450;cursor:pointer}
 .start-demo:hover{color:var(--ink);background:#ececec}
-body.intent-first:not(.page-open):not(.has-intent):not(.limited) .start-demo{display:flex;position:absolute;left:50%;bottom:calc(100% + 10px);transform:translateX(-50%);white-space:nowrap}
+body.intent-first:not(.page-open):not(.limited) .start-demo{display:flex;position:fixed;z-index:20;top:10px;right:calc((100vw - min(1152px, 100vw - 28px)) / 2 + 4px);height:30px;white-space:nowrap}
