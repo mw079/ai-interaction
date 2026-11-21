@@ -105,3 +105,9 @@ test('the journey check scores each stage and flags what went wrong',async()=>{
  assert.equal(bad['highlights are short details'],false);assert.equal(bad['Tab never asks for something'],false);assert.equal(bad['follow-up keeps the page'],false);
  assert.deepEqual(scoreJourney({failure:'timeout'}),{'journey completed':false});
 });
+
+test('the focus picker names a takeaway by its label, also after the takeaway was edited',async()=>{
+ const {followUpScopes}=await import('../public/composer/controls-extended.js');
+ const page={body:['Intro.','Safety: They train immunity.','Plain second passage.'],components:[],edits:{paragraphs:{0:'They train immunity without disease.'}}};
+ assert.deepEqual(followUpScopes(page).map(s=>s.label),['Whole slide'.replace('slide','page'),'Introduction','Safety','Paragraph 3']);
+});
