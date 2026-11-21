@@ -591,7 +591,7 @@ function changed({immediate=false,typing=false,keepPopover=false}={}){
   showQuickAnswer(keep?(completedAnswer||$('quick-answer').textContent):'',keep);state.suppressed=null;if(!keepPopover)closeIntentPopover();
   if(state.proposal&&state.proposal.baseVersion===undefined){$('accept-button').disabled=true;$('proposal-label').textContent='Earlier page · explore again to use the latest intent';}
   const hasText=!!text;if(!hasText)state.answers=[];document.body.classList.toggle('has-intent',hasText);$('typing-assistance').hidden=!hasText;
-  $('build-page').disabled=!hasText;
+  $('build-page').disabled=!hasText||state.limited;   // over today's limit Send cannot do anything, so it stays off
   sizeComposer();
   if(shownPreview)renderSnapshot(shownPreview.data,shownPreview.source,shownPreview.text,false);
   else renderUncertainty();
@@ -690,6 +690,6 @@ function showLimit(message){
   document.body.classList.remove('live');document.body.classList.add('limited');
   $('typing-assistance').hidden=true;
   if(message)$('limit-message').textContent=message;
-  $('limit-card').hidden=false;
+  $('limit-card').hidden=false;$('build-page').disabled=true;
 }
 fetch('/api/config').then(r=>r.json()).then(config=>{if(config.limited){showLimit();return;}if(!config.live)return;state.live=true;document.body.classList.add('live');changed();}).catch(()=>{});

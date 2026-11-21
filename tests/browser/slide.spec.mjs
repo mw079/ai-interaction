@@ -124,13 +124,16 @@ test('over the daily limit, the try-tomorrow card appears and the current page s
     await page.getByRole('textbox',{name:'Your next instruction'}).fill('Create a triangle slide.');
     await page.clock.runFor(1500);                                     // the live preview is refused
     await expect(card).toBeVisible();
-    await expect(page.locator('body')).toHaveClass(/\blimited\b/);   // ...and Send is disabled
+    await expect(page.locator('body')).toHaveClass(/\blimited\b/);
+    await expect(button(page,'Explore interactively')).toBeDisabled();  // ...and Send is off
     await expect(card).toContainText('Try again tomorrow.');
     await expect(title(page)).toHaveValue(evaporationTitle);            // the page is kept
     await expect(page.locator('#status')).not.toContainText('limit');   // no second, duplicate message
     await page.reload();                                                 // the server remembers the count
     await expect(card).toBeVisible();
     await expect(page.locator('body')).not.toHaveClass(/\blive\b/);
+    await page.getByRole('textbox',{name:'Your next instruction'}).fill('Create a triangle slide.');
+    await expect(button(page,'Explore interactively')).toBeDisabled();  // typing does not turn Send back on
   }finally{server.setDailyLimit(Infinity);}
 });
 
