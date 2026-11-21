@@ -180,11 +180,14 @@ test('go deeper answers every follow-up once with at most one valid component',a
  assert.equal(bad.status,400);
 });
 
-test('data that grows by one item fits: up to 8 for chart, spectrum, map and timeline, 6 elsewhere',()=>{
+test('data that grows fits: up to 12 for chart and timeline, 8 for spectrum and map, 6 elsewhere',()=>{
   const items=n=>Array.from({length:n},(_,i)=>({label:'Item '+i,detail:'Detail.',value:i*10,latitude:null,longitude:null}));
   assert.equal(validComponents([{id:'ph',type:'spectrum',title:'pH',prompt:'Acidic | Alkaline',items:items(8),edges:[]}]),true);
   assert.equal(validComponents([{id:'ph',type:'spectrum',title:'pH',prompt:'Acidic | Alkaline',items:items(9),edges:[]}]),false);
   assert.equal(validComponents([{...cycle,items:items(7)}]),false);
+  assert.equal(validComponents([{id:'sums',type:'chart',title:'Sums',prompt:'',items:items(11),edges:[]}]),true);   // every sum of two dice
+  assert.equal(validComponents([{id:'sums',type:'chart',title:'Sums',prompt:'',items:items(13),edges:[]}]),false);
+  assert.equal(validComponents([{id:'trip',type:'map',title:'Trip',prompt:'',items:items(9).map(i=>({...i,latitude:1,longitude:1})),edges:[]}]),false);
 });
 
 test('a page has up to three components (views), never four',()=>{
