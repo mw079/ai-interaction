@@ -67,7 +67,9 @@ body.intent-first[data-experience=unified].page-open .composer textarea{max-heig
 .composer-choice-row select{width:100%;min-height:38px}
 .composer-choice-row{display:flex;gap:8px;align-items:center;justify-content:space-between}
 .composer-choice-row select{width:auto;max-width:52%}
-.control-scope-preview{display:block;color:#6d6d6d;font-size:.75rem;margin-top:4px}
+/* Focus picker: the part's name on the first line, a short preview of it on its own line below (side by side, the name was squeezed letter by letter). */
+.control-option:has(>.control-scope-preview){flex-wrap:wrap;row-gap:2px}
+.control-scope-preview{display:block;flex:1 0 100%;padding-left:24px;color:#6d6d6d;font-size:.75rem;margin-top:2px}
 
 @media(max-width:580px){
   

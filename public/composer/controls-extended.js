@@ -128,7 +128,9 @@ export function followUpScopes(component,activeField,selection){
   if(!component)return scopes;
   component.body.forEach((text,index)=>{
     const value=index===0?component.edits?.explanation??text:component.edits?.paragraphs?.[index-1]??text;
-    if(value.trim())scopes.push({id:'passage:'+index,label:index===0?'Introduction':'Paragraph '+(index+1),text:value});
+    // A takeaway is listed by its own label ("Safety"), other passages by position.
+    const named=index&&value.match(/^([^:\n]{1,32}):\s/)?.[1].trim();
+    if(value.trim())scopes.push({id:'passage:'+index,label:index===0?'Introduction':named||'Paragraph '+(index+1),text:value});
   });
   if(activeField&&selection?.length&&selection.start<selection.end){
     const parent=scopes.find(scope=>scope.id===activeField);
