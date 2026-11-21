@@ -127,6 +127,7 @@ test('over the daily limit, the try-tomorrow card appears and the current page s
     await expect(page.locator('body')).toHaveClass(/\blimited\b/);
     await expect(button(page,'Explore interactively')).toBeDisabled();  // ...and Send is off
     await expect(card).toContainText('Try again tomorrow.');
+    await expect.poll(()=>page.locator('#limit-video').evaluate(video=>!video.paused&&video.currentTime>0)).toBe(true);   // the demo video plays
     await expect(title(page)).toHaveValue(evaporationTitle);            // the page is kept
     await expect(page.locator('#status')).not.toContainText('limit');   // no second, duplicate message
     await page.reload();                                                 // the server remembers the count

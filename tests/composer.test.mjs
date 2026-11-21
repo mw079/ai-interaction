@@ -101,3 +101,9 @@ test('in-progress previews use finished words and drop resolved or superseded su
  assert.deepEqual(answeredDuration.information,[]);
  assert.equal(answeredDuration.question,'');
 });
+
+test('after a picker choice in brackets, a new sentence from Tab starts with a full stop',async()=>{
+ const {completionSuffix}=await import('../public/shared/model.js');
+ assert.equal(completionSuffix('Plan a trip (3 days) to Portugal (Porto)',' Include local food.'),'. Include local food.');
+ assert.equal(completionSuffix('Plan a trip to Portugal (Porto)',' with my parents.'),' with my parents.');
+});

@@ -693,5 +693,6 @@ function showLimit(message){
   $('typing-assistance').hidden=true;
   if(message)$('limit-message').textContent=message;
   $('limit-card').hidden=false;$('build-page').disabled=true;
+  $('limit-video')?.play().catch(()=>{});   // a short demo of the app, started only when the card is shown
 }
 fetch('/api/config').then(r=>r.json()).then(config=>{if(config.limited){showLimit();return;}if(!config.live)return;state.live=true;document.body.classList.add('live');changed();}).catch(()=>{});

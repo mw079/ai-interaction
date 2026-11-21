@@ -64,6 +64,8 @@ export function completionSuffix(text,completion){
   if((k>=2||wholeWord)&&lower.endsWith(start.slice(0,k))&&(before===undefined||!/[\p{L}\p{N}]/u.test(before)))return next.slice(k);
  }
  if(!text||/\s$/u.test(text))return next;
+ // After a picker choice in brackets, "…Portugal (Porto)" + "Include food" is a new sentence too.
+ if(/[)\]]$/u.test(text)&&SENTENCE_START.test(next))return '. '+next;
  if(!/[\p{L}\p{N}]$/u.test(text))return /^\p{P}/u.test(next)?next:' '+next;     // after "." or ","
  if(/^\p{P}/u.test(next))return next;                                          // ". Consider…", ", even…"
  const spaced=raw!==next,capital=/^\p{Lu}/u.test(next);

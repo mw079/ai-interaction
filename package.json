@@ -11,7 +11,8 @@
     "eval:pages": "node dev/eval-pages.mjs",
     "eval:pickers": "node dev/eval-pickers.mjs",
     "eval:followups": "node dev/eval-followups.mjs",
-    "eval:journeys": "node dev/eval-journeys.mjs"
+    "eval:journeys": "node dev/eval-journeys.mjs",
+    "demo-video": "node dev/demo-video.mjs"
   },
   "engines": {
     "node": ">=22"
