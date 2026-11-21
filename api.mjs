@@ -54,7 +54,10 @@ export async function handleAPI(request,upstream=fetch,env={},{limiter=limiterFo
   const serverKey=!!env.OPENAI_API_KEY;
   if(new URL(request.url).pathname==='/api/config')return json({live:serverKey,limited:serverKey&&limiter.limited(visitor)});
   if(request.method!=='POST')return json({error:'Use POST for this action.'},405);
-  const origin=request.headers.get('Origin');if(origin&&origin!==new URL(request.url).origin)return json({error:'This request must come from the same website.'},403);
+  // Only this site's own pages may call the API. Hosts are compared rather than full origins: behind
+  // an HTTPS proxy (Render) the page is https:// while the server itself is reached over http://.
+  const origin=request.headers.get('Origin');let originHost=null;try{originHost=origin&&new URL(origin).host;}catch{}
+  if(origin&&originHost!==new URL(request.url).host)return json({error:'This request must come from the same website.'},403);
   if(!serverKey)return json({error:'Live answers are not available right now.'},503);
   const authorization=`Bearer ${env.OPENAI_API_KEY}`;
   if(new URL(request.url).pathname!=='/api/preview')return json({error:'Not found.'},404);

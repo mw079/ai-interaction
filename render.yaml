@@ -1,0 +1,19 @@
+# Render Blueprint: one free Node web service serves both the page and the API.
+# The OpenAI key is entered in the Render dashboard (sync: false), never stored in the repo.
+services:
+  - type: web
+    name: ai-interaction
+    runtime: node
+    plan: free
+    buildCommand: node build.mjs
+    startCommand: node server.mjs
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: DAILY_LIMIT
+        value: "200"
+      - key: DAILY_TOTAL_LIMIT
+        value: "2000"
