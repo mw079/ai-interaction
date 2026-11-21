@@ -170,12 +170,13 @@ async function main() {
   await js(`document.getElementById('app').src=${JSON.stringify(`${BASE}/`)}`);
   await box.waitFor({timeout: 30_000});
   await sleep(1500);
-  // The video opens on the app, already close on the empty field.
+  // The video opens on the whole start screen (the field, and How it works at the top right),
+  // then moves close on the field.
   const composer = await centre(app.locator('.composer'));
-  await zoom(1.3, {x: composer.x, y: composer.y - 60});
-  await sleep(600);
   await cast(1);
-  await sleep(500);
+  await sleep(1300);
+  await zoom(1.3, {x: composer.x, y: composer.y - 60});
+  await sleep(200);
 
   // 1. A rough thought.
   await click(box, 200);
