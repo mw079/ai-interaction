@@ -42,6 +42,7 @@ test('audience refinements become visible questions without replacing their choi
 });
 test('live answer display keeps one short sentence with a hard length bound',()=>{
  assert.equal(compactLiveAnswer({body:[],interpretation:'A restatement of the request'}),'');
+ assert.equal(compactLiveAnswer({body:['Subject: Thank you for a great launch\n\nHi team,\nThank you all for your hard work.']}),'Subject: Thank you for a great launch\nHi team,\nThank you all for your hard work.','a multi-line sample keeps its lines');
  assert.equal(compactLiveAnswer({body:['First sentence. Second sentence.']}),'First sentence. Second sentence.');   // both fit: the second often carries the point
  assert.equal(compactLiveAnswer({body:['A first sentence that is long enough on its own to matter here. '+'A second one that would take the whole answer well past the hard limit of one hundred and sixty characters.']}),'A first sentence that is long enough on its own to matter here.');assert.ok(compactLiveAnswer({body:['long '.repeat(100)]}).length<=160);
  // An over-long answer ends at its last clause break as a whole sentence, not mid-phrase.

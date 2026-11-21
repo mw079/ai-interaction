@@ -25,7 +25,7 @@
 #input-mirror{font:1.0625rem/1.6 'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;white-space:pre-wrap;overflow-wrap:break-word;color:transparent}
 
 
-#quick-answer{font-size:.9375rem;line-height:1.8;color:#4e4e4e}#quick-provenance{display:block;font-size:.6875rem;color:var(--muted);margin-top:7px}
+#quick-answer{font-size:.9375rem;line-height:1.8;color:#4e4e4e;white-space:pre-line}#quick-provenance{display:block;font-size:.6875rem;color:var(--muted);margin-top:7px}
 
 #build-page{margin-top:26px;font-size:.8125rem;padding:10px 15px}
 .intent-first .status-line{margin-top:16px;font-size:.6875rem}

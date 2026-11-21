@@ -335,3 +335,7 @@ body.intent-first[data-experience=unified].page-open #cancel-button{display:none
 .change-status .page-spinner{flex:none}
 .document-panel.has-slide[data-generating]:not(.is-drafting) .page-progress{display:none}
 
+/* A written piece after the takeaways (an email, a message): plain text on a soft card, one paragraph per field. */
+.atlas-message{display:grid;gap:6px;margin:28px 0 0;padding:20px 24px;background:#f6f6f6;border-radius:14px}
+.atlas-message .atlas-text{background:transparent}
+@media(max-width:600px){.atlas-message{padding:16px}}

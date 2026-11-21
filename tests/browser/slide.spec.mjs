@@ -402,6 +402,15 @@ test('one over-long takeaway label does not turn the other takeaways back into p
   await expect(page.getByRole('textbox',{name:'Page paragraph 2'})).toHaveValue('The Sun drives evaporation.');
 });
 
+test('a written piece after the takeaways is shown whole below them, not cut away',async({page})=>{
+  await send(page,'Plan my salary talk with an email.','Negotiate your offer');
+  await expect(page.locator('.atlas-body .atlas-law-heading')).toHaveText(['Leverage','Timing','Flexibility']);
+  const email=page.locator('.atlas-message textarea');
+  await expect(email).toHaveCount(4);
+  await expect(email.first()).toHaveValue('Subject: Offer for the Analyst role');
+  await expect(email.last()).toHaveValue('Best,\nJordan');
+});
+
 test('Kepler takeaways have bold labels and a plain editable body, and notes answers format emphasis safely',async({page})=>{
   await send(page,'Explain all three Kepler laws.','Kepler’s laws');
   const cards=page.locator('.atlas-law-overview .atlas-law-heading');

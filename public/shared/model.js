@@ -124,7 +124,14 @@ export function liveClarificationFor(text, data, entries=[]) {
     ...(start>=0?{start,end:start+phrase.length}:{}),replace:false});
 }
 export function compactLiveAnswer(data){
-  const text=(data.body?.join(' ')||'').replace(/\s+/g,' ').trim();
+  // A sample with several lines (an email's subject, greeting and first sentence) keeps its line
+  // breaks: run together, "…a great launch Hi team, Thank you…" reads as one broken sentence.
+  const lines=(data.body?.join('\n')||'').split(/\n+/).map(line=>line.replace(/\s+/g,' ').trim()).filter(Boolean);
+  if(lines.length>1){
+    const kept=[];for(const line of lines){if([...kept,line].join('\n').length>160)break;kept.push(line);}
+    if(kept.length>1)return kept.join('\n');
+  }
+  const text=lines.join(' ');
   // The whole answer when it fits; a second sentence often carries the point.
   if(text.length<=160)return text;
   const first=text.match(/^.*?[.!?](?:\s|$)/)?.[0]?.trim();
@@ -182,14 +189,17 @@ export function validPreview(v) {
   return !!v && (v.launch===undefined||(!!v.launch&&Number.isFinite(v.launch.speed)&&Number.isFinite(v.launch.angle)&&Object.hasOwn(WORLDS,v.launch.world))) && (v.followUps===undefined||(Array.isArray(v.followUps)&&v.followUps.length<=3&&v.followUps.every(s=>short(s,90)))) && (v.slideOptions===undefined||validSlideOptions(v.slideOptions)) && (v.components===undefined||validComponents(v.components)) && (v.questionKind===undefined||['clarify','explore','none'].includes(v.questionKind)) && (v.completion===undefined||short(v.completion,180)) && (v.replacement===undefined||short(v.replacement,2000)) && (v.information===undefined||validInformation(v.information)) && ['projectile','outline','planner','kepler'].includes(v.kind)
     && (v.phrase===undefined||short(v.phrase,120)) && short(v.title,160) && short(v.interpretation,500) && short(v.audience,120) && short(v.question,200)
     && Array.isArray(v.options) && v.options.length <= 3 && v.options.every(s=>short(s,80))
-    && Array.isArray(v.body) && v.body.length <= 6 && v.body.every(s=>short(s,700))
+    && Array.isArray(v.body) && v.body.length <= 12 && v.body.every(s=>short(s,700))
     && Array.isArray(v.nodes) && v.nodes.length <= 6 && v.nodes.every(s=>short(s,80))
     && Array.isArray(v.rows) && v.rows.length <= 6 && v.rows.every(r=>r && short(r.criterion,80)&&short(r.a,300)&&short(r.b,300));
 }
 
 // Pages with a visual keep prose short: an introduction plus up to three takeaways,
 // each cut at a sentence boundary. Kepler and projectile pages keep their own rules.
+// A written piece the user asked for (an email after the takeaways) is kept whole: a fourth
+// "Label: sentence" is dropped, but text that is not a takeaway is the deliverable itself.
 const PAGE_TEXT_LIMIT=240;
+const TAKEAWAY=/^[^:\n]{1,32}:\s+\S/;
 function firstSentences(text,max=PAGE_TEXT_LIMIT){
  const value=text.trim();
  if(value.length<=max)return value;
@@ -200,7 +210,8 @@ function firstSentences(text,max=PAGE_TEXT_LIMIT){
 export function tidyPage(page){
  if(!page||!Array.isArray(page.body)||!page.components?.length)return page;
  const [intro='',...rest]=page.body;
- return {...page,body:[firstSentences(intro),...rest.slice(0,3).map(text=>firstSentences(text))].filter((text,i)=>i===0||text)};
+ const extra=rest.slice(3),message=extra.some(text=>!TAKEAWAY.test(text.trim()))?extra.filter(text=>text.trim()):[];
+ return {...page,body:[firstSentences(intro),...rest.slice(0,3).map(text=>firstSentences(text)),...message].filter((text,i)=>i===0||text)};
 }
 
 // While a follow-up is being made, its preview ("Will add a quiz on tilt.") becomes the status

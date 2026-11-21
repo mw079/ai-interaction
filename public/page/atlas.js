@@ -178,19 +178,26 @@ export function renderAtlas(target,p,{titleField,onEdit}){
  // instead of turning every takeaway back into prose. Most passages must fit to use columns.
  const takeawayPattern=/^([^:\n]{1,32}):\s+(\S[\s\S]*)$/;
  const takeawayParts=paragraph=>{const m=paragraph.trim().match(takeawayPattern);return m&&m[1].trim().split(/\s+/).length<=4?m:null;};
- const fitting=paragraphs.filter(takeawayParts).length;
- const takeaways=!overview&&paragraphs.length>=1&&paragraphs.length<=3&&fitting>0&&fitting*2>=paragraphs.length;
+ // A written piece the user asked for (an email) can follow the takeaways: the leading
+ // "Label: sentence" passages stay columns and the piece reads as plain text below them.
+ let lead=0;while(lead<3&&lead<paragraphs.length&&takeawayParts(paragraphs[lead]))lead++;
+ const written=!overview&&!!p.components?.length&&lead>0&&paragraphs.length>3&&paragraphs.slice(lead).some(paragraph=>!takeawayParts(paragraph));
+ const columns=written?lead:paragraphs.length;
+ const fitting=paragraphs.slice(0,columns).filter(takeawayParts).length;
+ const takeaways=!overview&&columns>=1&&columns<=3&&fitting>0&&fitting*2>=columns;
  body.classList.toggle('atlas-law-overview',overview||takeaways);
- body.style.setProperty('--cols',String(paragraphs.length||3));
+ body.style.setProperty('--cols',String(columns||3));
+ const message=written?make('div','atlas-message'):null;
  paragraphs.forEach((paragraph,i)=>{
   p.edits.paragraphs??={};
-  const parts=takeaways?takeawayParts(paragraph):null;
+  const parts=takeaways&&i<columns?takeawayParts(paragraph):null;
   const original=overview?paragraph.trim().replace(lawPrefixes[i],''):parts?parts[2]:paragraph;
   const item=text(p.edits.paragraphs[i]??original,'Page paragraph '+(i+2),value=>p.edits.paragraphs[i]=value,i+1);
   if(overview||parts)item.prepend(make('h3','atlas-law-heading',overview?lawLabels[i]:parts[1].trim()));
-  body.append(item);
+  (message&&i>=columns?message:body).append(item);
  });
  target.append(body);
+ if(message)target.append(message);
  // Go deeper: follow-up questions as tabs. Answers are prefetched in one request and shown
  // in a panel below, one at a time; the full slide stays a secondary action.
  if(p.followUps?.length){

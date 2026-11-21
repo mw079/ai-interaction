@@ -78,6 +78,8 @@ function previewFor({phase,text}){
           {label:'Vatican',detail:'Day 3: the museums and St Peter’s.',value:0,latitude:41.9029,longitude:12.4534}]}],
       followUps:['Where should I eat?']};
     // Starts like a good page (title, introduction), then fails validation: an unknown component.
+    if(text==='Plan my salary talk with an email.')return {...preview,title:'Negotiate your offer',body:['Prepare a calm, evidence-based request.','Leverage: Tie your results to the role.','Timing: Ask after the offer, before accepting.','Flexibility: Consider bonus or leave.','Subject: Offer for the Analyst role','Hi Alex,','Thank you for the offer. Could the base salary be 100,000 instead of 90,000?','Best,\nJordan'],
+      components:[{id:'plan',type:'checklist',title:'Your plan',prompt:'',edges:[],items:[{label:'Research',detail:'Compare pay.',value:0},{label:'Ask',detail:'Name a number.',value:0}]}]};
     if(text==='Make a broken page.')return {...preview,title:'Half a page',body:['This page starts well.'],components:[{id:'bad',type:'not-a-component',title:'Bad',prompt:'',edges:[],items:[]}]};
     if(text==='Make a running plan.')return {...preview,kind:'planner',title:'Zero to 5K',body:['Build up gradually over four weeks.'],
       rows:[{criterion:'Week 1',a:'Run 1 minute, walk 2 minutes; repeat 8 times.',b:''},
