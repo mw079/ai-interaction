@@ -119,14 +119,14 @@ test('over the daily limit, the try-tomorrow card appears and the current page s
   await send(page,'Create an evaporation slide.',evaporationTitle);
   server.setDailyLimit(0);                                              // today's allowance is used up
   try{
-    const card=page.getByRole('status').filter({hasText:'That’s all for today'});
+    const card=page.locator('#limit-card');
     await expect(card).toBeHidden();
     await page.getByRole('textbox',{name:'Your next instruction'}).fill('Create a triangle slide.');
     await page.clock.runFor(1500);                                     // the live preview is refused
     await expect(card).toBeVisible();
     await expect(page.locator('body')).toHaveClass(/\blimited\b/);
     await expect(button(page,'Explore interactively')).toBeDisabled();  // ...and Send is off
-    await expect(card).toContainText('Try again tomorrow.');
+    await expect(card).toHaveText('Today’s limit has been reached. Try again tomorrow.');
     await expect.poll(()=>page.locator('#limit-video').evaluate(video=>!video.paused&&video.currentTime>0)).toBe(true);   // the demo video plays
     await expect(title(page)).toHaveValue(evaporationTitle);            // the page is kept
     await expect(page.locator('#status')).not.toContainText('limit');   // no second, duplicate message
@@ -136,6 +136,22 @@ test('over the daily limit, the try-tomorrow card appears and the current page s
     await page.getByRole('textbox',{name:'Your next instruction'}).fill('Create a triangle slide.');
     await expect(button(page,'Explore interactively')).toBeDisabled();  // typing does not turn Send back on
   }finally{server.setDailyLimit(Infinity);}
+});
+
+test('How it works opens the demo video with sound, and Escape or a click outside closes it',async({page})=>{
+  await send(page,'Create an evaporation slide.',evaporationTitle);
+  const how=button(page,'How it works'),dialog=page.getByRole('dialog',{name:'How AI Interaction works'}),video=page.locator('#demo-video');
+  await how.click();
+  await expect(dialog).toBeVisible();
+  await expect.poll(()=>video.evaluate(v=>!v.paused&&!v.muted&&v.currentTime>0)).toBe(true);   // plays, with sound
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect.poll(()=>video.evaluate(v=>v.paused)).toBe(true);
+  await expect(how).toBeFocused();                                                          // focus returns
+  await how.click();
+  await expect(dialog).toBeVisible();
+  await page.mouse.click(5,5);                                                              // outside the video
+  await expect(dialog).toBeHidden();
 });
 
 test('a newer slide remains in History when applying a change from Back',async({page})=>{

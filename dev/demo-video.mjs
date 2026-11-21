@@ -4,8 +4,8 @@
 //
 // Usage (with the app running with a key and a high DAILY_LIMIT, e.g. DAILY_LIMIT=5000 PORT=4319 npm run dev):
 //   DEMO_URL=http://127.0.0.1:4319 npm run demo-video
-// Writes artifacts/video/ai-interaction-demo.mp4 (1080p, music) and public/demo.mp4 (small, silent,
-// looping, shown in the "Try again tomorrow" card). About 12 model requests.
+// Writes artifacts/video/ai-interaction-demo.mp4 (1080p, music) and public/demo.mp4 (720p with music,
+// shown in the app: muted in the daily-limit card, with sound under "How it works"). About 12 model requests.
 //
 // How: Playwright opens a wrapper page on the app's own origin (so the app's frame-ancestors rule
 // allows it) that draws the look (gradient, a window around the real app, a cursor with click
@@ -278,10 +278,10 @@ async function main() {
   const full = join(outDir, 'ai-interaction-demo.mp4');
   execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', silent, '-i', music, '-map', '0:v', '-map', '1:a', '-c:v', 'copy',
     '-af', 'volume=0.7', '-c:a', 'aac', '-b:a', '160k', '-shortest', '-movflags', '+faststart', full]);
-  // The card version: small, silent, looping in the "Try again tomorrow" card.
+  // The app's version: 720p with the music (about 1.5 MB), for the daily-limit card and "How it works".
   const card = join(ROOT, 'public', 'demo.mp4');
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', silent, '-an', '-vf', 'scale=960:-2,fps=24', '-c:v', 'libx264',
-    '-preset', 'slow', '-crf', '30', '-profile:v', 'main', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', card]);
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', full, '-vf', 'scale=1280:720', '-c:v', 'libx264', '-preset', 'slow',
+    '-crf', '27', '-profile:v', 'main', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '96k', '-movflags', '+faststart', card]);
   rmSync(work, {recursive: true, force: true});
   console.log(`wrote ${full} (${seconds.toFixed(1)} s, ${frames.length} frames) and ${card}`);
 }

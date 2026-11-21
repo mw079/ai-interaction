@@ -41,12 +41,12 @@ test('the daily limit is counted per visitor on the server and resets the next U
  assert.equal((await send('a',{...payload,format:'run code'})).status,400);   // invalid requests are not counted
  assert.equal((await send('a')).status,200);
  const limited=await send('a');assert.equal(limited.status,429);
- assert.deepEqual(await limited.json(),{error:'You’ve reached today’s limit. Try again tomorrow.',limit:'daily',retryable:false});
+ assert.deepEqual(await limited.json(),{error:'Today’s limit has been reached. Try again tomorrow.',limit:'daily',retryable:false});
  assert.equal(calls,2);                                                        // over the limit, OpenAI is not called
  assert.deepEqual(await (await handleAPI(new Request('https://example.test/api/config'),fetch,{},{limiter,visitor:'a'})).json(),{live:true,limited:true});
  assert.equal((await send('b')).status,200);                                   // another visitor has their own count
  const total=await send('c');assert.equal(total.status,429);                   // ...until the app-wide cap is reached
- assert.equal((await total.json()).error,'The demo has reached today’s limit. Try again tomorrow.');
+ assert.equal((await total.json()).error,'Today’s limit has been reached. Try again tomorrow.');
  now=Date.parse('2026-11-20T00:00:01Z');
  assert.equal((await send('a')).status,200);                                   // a new UTC day starts fresh
 });

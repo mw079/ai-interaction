@@ -686,6 +686,13 @@ const changeStatus=node('div','change-status');changeStatus.id='change-status';c
 $('live-question').before(changeStatus);
 workspace=setupWorkspace();$('page-back').onclick=()=>navigatePage(-1);$('page-forward').onclick=()=>navigatePage(1);
 window.addEventListener('pagehide',()=>{stop();state.pageController?.abort();});changed();
+// How it works: the demo video in a dialog, with sound. It closes with ×, Escape or a click
+// outside the video, and focus returns to the button.
+const demoDialog=$('demo-dialog'),demoVideo=$('demo-video');
+$('how-it-works').onclick=()=>{demoDialog.showModal();demoVideo.currentTime=0;demoVideo.play().catch(()=>{});};
+$('close-demo').onclick=()=>demoDialog.close();
+demoDialog.addEventListener('click',event=>{if(event.target===demoDialog)demoDialog.close();});
+demoDialog.addEventListener('close',()=>{demoVideo.pause();$('how-it-works').focus();});
 // Live help needs the server's key; a visitor over today's limit sees the try-tomorrow card instead.
 function showLimit(message){
   state.live=false;state.limited=true;stop();composerExperience?.stop();state.pageController?.abort();hidePageProgress();

@@ -38,9 +38,9 @@ export function createDailyLimiter({perVisitor=200,total=2000,now=()=>Date.now()
     limited(visitor){today();return used>=total||(visitors.get(visitor)||0)>=perVisitor;},
     take(visitor){
       today();
-      if(used>=total)return {ok:false,error:'The demo has reached today’s limit. Try again tomorrow.'};
+      if(used>=total)return {ok:false,error:'Today’s limit has been reached. Try again tomorrow.'};
       const count=visitors.get(visitor)||0;
-      if(count>=perVisitor)return {ok:false,error:'You’ve reached today’s limit. Try again tomorrow.'};
+      if(count>=perVisitor)return {ok:false,error:'Today’s limit has been reached. Try again tomorrow.'};
       visitors.set(visitor,count+1);used++;
       return {ok:true,remaining:perVisitor-count-1};
     }
